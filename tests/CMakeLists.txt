@@ -34,6 +34,7 @@ set(SOURCES
     test_drag_and_drop_service.cpp
     test_resize_service.cpp
     test_render_data_manager.cpp
+    test_tessellation_helpers.cpp
     test_scene_override_manager.cpp
     test_carousel_layout.cpp
     test_overview_scene_override.cpp
@@ -62,6 +63,7 @@ set(SOURCES
     stub_surface.h
     stub_window_controller.h
     stub_container.h
+    stub_renderable.h
     vertical_display_configuration_policy.h)
 
 if (END_TO_END_TESTS)

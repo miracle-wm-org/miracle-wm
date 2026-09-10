@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "container_effect.h"
+#include "window_allocation.h"
 #include <optional>
 
 namespace miracle
@@ -77,6 +78,7 @@ public:
     void set_workspace_alpha(float a) override;
     glm::mat4 get_workspace_transform() const override;
     void set_animation_transform(glm::mat4 transform) override;
+    void set_animation_stretch_target(std::optional<ContentStretch> stretch) override;
     void set_animation_alpha(float a) override;
     glm::mat4 get_animation_transform() const override;
     float get_alpha() const;

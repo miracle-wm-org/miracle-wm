@@ -183,6 +183,16 @@ void miracle::WindowContainer::set_animation_transform(glm::mat4 transform)
     rerender();
 }
 
+void miracle::WindowContainer::set_animation_stretch_target(std::optional<ContentStretch> stretch)
+{
+    if (!render_id_.has_value())
+        return;
+
+    if (auto const rdm_locked = rdm.lock())
+        rdm_locked->stretch_change(render_id_.value(), stretch);
+    rerender();
+}
+
 glm::mat4 miracle::WindowContainer::get_workspace_transform() const
 {
     return workspace_effect.transform;

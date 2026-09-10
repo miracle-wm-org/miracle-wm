@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_WM_ANIMATION_H
 
 #include "plugin_manager.h"
+#include <cstdint>
 #include <functional>
 #include <glm/glm.hpp>
 #include <memory>
@@ -36,6 +37,32 @@ typedef uint32_t AnimationHandle;
 
 /// Evaluates \p definition's easing function at normalized time \p t in [0, 1].
 float ease(BuiltInAnimationDefinition const& definition, float t);
+
+/// The largest size change, on either axis, that is not worth animating. A change of a few
+/// pixels reads as jitter rather than motion, and still costs a full stretch and crop cycle
+/// for every frame of it. Matches niri's RESIZE_ANIMATION_THRESHOLD.
+constexpr int kResizeThreshold = 10;
+
+/// What an in-flight resize wants drawn this frame. Present only while a resize animation
+/// is running and only when it actually changes the window's size.
+struct ResizeFrame
+{
+    /// The size we asked the client to adopt. Only *gates* the stretch; the size the
+    /// content is drawn at comes from `clip_area`, clamped downstream to what the client
+    /// can reach.
+    mir::geometry::Size target;
+
+    /// The window size the client was settled at when this animation began. The renderer
+    /// uses it to learn, once, how far a client's buffer overshoots its window - see
+    /// ContentStretch::source.
+    mir::geometry::Size source;
+
+    /// How far through the animation this frame is, in [0, 1], held monotone. The renderer
+    /// cross-fades the pre-resize content out over the animation's *remaining* progress once
+    /// the client swaps buffers, so it needs the same clock the motion is on rather than one
+    /// of its own - see ContentStretch::progress.
+    float progress = 0.f;
+};
 
 struct AnimationData
 {
@@ -80,6 +107,12 @@ struct AnimationFrameResult
     /// When set, process_animation() uses this for clip() instead of rectangle,
     /// so rectangle can carry the final target size for modify_window().
     std::optional<mir::geometry::Rectangle> clip_area;
+
+    /// How the drawn content should be stretched this frame, if at all. Unset by
+    /// `finish()`, which is what stops the stretch on the final frame - by then the clamped
+    /// clip has landed on the client's own size, so the scale is 1.0 and dropping it is
+    /// invisible.
+    std::optional<ResizeFrame> resize;
 
     AnimationFrameResult merge(AnimationFrameResult const& other) const;
 };
@@ -130,6 +163,23 @@ public:
     [[nodiscard]] virtual bool is_being_removed() const;
     bool tick(float dt);
 
+    /// What this animation is displaying right now. The area is the clip rectangle rather
+    /// than the requested window rectangle, since the clip is what the user actually sees,
+    /// and is unset for definitions with no positional part.
+    struct State
+    {
+        std::optional<mir::geometry::Rectangle> area;
+        float opacity = 1.f;
+    };
+
+    [[nodiscard]] State current_state() const;
+
+    /// Restart this animation from \p state instead of its configured start.
+    ///
+    /// Used when a new animation replaces one that is still in flight, so the replacement
+    /// continues from what is on screen rather than snapping back to the caller's start.
+    void retarget_from(State const& state);
+
 private:
     AnimationFrameResult tick_built_in(BuiltInAnimationDefinition const& builtin_def, float t);
     AnimationFrameResult finish() const;
@@ -141,6 +191,12 @@ private:
     std::function<void(AnimationFrameResult const&)> on_tick;
     bool is_being_removed_ = false;
     std::shared_ptr<PluginManager> plugin_manager;
+
+    /// The eased value, clamped to [0, 1] and never allowed to go back down; see
+    /// ResizeFrame::progress. `ease_out_back` and the elastic curves both dip below 1 after
+    /// first reaching it, and a cross-fade that reverses reads as a flicker. This is niri's
+    /// value() / clamped_value() split.
+    float clamped_progress = 0.f;
 };
 }
 

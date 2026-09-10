@@ -20,6 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "animation.h"
 #include "geometry_helpers.h"
 #include "plugin_manager.h"
+#include <algorithm>
+#include <cstdlib>
 #include <cstring>
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
@@ -256,6 +258,41 @@ bool Animation::is_being_removed() const
     return is_being_removed_;
 }
 
+Animation::State Animation::current_state() const
+{
+    // Guarded like tick(): a zero-duration definition is instantly over, not a division.
+    float const t = definition_.duration_seconds > 0.f
+        ? std::clamp(runtime_seconds / definition_.duration_seconds, 0.f, 1.f)
+        : 1.f;
+
+    State state { std::nullopt, data_.opacity_start };
+    for (auto const& builtin_def : definition_.data)
+    {
+        auto const p = ease(builtin_def, t);
+        if (builtin_def.type == BultInAnimationType::slide)
+        {
+            auto const [position, clip_area_size] = slide(p, data_.area_start, data_.area_end);
+            state.area = geom::Rectangle {
+                geom::Point { position.x,       position.y       },
+                geom::Size { clip_area_size.x, clip_area_size.y }
+            };
+        }
+        else if (builtin_def.type == BultInAnimationType::fade)
+            state.opacity = data_.opacity_start + (data_.opacity_end - data_.opacity_start) * p;
+    }
+
+    return state;
+}
+
+void Animation::retarget_from(State const& state)
+{
+    if (state.area)
+        data_.area_start = *state.area;
+    data_.opacity_start = state.opacity;
+    runtime_seconds = 0.f;
+    clamped_progress = 0.f;
+}
+
 bool Animation::tick(float dt)
 {
     runtime_seconds += dt;
@@ -330,31 +367,57 @@ AnimationFrameResult Animation::tick_built_in(BuiltInAnimationDefinition const& 
     {
         auto const p = ease(builtin_def, t);
         const auto [position, clip_area_size] = slide(p, data_.area_start, data_.area_end);
-        // For growing axes: set the final size immediately so the client can start
-        // rendering at the correct dimensions right away (avoids blank space).
-        // For shrinking axes: keep the starting size so the clip can hide the excess;
-        // the actual resize happens at animation end via finish().
-        auto const window_w = (data_.area_end.size.width >= data_.area_start.size.width)
-            ? data_.area_end.size.width
-            : data_.area_start.size.width;
-        auto const window_h = (data_.area_end.size.height >= data_.area_start.size.height)
-            ? data_.area_end.size.height
-            : data_.area_start.size.height;
+        // The final size is requested on the very first frame, whether the axis is
+        // growing or shrinking, so that the logical geometry is up to date for
+        // whatever command comes next. Without this, a shrink only reached the
+        // window on completion and repeated resize commands recomputed the same
+        // target from a stale size.
         auto const window_rect = geom::Rectangle {
             geom::Point { position.x, position.y },
-            geom::Size { window_w,   window_h   }
+            data_.area_end.size
         };
+        // A pure move shows the very same pixels from the first frame to the last, so it
+        // needs no stretch at all. Only an animation that changes the window's size does -
+        // and only by enough to be worth one: a handful of pixels costs a full stretch and
+        // crop cycle to show a change too small to read as motion, and lands as jitter.
+        auto const dw = std::abs(
+            data_.area_end.size.width.as_int() - data_.area_start.size.width.as_int());
+        auto const dh = std::abs(
+            data_.area_end.size.height.as_int() - data_.area_start.size.height.as_int());
+        bool const is_resize = std::max(dw, dh) > kResizeThreshold;
+
         // clip_area carries the animated scissor size to reveal/conceal content gradually.
+        // It bounds a client that lags behind, or refuses, the request above, and - once
+        // clamped to the client's own constraints - it is also the size the content is
+        // stretched to each frame. `resize` below only says a stretch is in flight at all.
+        // A size change too small to animate takes the final size from the first frame, so
+        // the clip is a plain moving window rather than a scale of one pixel per frame.
         auto const clip_rect = geom::Rectangle {
             geom::Point { position.x,       position.y       },
-            geom::Size { clip_area_size.x, clip_area_size.y }
+            is_resize
+                ? geom::Size { clip_area_size.x, clip_area_size.y }
+                : data_.area_end.size
         };
+        // Monotone by construction: an overshooting ease is welcome in the motion but not in
+        // the cross-fade the renderer drives off this.
+        clamped_progress = std::max(clamped_progress, std::clamp(p, 0.f, 1.f));
+
+        std::optional<ResizeFrame> resize;
+        if (is_resize)
+        {
+            resize = ResizeFrame {
+                .target = data_.area_end.size,
+                .source = data_.area_start.size,
+                .progress = clamped_progress
+            };
+        }
         return {
             .is_complete = false,
             .rectangle = window_rect,
             .transform = std::nullopt,
             .opacity = 1.f,
-            .clip_area = clip_rect
+            .clip_area = clip_rect,
+            .resize = resize
         };
     }
     case BultInAnimationType::grow:

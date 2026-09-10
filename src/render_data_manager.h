@@ -31,6 +31,36 @@ namespace miracle
 class Container;
 typedef int RenderDataManagerId;
 
+/// What an in-flight resize animation wants done to a window's drawn content.
+struct ContentStretch
+{
+    /// The size to draw the window's content at this frame. Never a size the client cannot
+    /// reach: once the animated clip passes the client's limit this freezes at that limit
+    /// and the clip crops the difference - which is exactly what the un-animated frame
+    /// after it does, so switching the stretch off is invisible.
+    mir::geometry::Size size;
+
+    /// The window size the client was settled at when the animation began. The renderer
+    /// needs one known-good pairing of a committed buffer with the window size it was drawn
+    /// for in order to learn that client's fixed buffer overshoot (a CSD drop shadow); this
+    /// is that pairing, taken at the only moment it is free of the client's ack latency -
+    /// before the compositor has asked for anything new.
+    mir::geometry::Size source;
+
+    /// How far through the animation this frame is, in [0, 1], held monotone. Once the
+    /// client swaps buffers mid-animation the renderer cross-fades the content it was showing
+    /// out over whatever is left of this, so the fade rides the same curve the motion does
+    /// rather than a duration of its own.
+    ///
+    /// Unlike the fields above this changes every frame, so it costs the early-out in
+    /// stretch_change() the frames where the stretch has frozen at the client's limit. That
+    /// is the only case the early-out ever caught - during the rest of a resize the size is
+    /// moving anyway - so the cost is a render-data copy on those frames.
+    float progress = 0.f;
+
+    friend bool operator==(ContentStretch const&, ContentStretch const&) = default;
+};
+
 struct RenderData
 {
     RenderDataManagerId id = 0;
@@ -43,6 +73,9 @@ struct RenderData
     glm::mat4 workspace_transform = glm::mat4(1.f);
     std::optional<mir::geometry::Rectangle> output_area;
     std::optional<uint8_t> shader_id = std::nullopt;
+    /// What an in-flight resize animation wants done to this window's content, or
+    /// nothing when it should be drawn at its own size.
+    std::optional<ContentStretch> stretch;
 };
 
 class RenderDataManager
@@ -57,6 +90,7 @@ public:
     void focus_change(RenderDataManagerId id, bool is_focused);
     void needs_outline_change(RenderDataManagerId id, bool needs_outline);
     void shader_id_change(RenderDataManagerId id, std::optional<uint8_t> shader_id);
+    void stretch_change(RenderDataManagerId id, std::optional<ContentStretch> stretch);
     /// Reset every RenderData whose shader_id is in \p ids back to the default
     /// shader (std::nullopt). Used when the shaders are removed (e.g. on plugin unload).
     void reset_shaders(std::vector<uint8_t> const& ids);

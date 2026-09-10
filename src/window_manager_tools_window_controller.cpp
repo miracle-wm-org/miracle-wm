@@ -175,6 +175,11 @@ void WindowManagerToolsWindowController::noclip(miral::Window const& window)
 {
     auto& window_info = tools.info_for(window);
     window_info.clip_area({});
+
+    // An animation torn down before it completed never runs finish(), so stop the
+    // stretch here too rather than leaving the content scaled on the render data.
+    if (auto const container = get_window_container(window))
+        container->set_animation_stretch_target(std::nullopt);
 }
 
 void WindowManagerToolsWindowController::select_active_window(miral::Window const& window)
@@ -234,6 +239,40 @@ void WindowManagerToolsWindowController::process_animation(
         if (!window)
             return;
 
+        // The clip and the stretch describe how to draw the surface at the size it is about
+        // to be given, so a resize installs both before the modify_window() below hands it
+        // that size - a compositor pass landing in between would otherwise find the window
+        // at its final size with neither and draw one frame that way. The other order is
+        // harmless: until the resize lands the surface is still its old size, which is what
+        // the clip names on the frame that resizes it.
+        //
+        // Only the animated clip goes first. It shares its top-left with the window, so it
+        // always overlaps it; the fallback clips below are wherever the animation put them
+        // and could miss it entirely, which makes Mir drop the surface for a pass, so they
+        // stay after the move that brings the two together.
+        std::optional<ContentStretch> stretch;
+        if (result.resize && result.clip_area)
+        {
+            // The animated clip run through the client's own constraints. miral applied
+            // exactly these when it sized the surface, so a client that refuses the target
+            // size stops scaling exactly where it stops resizing and the crop takes the
+            // difference - which is also what makes the last animated frame and the first
+            // un-animated one draw the same pixels. Passing the top-left the window has
+            // right now keeps constrain_resize's left/top branches inert.
+            auto pos = window.top_left();
+            auto size = result.clip_area->size;
+            tools.info_for(window).constrain_resize(pos, size);
+            stretch = ContentStretch { size, result.resize->source, result.resize->progress };
+        }
+        container->set_animation_stretch_target(stretch);
+
+        // The clip gets the raw animated rectangle, not the constrained one: it is both
+        // what the border is sized from and the crop the content is cut down to, so it has
+        // to be the rectangle the tile actually occupies this frame. The stretch stopping
+        // at the client's limit while the clip carries on past it is what the crop is for.
+        if (!result.is_complete && result.clip_area)
+            clip(window, result.clip_area.value());
+
         if (rectangle)
         {
             miral::WindowSpecification spec;
@@ -265,9 +304,7 @@ void WindowManagerToolsWindowController::process_animation(
             if (result.rectangle)
                 clip(window, result.rectangle.value());
         }
-        else if (result.clip_area)
-            clip(window, result.clip_area.value());
-        else if (rectangle)
+        else if (!result.clip_area && rectangle)
             clip(window, rectangle.value());
     }
     catch (std::out_of_range const&)

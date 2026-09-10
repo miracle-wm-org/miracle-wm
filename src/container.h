@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "layout_scheme.h"
 #include "observer_registrar.h"
 #include "plugin_handle.h"
+#include "render_data_manager.h"
 #include "scratchpad_state.h"
 #include <glm/glm.hpp>
 #include <memory>
@@ -29,6 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
 #include <nlohmann/json.hpp>
+#include <optional>
 
 namespace geom = mir::geometry;
 
@@ -113,6 +115,13 @@ public:
     ///
     ///\param transform
     virtual void set_animation_transform(glm::mat4 transform) = 0;
+
+    /// Sets how an in-flight resize animation wants this container's drawn content
+    /// stretched this frame. Nothing means draw the content at its own size, which is what
+    /// ends a stretch. Containers with no render data ignore it entirely.
+    ///
+    /// \param stretch the constrained stretch, or nothing to stop stretching
+    virtual void set_animation_stretch_target(std::optional<ContentStretch> /*stretch*/) { }
 
     virtual void set_workspace_transform(glm::mat4 const& transform) = 0;
     virtual void set_workspace_alpha(float a) = 0;

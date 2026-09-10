@@ -216,7 +216,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     miracle::WithDefaultFlag<Gaps> outer_gaps = Gaps { .top = 10, .bottom = 10, .left = 10, .right = 10 };
     miracle::WithDefaultFlag<std::vector<StartupApp>> startup_apps;
     miracle::WithDefaultFlag<std::optional<std::string>> terminal = std::optional<std::string>("miracle-wm-sensible-terminal");
-    miracle::WithDefaultFlag<int> resize_jump = 50;
+    miracle::WithDefaultFlag<int> resize_jump = 128;
     miracle::WithDefaultFlag<std::vector<EnvironmentVariable>> environment_variables;
     miracle::WithDefaultFlag<BorderConfig> border_config;
     miracle::WithDefaultFlag<bool> animations_enabled = true;
