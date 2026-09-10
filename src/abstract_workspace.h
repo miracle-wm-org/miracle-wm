@@ -23,12 +23,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <memory>
 #include <miracle/cpp/gaps.h>
+#include <optional>
+#include <string>
 
 namespace miracle
 {
 class AbstractOutput;
 class Container;
 class ParentContainer;
+
+/// How a workspace places the new windows that are opened on it.
+enum class WindowPlacementPolicy
+{
+    /// New windows are added to the tiling grid.
+    tile,
+
+    /// New windows are floated over the workspace.
+    floating
+};
+
+/// \returns the IPC name of the policy, either "tile" or "float"
+std::string to_string(WindowPlacementPolicy);
+
+/// \returns the policy matching "tile" or "float", otherwise nullopt
+std::optional<WindowPlacementPolicy> window_placement_policy_from_string(std::string const&);
 
 class AbstractWorkspace : public std::enable_shared_from_this<AbstractWorkspace>
 {
@@ -51,17 +69,39 @@ public:
     /// \param end the position that the workspace will end up at.
     virtual void hide(mir::geometry::Point const& end) = 0;
 
+    /// Shows or hides every container on the workspace, without any of the
+    /// focus handling or animation that a real workspace switch performs.
+    ///
+    /// This is how a workspace that is not the active one is forced into the
+    /// scene so that an effect can render it. Prefer holding a
+    /// [WorkspacePreview] over calling this directly, so that the reveal is
+    /// undone exactly once, along with the transform and alpha that the
+    /// workspace was left with.
+    virtual void set_containers_shown(bool shown) = 0;
+
     /// Iterates all containers on this workspace that represent a window until the predicate is satisfied.
     /// Returns true if the predicate returned true.
     virtual bool for_each_window(std::function<bool(std::shared_ptr<WindowContainer>)> const&) const = 0;
 
     virtual void advise_focus_gained(std::shared_ptr<Container> const& container) = 0;
 
+    /// Focuses a window on this workspace.
+    virtual void select_window() = 0;
+
     [[nodiscard]] virtual std::shared_ptr<AbstractOutput> get_output() const = 0;
 
     virtual void set_output(std::shared_ptr<AbstractOutput> const&) = 0;
 
     [[nodiscard]] virtual bool is_empty() const = 0;
+
+    /// Whether any window on this workspace is requesting attention.
+    ///
+    /// This walks every container on the workspace, so prefer aggregating the
+    /// "urgent" key out of the child json when the container tree is already
+    /// being built.
+    ///
+    /// \returns `true` if any window on the workspace is urgent
+    [[nodiscard]] virtual bool urgent() const = 0;
     virtual void graft(std::shared_ptr<Container> const&) = 0;
 
     [[nodiscard]] virtual uint32_t id() const = 0;
@@ -78,6 +118,10 @@ public:
 
     [[nodiscard]] virtual std::optional<Gaps> inner_gaps() const = 0;
     virtual void inner_gaps(std::optional<Gaps> const& gaps) = 0;
+
+    /// How windows that are newly opened on this workspace are placed.
+    [[nodiscard]] virtual WindowPlacementPolicy placement_policy() const = 0;
+    virtual void placement_policy(WindowPlacementPolicy) = 0;
 
     /// Sets the transformation for this workspace.
     virtual void transform(glm::mat4 const&) = 0;

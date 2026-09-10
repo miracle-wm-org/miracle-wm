@@ -85,7 +85,7 @@ namespace test
         {
         }
 
-        void handle_modify(miral::WindowSpecification const& specification) override
+        void handle_modify(miral::WindowSpecification const& specification, bool hidden) override
         {
         }
 

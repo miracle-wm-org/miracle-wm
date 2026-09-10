@@ -19,6 +19,7 @@ The `change` string is one of the following:
 | fullscreen_mode | The window's fullscreen mode has changed                 |
 | move            | The window has been reparented in the tree               |
 | mark            | A mark has been added or removed from the window         |
+| urgent          | The window has started or stopped wanting attention      |
 
 The `container` is an object representing the container for that window. You may
 see an example below.

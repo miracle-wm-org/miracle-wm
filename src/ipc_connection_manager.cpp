@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "ipc_connection_manager"
 
 #include "ipc_connection_manager.h"
+#include "abstract_workspace.h"
 #include "binding_event.h"
 #include "command_controller.h"
 #include "config.h"
@@ -81,6 +82,22 @@ json mode_event_to_json(WindowManagerMode mode)
         { "pango_markup", true                                            }
     };
 }
+
+json config_errors_to_json(std::vector<miracle::Error> const& errors)
+{
+    json result = json::array();
+    for (auto const& error : errors)
+    {
+        result.push_back({
+            { "filename", error.filename                                                    },
+            { "line",     error.line                                                        },
+            { "column",   error.column                                                      },
+            { "level",    error.level == miracle::ErrorLevel::warning ? "warning" : "error" },
+            { "message",  error.message                                                     },
+        });
+    }
+    return result;
+}
 }
 
 IpcConnectionManager::IpcConnectionManager(
@@ -88,10 +105,12 @@ IpcConnectionManager::IpcConnectionManager(
     std::shared_ptr<AbstractCommandController> const& command_controller,
     std::shared_ptr<IpcCommandExecutor> const& command_executor,
     std::shared_ptr<Config> const& config,
-    std::shared_ptr<WindowController> const& window_controller) :
+    std::shared_ptr<WindowController> const& window_controller,
+    std::shared_ptr<PluginManager> const& plugin_manager) :
     main_loop(main_loop_),
     command_controller(command_controller),
-    ipc_message_handler(std::make_unique<IpcMessageHandler>(command_controller, command_executor, config, window_controller))
+    config(config),
+    ipc_message_handler(std::make_unique<IpcMessageHandler>(command_controller, command_executor, config, window_controller, plugin_manager))
 {
     auto const ipc_socket_raw = socket(AF_UNIX, SOCK_STREAM, 0);
     if (ipc_socket_raw == -1)
@@ -244,7 +263,43 @@ IpcConnectionManager::IpcConnectionManager(
 
 IpcConnectionManager::~IpcConnectionManager()
 {
+    // Expires the weak_ptrs held by any action still sitting on the main loop queue.
+    alive.reset();
     main_loop->unregister_fd_handler(this);
+}
+
+void IpcConnectionManager::run_on_main_loop(std::function<void()> action)
+{
+    main_loop->enqueue(this, [weak_alive = std::weak_ptr<bool>(alive), action = std::move(action)]
+    {
+        // We may have been destroyed between enqueueing the action and draining it.
+        if (weak_alive.expired())
+            return;
+
+        action();
+    });
+}
+
+std::vector<std::shared_ptr<IpcConnectionManager::IpcClient>> IpcConnectionManager::snapshot_clients()
+{
+    std::lock_guard lock(clients_mutex);
+    return clients;
+}
+
+void IpcConnectionManager::broadcast(IpcType type, std::string payload)
+{
+    run_on_main_loop([this, type, payload = std::move(payload)]
+    {
+        for (auto const& client : snapshot_clients())
+        {
+            if ((client->subscribed_events & ipc_event_mask(type)) == 0)
+            {
+                continue;
+            }
+
+            send_reply(*client, type, payload);
+        }
+    });
 }
 
 void IpcConnectionManager::on_workspace_created(uint32_t id)
@@ -255,18 +310,7 @@ void IpcConnectionManager::on_workspace_created(uint32_t id)
         { "current", command_controller->workspace_to_json(id) }
     };
 
-    auto const serialized_value = to_string(j);
-
-    std::lock_guard lock(clients_mutex);
-    for (auto& client : clients)
-    {
-        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
-        {
-            continue;
-        }
-
-        send_reply(*client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
-    }
+    broadcast(IpcType::IPC_EVENT_WORKSPACE, to_string(j));
 }
 
 void IpcConnectionManager::on_workspace_empty(uint32_t id)
@@ -277,18 +321,7 @@ void IpcConnectionManager::on_workspace_empty(uint32_t id)
         { "current", command_controller->workspace_to_json(id) }
     };
 
-    auto const serialized_value = to_string(j);
-
-    std::lock_guard lock(clients_mutex);
-    for (auto& client : clients)
-    {
-        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
-        {
-            continue;
-        }
-
-        send_reply(*client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
-    }
+    broadcast(IpcType::IPC_EVENT_WORKSPACE, to_string(j));
 }
 
 void IpcConnectionManager::on_workspace_removed(uint32_t id)
@@ -298,17 +331,7 @@ void IpcConnectionManager::on_workspace_removed(uint32_t id)
         { "current", command_controller->workspace_to_json(id) }
     };
 
-    auto const serialized_value = to_string(j);
-    std::lock_guard lock(clients_mutex);
-    for (auto& client : clients)
-    {
-        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
-        {
-            continue;
-        }
-
-        send_reply(*client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
-    }
+    broadcast(IpcType::IPC_EVENT_WORKSPACE, to_string(j));
 }
 
 void IpcConnectionManager::on_workspace_focused(
@@ -325,17 +348,7 @@ void IpcConnectionManager::on_workspace_focused(
     else
         j["old"] = nullptr;
 
-    auto const serialized_value = to_string(j);
-    std::lock_guard lock(clients_mutex);
-    for (auto& client : clients)
-    {
-        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
-        {
-            continue;
-        }
-
-        send_reply(*client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
-    }
+    broadcast(IpcType::IPC_EVENT_WORKSPACE, to_string(j));
 }
 
 void IpcConnectionManager::on_workspace_renamed(uint32_t id)
@@ -345,51 +358,23 @@ void IpcConnectionManager::on_workspace_renamed(uint32_t id)
         { "current", command_controller->workspace_to_json(id) }
     };
 
-    auto const serialized_value = to_string(j);
-    std::lock_guard lock(clients_mutex);
-    for (auto& client : clients)
-    {
-        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
-        {
-            continue;
-        }
-
-        send_reply(*client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
-    }
+    broadcast(IpcType::IPC_EVENT_WORKSPACE, to_string(j));
 }
 
-void IpcConnectionManager::on_config_changed(Config const&)
+void IpcConnectionManager::on_config_changed(Config const& changed_config)
 {
     json const j = {
         { "change", "reload" }
     };
 
-    auto const serialized_value = to_string(j);
-    std::lock_guard lock(clients_mutex);
-    for (auto& client : clients)
-    {
-        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
-        {
-            continue;
-        }
-
-        send_reply(*client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
-    }
+    broadcast(IpcType::IPC_EVENT_WORKSPACE, to_string(j));
+    broadcast(IpcType::IPC_EVENT_CONFIG_ERRORS,
+        to_string(config_errors_to_json(changed_config.get_config_errors())));
 }
 
 void IpcConnectionManager::on_mode_changed(WindowManagerMode mode)
 {
-    auto const response = to_string(mode_event_to_json(mode));
-    std::lock_guard lock(clients_mutex);
-    for (auto& client : clients)
-    {
-        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_MODE)) == 0)
-        {
-            continue;
-        }
-
-        send_reply(*client, IpcType::IPC_EVENT_MODE, response);
-    }
+    broadcast(IpcType::IPC_EVENT_MODE, to_string(mode_event_to_json(mode)));
 }
 
 void IpcConnectionManager::on_shutdown()
@@ -397,8 +382,9 @@ void IpcConnectionManager::on_shutdown()
     auto const response = to_string(json({
         { "change", "exit" }
     }));
-    std::lock_guard lock(clients_mutex);
-    for (auto& client : clients)
+    // Sent synchronously rather than via [broadcast]: the main loop is on its way down
+    // and may never drain another action.
+    for (auto const& client : snapshot_clients())
     {
         if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_SHUTDOWN)) == 0)
         {
@@ -408,9 +394,14 @@ void IpcConnectionManager::on_shutdown()
         send_reply(*client, IpcType::IPC_EVENT_SHUTDOWN, response);
     }
 
-    for (auto& client : clients)
+    std::vector<std::shared_ptr<IpcClient>> remaining;
+    {
+        std::lock_guard lock(clients_mutex);
+        remaining.swap(clients);
+    }
+
+    for (auto const& client : remaining)
         disconnect_internal(client.get());
-    clients.clear();
 }
 
 void IpcConnectionManager::send_window_event(const char* event, Container const& container)
@@ -419,18 +410,9 @@ void IpcConnectionManager::send_window_event(const char* event, Container const&
         { "change",    event                    },
         { "container", container.to_json(false) }  // TODO: Handle workspace visibility
     });
-    auto const str = to_string(j);
-
-    std::lock_guard lock(clients_mutex);
-    for (auto& client : clients)
-    {
-        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_WINDOW)) == 0)
-        {
-            continue;
-        }
-
-        send_reply(*client, IpcType::IPC_EVENT_WINDOW, str);
-    }
+    // Serialized here, on the caller's thread, because [Container::to_json] reads live
+    // window management state. Only the send itself is deferred to the main loop.
+    broadcast(IpcType::IPC_EVENT_WINDOW, to_string(j));
 }
 
 void IpcConnectionManager::output_created(miral::Output const&)
@@ -453,35 +435,41 @@ void IpcConnectionManager::send_output_event()
     auto const j = json({
         { "change", "unspecified" }
     });
-    auto const str = to_string(j);
-
-    std::lock_guard lock(clients_mutex);
-    for (auto& client : clients)
-    {
-        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_OUTPUT)) == 0)
-        {
-            continue;
-        }
-
-        send_reply(*client, IpcType::IPC_EVENT_OUTPUT, str);
-    }
+    broadcast(IpcType::IPC_EVENT_OUTPUT, to_string(j));
 }
 
 void IpcConnectionManager::on_binding_event(BindingEvent const& binding_event)
 {
-    auto const j = binding_event.to_json();
-    auto const str = to_string(j);
+    broadcast(IpcType::IPC_EVENT_BINDING, to_string(binding_event.to_json()));
+}
 
-    std::lock_guard lock(clients_mutex);
-    for (auto& client : clients)
+void IpcConnectionManager::on_plugin_event(std::string const& ns, std::string const& payload_json)
+{
+    json j;
+    j["plugin"] = ns;
+    try
     {
-        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_BINDING)) == 0)
-        {
-            continue;
-        }
-
-        send_reply(*client, IpcType::IPC_EVENT_BINDING, str);
+        j["payload"] = json::parse(payload_json);
     }
+    catch (json::exception const&)
+    {
+        // Fall back to the raw string if the plugin published a non-JSON payload.
+        j["payload"] = payload_json;
+    }
+    run_on_main_loop([this, ns, str = to_string(j)]
+    {
+        for (auto const& client : snapshot_clients())
+        {
+            if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_PLUGIN)) == 0)
+                continue;
+
+            auto const& namespaces = client->subscribed_plugin_namespaces;
+            if (std::ranges::find(namespaces, ns) == namespaces.end())
+                continue;
+
+            send_reply(*client, IpcType::IPC_EVENT_PLUGIN, str);
+        }
+    });
 }
 
 void IpcConnectionManager::on_window_created(Container const& container)
@@ -519,22 +507,49 @@ void IpcConnectionManager::on_window_marked(Container const& container)
     send_window_event("mark", container);
 }
 
+void IpcConnectionManager::on_urgency_changed(Container const& container)
+{
+    send_window_event("urgent", container);
+
+    // The workspace inherits the urgency of its windows, so bars that watch
+    // workspaces rather than windows need to be told that it changed too.
+    auto const workspace = container.get_workspace();
+    if (!workspace)
+        return;
+
+    json const j = {
+        { "change",  "urgent"                                               },
+        { "old",     nullptr                                                },
+        { "current", command_controller->workspace_to_json(workspace->id()) }
+    };
+
+    broadcast(IpcType::IPC_EVENT_WORKSPACE, to_string(j));
+}
+
 void IpcConnectionManager::disconnect(IpcClient& client)
 {
-    std::lock_guard lock(clients_mutex);
-    auto const it = std::ranges::find_if(clients, [&](std::shared_ptr<IpcClient> const& other)
+    std::shared_ptr<IpcClient> removed;
+
     {
-        return other->client_fd.operator int() == client.client_fd.operator int();
-    });
-    if (it != clients.end())
-    {
-        disconnect_internal(it->get());
+        std::lock_guard lock(clients_mutex);
+        auto const it = std::ranges::find_if(clients, [&](std::shared_ptr<IpcClient> const& other)
+        {
+            return other->client_fd.operator int() == client.client_fd.operator int();
+        });
+        if (it == clients.end())
+        {
+            mir::log_error("Unable to disconnect client");
+            return;
+        }
+
+        // [clients] holds the only reference to the client, so we keep it alive until this
+        // call returns: our callers still refer to it after we have erased it.
+        removed = *it;
         clients.erase(it);
     }
-    else
-    {
-        mir::log_error("Unable to disconnect client");
-    }
+
+    // Called with the lock released: it blocks until the client's fd handler is idle.
+    disconnect_internal(removed.get());
 }
 
 void IpcConnectionManager::disconnect_internal(IpcClient* client)
@@ -570,11 +585,19 @@ void IpcConnectionManager::handle_command(IpcClient& client, uint32_t payload_le
     buf[payload_length] = '\0';
     auto const result = ipc_message_handler->handle_msg(payload_type, buf, payload_length);
     if (result.fatal)
+    {
         disconnect(client);
-    else
-        send_reply(client, result.type, result.payload);
+        free(buf);
+        return;
+    }
+
+    send_reply(client, result.type, result.payload);
 
     client.subscribed_events |= result.subscribed_events;
+    client.subscribed_plugin_namespaces.insert(
+        client.subscribed_plugin_namespaces.end(),
+        result.subscribed_plugin_namespaces.begin(),
+        result.subscribed_plugin_namespaces.end());
     if (result.subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_TICK))
     {
         json const response = {
@@ -584,9 +607,17 @@ void IpcConnectionManager::handle_command(IpcClient& client, uint32_t payload_le
         send_reply(client, IpcType::IPC_EVENT_TICK, to_string(response));
     }
 
+    if (result.subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_CONFIG_ERRORS))
+    {
+        // A freshly-subscribed client immediately receives all errors from the most
+        // recent configuration load.
+        auto const serialized_errors = to_string(config_errors_to_json(config->get_config_errors()));
+        send_reply(client, IpcType::IPC_EVENT_CONFIG_ERRORS, serialized_errors);
+    }
+
     if (result.send_tick_event)
     {
-        for (auto& other_client : clients)
+        for (auto const& other_client : snapshot_clients())
         {
             if ((other_client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_TICK)) == 0)
             {
@@ -662,10 +693,15 @@ ssize_t write_nosigpipe(int fd, void* buf, size_t len)
 
     result = write(fd, buf, len);
 
+    // Draining SIGPIPE below overwrites errno (sigtimedwait sets EAGAIN when it times out),
+    // so preserve the write's own errno for the caller.
+    int const write_errno = errno;
+
     while (sigtimedwait(&newset, &si, &ts) >= 0 || errno != EAGAIN)
         ;
     pthread_sigmask(SIG_SETMASK, &oldset, 0);
 
+    errno = write_errno;
     return result;
 }
 }

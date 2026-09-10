@@ -43,22 +43,37 @@ namespace miracle
 struct OutputConfigDetails
 {
     std::string name;
+    int id = 0;
     mir::graphics::DisplayConfigurationCardId card_id;
-    mir::geometry::Size size;
+    mir::geometry::Size physical_size_mm;
     mir::geometry::Point position;
-    double scale;
-    MirOrientation orientation;
+    double scale = 1.0;
+    MirOrientation orientation = mir_orientation_normal;
     mir::graphics::DisplayConfigurationLogicalGroupId group_id;
     std::vector<mir::graphics::DisplayConfigurationMode> modes;
     std::optional<size_t> current_mode_index;
-    bool used;
-    MirPowerMode power_mode;
-    MirPixelFormat current_format;
-    bool is_primary;
+    /// Whether a display is physically attached to this output. A disconnected output is gone,
+    /// while an output that is connected but not [used] is simply switched off.
+    bool connected = false;
+    bool used = false;
+    MirPowerMode power_mode = mir_power_mode_off;
+    MirPixelFormat current_format = mir_pixel_format_invalid;
+    bool is_primary = false;
     mir::graphics::DisplayInfo display_info;
 };
 
 typedef std::vector<OutputConfigDetails> OutputConfigDetailList;
+
+/// Implemented by anyone who needs to know about the display configuration that is
+/// actually in effect, including the outputs that are switched off. Note that
+/// [miral::Output] only ever describes outputs that are enabled, so anything that
+/// cares about disabled outputs must listen here instead.
+class DisplayConfigListener
+{
+public:
+    virtual ~DisplayConfigListener() = default;
+    virtual void display_configuration_changed(OutputConfigDetailList const& configuration) = 0;
+};
 
 class DisplayConfig
 {
@@ -71,7 +86,7 @@ public:
         std::optional<mir::geometry::Point> position;
         std::optional<mir::geometry::Size> size;
         std::optional<double> refresh;
-        MirOrientation orientation;
+        MirOrientation orientation = mir_orientation_normal;
         float scale = 1.f;
         mir::graphics::DisplayConfigurationLogicalGroupId group_id;
     };
@@ -86,11 +101,16 @@ public:
     void update(OutputConfig const& card);
     std::vector<OutputConfig> get_configs();
     [[nodiscard]] OutputConfigDetailList configuration() const;
+    /// Registers a listener that is notified whenever the display configuration changes.
+    /// The listener is dropped as soon as it expires.
+    void register_listener(std::weak_ptr<DisplayConfigListener> const& listener);
     void operator()(mir::Server& server);
 
 private:
     class Self;
+    class ConfigObserver;
     std::shared_ptr<Self> self;
+    std::shared_ptr<ConfigObserver> observer;
     std::shared_ptr<mir::MainLoop> main_loop;
     mir::Fd inotify_fd;
     int file_watch = 0;

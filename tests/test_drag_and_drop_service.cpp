@@ -225,3 +225,66 @@ TEST_F(DragAndDropServiceTest, CanDragToOtherContainer)
         mir_input_event_modifier_none,
         0);
 }
+
+TEST_F(DragAndDropServiceTest, DragToEmptyWorkspaceDetachesFromOldWorkspace)
+{
+    test::MockOutput* mock_output = new test::MockOutput();
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
+    ON_CALL(*mock_output, get_workspaces())
+        .WillByDefault(::testing::Return(workspaces));
+    EXPECT_CALL(*output_factory, create(::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(testing::Return(std::shared_ptr<AbstractOutput>(mock_output)));
+    output_manager->create("Output1", 1, {
+                                             { 0,    0    },
+                                             { 1920, 1080 }
+    },
+        *workspace_manager);
+
+    auto container_drag = std::make_shared<::testing::NiceMock<test::MockContainer>>();
+    state->add(container_drag);
+    state->focus_container(container_drag);
+    ON_CALL(*mock_output, intersect(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(container_drag));
+
+    ON_CALL(*container_drag, drag_start())
+        .WillByDefault(::testing::Return(true));
+
+    service.handle_pointer_event(
+        *state,
+        100,
+        100,
+        mir_pointer_action_button_down,
+        mir_input_event_modifier_meta,
+        mir_pointer_button_primary);
+
+    std::shared_ptr<test::MockWorkspace> old_workspace = std::make_shared<test::MockWorkspace>();
+    std::shared_ptr<test::MockWorkspace> empty_workspace = std::make_shared<test::MockWorkspace>();
+    ON_CALL(*mock_output, active())
+        .WillByDefault(::testing::Return(empty_workspace));
+    ON_CALL(*empty_workspace, is_empty())
+        .WillByDefault(::testing::Return(true));
+    ON_CALL(*container_drag, get_workspace())
+        .WillByDefault(::testing::Return(old_workspace));
+
+    // The container must be removed from the workspace that it came from before it is
+    // added to the empty workspace, otherwise it remains in the old workspace's tree.
+    // Note: the matchers capture a raw pointer on purpose. Holding a shared_ptr to the
+    // dragged container inside an expectation would create a reference cycle with the
+    // container's own get_workspace() action and leak the mock.
+    auto const is_dragged = [expected = container_drag.get()](std::shared_ptr<Container> const& c)
+    {
+        return c.get() == expected;
+    };
+
+    ::testing::InSequence seq;
+    EXPECT_CALL(*old_workspace, delete_container(::testing::Truly(is_dragged)));
+    EXPECT_CALL(*empty_workspace, graft(::testing::Truly(is_dragged)));
+
+    service.handle_pointer_event(
+        *state,
+        500,
+        500,
+        mir_pointer_action_button_down,
+        mir_input_event_modifier_none,
+        0);
+}

@@ -115,6 +115,15 @@ public:
     virtual bool quit() = 0;
     virtual bool try_toggle_fullscreen(std::vector<ContainerScope> const& scope) = 0;
     virtual bool select_workspace(int number, bool allow_back_and_forth) = 0;
+    /// Focus the workspace with the given \p id, wherever it lives.
+    ///
+    /// Named apart from the other overloads so that a [uint32_t] id cannot be
+    /// mistaken for a workspace number. Permitted while the overview is up,
+    /// because that is where a workspace gets picked by hand.
+    ///
+    /// \param animate whether the switch should slide; false when the caller has
+    ///                already brought the workspace on screen itself.
+    virtual bool select_workspace_by_id(uint32_t id, bool animate = true) = 0;
     virtual bool select_workspace(std::string const& name, bool allow_back_and_forth) = 0;
     virtual bool select_workspace_with_scope(std::vector<ContainerScope> const& scope) = 0;
     virtual bool next_workspace() = 0;
@@ -166,6 +175,16 @@ public:
     virtual std::unordered_set<std::string> get_all_marks() const = 0;
     virtual bool rename_selected_workspace(WorkspaceIdentifier const& new_identifier) = 0;
     virtual bool rename_existing_workspace(WorkspaceIdentifier const& existing_identifier, WorkspaceIdentifier const& new_identifier) = 0;
+
+    /// Sets the policy that new windows opened on a workspace are placed with.
+    ///
+    /// \param identifier the workspace to change, or nullopt for the focused workspace
+    /// \param policy the placement policy to apply
+    /// \returns true if a matching workspace was found, otherwise false
+    virtual bool set_workspace_placement_policy(
+        std::optional<WorkspaceIdentifier> const& identifier,
+        WindowPlacementPolicy policy)
+        = 0;
     virtual bool set_inner_gaps(uint32_t px, GapsChangeType type, bool current_workspace_only) = 0;
     virtual bool set_outer_gaps(uint32_t px, OuterGapsChange outer_gaps_change, GapsChangeType, bool current_workspace_only) = 0;
     virtual bool try_move_workspace_to_output(OutputSelection selection) = 0;
@@ -175,6 +194,15 @@ public:
     [[nodiscard]] virtual nlohmann::json workspaces_json() const = 0;
     [[nodiscard]] virtual nlohmann::json workspace_to_json(uint32_t) const = 0;
     [[nodiscard]] virtual nlohmann::json mode_to_json() const = 0;
+
+    /// Builds the JSON consumed by the debug overlay client: the cursor
+    /// position, the id of the window under the cursor, and a flat list of every
+    /// window (with geometry, clip area, visibility, ...) across all outputs.
+    [[nodiscard]] virtual nlohmann::json debug_state_to_json() const = 0;
+
+    /// The effective key binding set, for GET_KEYBINDS. See
+    /// [Config::describe_key_bindings] for the ordering contract.
+    [[nodiscard]] virtual nlohmann::json key_bindings_json() const = 0;
 };
 
 class CommandControllerInterface

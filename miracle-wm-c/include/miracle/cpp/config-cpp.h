@@ -185,6 +185,26 @@ struct MIRACLE_WM_CONFIG_API PluginConfiguration
 // Forward declaration so ConfigData::merge_with_plugin_config can reference PluginConfigData.
 struct PluginConfigData;
 
+/// Configuration for the helper clients that ship with miracle-wm. These are
+/// internal clients that the compositor launches on the user's behalf (e.g. the
+/// error reporter). This struct is also where future internal clients (decorations,
+/// top bars, etc.) will be configured.
+struct MIRACLE_WM_CONFIG_API WmClientsConfig
+{
+    /// Selects the client used to display configuration errors. Accepts:
+    ///   "default"  - use the bundled miracle-wm-basic-error-reporter
+    ///   "disabled" - do not launch any error reporter
+    ///   <string>   - path or name of an executable to launch instead
+    std::string error_reporter = "default";
+
+    /// Selects the client used to draw the debug overlay (toggled with
+    /// `miraclemsg debug`). Accepts:
+    ///   "default"  - use the bundled miracle-wm-debug-overlay
+    ///   "disabled" - never launch a debug overlay
+    ///   <string>   - path or name of an executable to launch instead
+    std::string debug_overlay = "default";
+};
+
 struct MIRACLE_WM_CONFIG_API ConfigData
 {
     ConfigData();
@@ -216,7 +236,11 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     miracle::WithDefaultFlag<TouchpadConfiguration> touchpad;
     miracle::WithDefaultFlag<MagnifierConfiguration> magnifier;
     miracle::WithDefaultFlag<bool> workspace_back_and_forth = true;
+
+    /// The color that the compositor clears the screen to. Always fully opaque.
+    miracle::WithDefaultFlag<glm::vec3> background_color = glm::vec3(46.f / 255.f, 52.f / 255.f, 54.f / 255.f);
     miracle::WithDefaultFlag<std::vector<PluginConfiguration>> plugins;
+    miracle::WithDefaultFlag<WmClientsConfig> wm_clients;
 
     /// Other configuration files to include in addition to this one.
     miracle::WithDefaultFlag<std::vector<std::string>> includes;
@@ -260,6 +284,7 @@ struct MIRACLE_WM_CONFIG_API PluginConfigData
     miracle::WithDefaultFlag<TouchpadConfiguration> touchpad;
     miracle::WithDefaultFlag<MagnifierConfiguration> magnifier;
     miracle::WithDefaultFlag<bool> workspace_back_and_forth;
+    miracle::WithDefaultFlag<glm::vec3> background_color;
 };
 
 enum class ErrorLevel

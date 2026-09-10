@@ -18,6 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_WINDOW_HELPERS_H
 #define MIRACLEWM_WINDOW_HELPERS_H
 
+#include "mir_version_manager.h"
+
 #include <miral/window_info.h>
 #include <miral/window_specification.h>
 
@@ -26,6 +28,18 @@ namespace miracle
 namespace window_helpers
 {
     miral::WindowSpecification copy_from(miral::WindowInfo const&);
+
+    /// Unset (clear) a miral WindowSpecification optional field, supporting both the
+    /// modern std::optional API (Mir >= 2.29) and the legacy mir::optional_value API.
+    template <typename Optional>
+    inline void reset_optional(Optional& optional)
+    {
+#ifdef MIR_VERSION_2_29_OR_GREATER
+        optional.reset();
+#else
+        optional.consume();
+#endif
+    }
 }
 }
 

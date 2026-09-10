@@ -1,0 +1,132 @@
+/**
+Copyright (C) 2025  Matthew Kosarek
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+**/
+
+#ifndef CAROUSEL_LAYOUT_H
+#define CAROUSEL_LAYOUT_H
+
+#include <mir/geometry/rectangle.h>
+#include <vector>
+
+namespace miracle::carousel_layout
+{
+
+/// Where a single window sits in the carousel.
+///
+/// Floating point because the carousel position is continuous while it
+/// animates from one slot to the next.
+struct Placement
+{
+    /// Top-left corner, in logical screen coordinates.
+    float x = 0.f;
+    float y = 0.f;
+    float width = 0.f;
+    float height = 0.f;
+    /// Multiplied into the window's alpha, so windows away from the center
+    /// read as dimmer than the one that is up front.
+    float opacity = 1.f;
+};
+
+/// Linearly interpolates every field of \p from towards \p to by \p p.
+Placement lerp(Placement const& from, Placement const& to, float p);
+
+/// True when (\p x, \p y) falls inside \p placement.
+bool contains(Placement const& placement, float x, float y);
+
+/// Maps \p rect out of \p source and into \p tile, preserving relative position
+/// and aspect, and inheriting \p tile's opacity.
+///
+/// This is what turns a window's real screen rectangle into its place inside a
+/// scaled-down picture of the workspace it lives on: \p source is the area that
+/// the tile is a picture of (an output), and \p tile is where that picture has
+/// been laid out.
+Placement fit(
+    mir::geometry::Rectangle const& source,
+    Placement const& tile,
+    mir::geometry::Rectangle const& rect);
+
+struct Options
+{
+    /// Width of the center slot's box, as a fraction of the bounds.
+    ///
+    /// This is a ceiling on the drawn size rather than a slot the strip is
+    /// spaced by: windows are packed against their neighbours' real edges, so
+    /// widening the center slot makes the front window bigger without pushing
+    /// the ones beside it any further out. Past 1.0 the center window starts
+    /// hanging off the edges of the bounds itself.
+    float center_width_fraction = 0.82f;
+    /// Height of the center slot's box, as a fraction of the bounds.
+    float center_height_fraction = 0.82f;
+    /// Every step away from the center multiplies the slot box by this.
+    float side_scale = 0.65f;
+    /// Opacity of a window a full step (or more) away from the center.
+    float dim = 0.75f;
+    /// Horizontal gap between the facing edges of neighbouring windows.
+    float gap = 16.f;
+    /// Multiplier on the edge-to-edge distance between neighbours. One packs
+    /// them exactly \p gap apart; below one they overlap, and the renderer has
+    /// to paint the strip outside-in for the center window to land on top.
+    float spacing = 1.f;
+    /// A window is never drawn larger than this fraction of its real size.
+    float max_scale = 1.f;
+};
+
+/// The strip of workspace tiles that the overview's second level uses.
+///
+/// A tile is a picture of a whole output rather than of a single window, so the
+/// center slot is wide enough to hold one comfortably and the neighbours are
+/// meant to be cut off by the edges of the screen rather than shrunk away to
+/// nothing: they are barely scaled down, and they advertise that there is more
+/// of the desktop off to either side.
+inline constexpr Options workspace_options {
+    .center_width_fraction = 0.62f,
+    .center_height_fraction = 0.62f,
+    .side_scale = 0.85f,
+    .dim = 0.55f,
+    .gap = 24.f,
+    .spacing = 1.f,
+    .max_scale = 1.f
+};
+
+/// Lays \p windows out on a horizontal carousel inside \p bounds, with the
+/// window at the (possibly fractional) index \p position front and center.
+///
+/// The strip has ends rather than wrapping: the windows before \p position run
+/// off to the left and the ones after it run off to the right, and there is
+/// nothing beyond either end.
+///
+/// Every window is scaled uniformly so its aspect ratio is preserved, fitted
+/// into its slot's box, and never blown up past \p Options::max_scale. The
+/// strip is then packed from those fitted sizes, each window sitting exactly
+/// \p Options::gap from the edge of the one beside it, so no two placements
+/// overlap at any \p position as long as \p Options::spacing is at least one.
+///
+/// Windows several steps from the center land entirely outside \p bounds and
+/// are left there for the renderer to cull; callers do not need to trim the
+/// result.
+///
+/// Deterministic: the same input always yields the same output.
+///
+/// \returns one placement per input window, in input order.
+std::vector<Placement> compute(
+    mir::geometry::Rectangle const& bounds,
+    std::vector<mir::geometry::Rectangle> const& windows,
+    float position,
+    Options const& options = {});
+
+}
+
+#endif

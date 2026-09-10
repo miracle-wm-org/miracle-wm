@@ -28,7 +28,7 @@ class IpcCommandExecutorTest : public Test
 {
 public:
     IpcCommandExecutorTest() :
-        executor(controller, launcher)
+        executor(controller, launcher, nullptr)
     {
     }
 
@@ -1502,6 +1502,130 @@ TEST_F(IpcCommandExecutorTest, WorkspaceNumberName)
     auto const validation_result = executor.process(parse_result);
     EXPECT_THAT(validation_result.size(), Eq(1));
     EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+namespace
+{
+/// Matches the workspace that a 'workspace ... policy' command is targeting.
+auto workspace_is(std::optional<int> number, std::optional<std::string> name)
+{
+    return testing::Truly([number, name](std::optional<WorkspaceIdentifier> const& identifier)
+    {
+        return identifier.has_value()
+            && identifier->number == number
+            && identifier->name == name;
+    });
+}
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspacePolicyOnFocusedWorkspace)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "policy", "float" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, set_workspace_placement_policy(Eq(std::nullopt), WindowPlacementPolicy::floating))
+        .WillOnce(Return(true));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspacePolicyTileOnFocusedWorkspace)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "policy", "tile" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, set_workspace_placement_policy(Eq(std::nullopt), WindowPlacementPolicy::tile))
+        .WillOnce(Return(true));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspacePolicyFailsWithoutValue)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "policy" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'workspace policy' expected 'float|tile'"));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspacePolicyFailsWithInvalidValue)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "policy", "meow" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'workspace policy' expected 'float|tile'"));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspacePolicyByNumber)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "2", "policy", "float" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, set_workspace_placement_policy(workspace_is(2, std::nullopt), WindowPlacementPolicy::floating))
+        .WillOnce(Return(true));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspacePolicyByName)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "meow", "policy", "tile" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, set_workspace_placement_policy(workspace_is(std::nullopt, "meow"), WindowPlacementPolicy::tile))
+        .WillOnce(Return(true));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspacePolicyByNumberAndName)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "2: meow", "policy", "float" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, set_workspace_placement_policy(workspace_is(2, "meow"), WindowPlacementPolicy::floating))
+        .WillOnce(Return(true));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspacePolicyByNumberFailsWhenWorkspaceIsMissing)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "2", "policy", "float" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, set_workspace_placement_policy)
+        .WillOnce(Return(false));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(false));
+    EXPECT_THAT(validation_result[0].error, Eq("'workspace <num/name> policy' could not find the requested workspace"));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspacePolicyByNumberFailsWithoutValue)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "2", "policy" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'workspace <num/name> policy' expected 'float|tile'"));
 }
 
 TEST_F(IpcCommandExecutorTest, WorkspaceName)

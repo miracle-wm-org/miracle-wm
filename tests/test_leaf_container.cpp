@@ -33,8 +33,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_workspace.h"
 #include "stub_configuration.h"
 #include "gmock/gmock.h"
+#include <glm/gtc/matrix_transform.hpp>
 #include <gtest/gtest.h>
 #include <memory>
+#include <vector>
 
 using namespace miracle;
 
@@ -146,8 +148,13 @@ TEST_F(LeafContainerTest, SetsAndGetsTreeCorrectly)
 
     leaf_container->set_workspace(new_workspace);
     ASSERT_EQ(leaf_container->get_workspace(), new_workspace);
-    EXPECT_THAT(state->render_data_manager()->get()[0].output_area, testing::Eq(parent_area));
-    EXPECT_THAT(state->render_data_manager()->get()[0].workspace_transform, testing::Eq(glm::mat4(2.f)));
+
+    uint64_t seen_generation = 0;
+    std::vector<RenderData> render_data;
+    state->render_data_manager()->copy_if_changed(seen_generation, render_data);
+    ASSERT_EQ(render_data.size(), 1);
+    EXPECT_THAT(render_data[0].output_area, testing::Eq(parent_area));
+    EXPECT_THAT(render_data[0].workspace_transform, testing::Eq(glm::mat4(2.f)));
 }
 
 TEST_F(LeafContainerTest, CorrectlyReportsIfFocused)
@@ -167,7 +174,7 @@ TEST_F(LeafContainerTest, IfModifyingWindowToFullScreenThenNoclipIsCalled)
     miral::WindowSpecification spec;
     spec.state() = mir_window_state_fullscreen;
     EXPECT_CALL(*window_controller, noclip(testing::_));
-    leaf_container->handle_modify(spec);
+    leaf_container->handle_modify(spec, false);
 }
 
 TEST_F(LeafContainerTest, IfModifyingWindowToRestoredThenClipIsCalled)
@@ -175,14 +182,14 @@ TEST_F(LeafContainerTest, IfModifyingWindowToRestoredThenClipIsCalled)
     miral::WindowSpecification spec;
     spec.state() = mir_window_state_restored;
     EXPECT_CALL(*window_controller, clip(testing::_, testing::_));
-    leaf_container->handle_modify(spec);
+    leaf_container->handle_modify(spec, false);
 }
 
 namespace
 {
 bool has_restored_state(miral::WindowSpecification const& spec)
 {
-    return spec.state().is_set() && spec.state().value() == mir_window_state_restored;
+    return spec.state() && spec.state().value() == mir_window_state_restored;
 }
 }
 
@@ -200,13 +207,39 @@ TEST_P(LeafContainerMaximizedTest, CannotMaximizeWindowInHandleModify)
     spec.state() = state;
 
     EXPECT_CALL(*window_controller, modify(window, testing::Truly(has_restored_state)));
-    leaf_container->handle_modify(spec);
+    leaf_container->handle_modify(spec, false);
 }
 
 INSTANTIATE_TEST_SUITE_P(
     LeafContainerMaximizedTest,
     LeafContainerMaximizedTest,
     ::testing::Values(mir_window_state_maximized, mir_window_state_vertmaximized, mir_window_state_horizmaximized, mir_window_state_minimized, mir_window_state_hidden));
+
+TEST_F(LeafContainerTest, HandleModifyWhileHiddenDefersStateUntilShown)
+{
+    miral::WindowSpecification spec;
+    spec.state() = mir_window_state_fullscreen;
+
+    // While the workspace is hidden, no live state change (hence no clip/noclip) happens now.
+    EXPECT_CALL(*window_controller, change_state(testing::_, testing::_)).Times(0);
+    EXPECT_CALL(*window_controller, noclip(testing::_)).Times(0);
+    leaf_container->handle_modify(spec, true);
+
+    // The deferred state is applied via the restore mechanism when the container is shown.
+    EXPECT_CALL(*window_controller, show(window, testing::Field(&RestoreResult::state, mir_window_state_fullscreen))).Times(1);
+    leaf_container->show();
+}
+
+TEST_F(LeafContainerTest, HandleModifyWhileHiddenSanitizesMaximizeToRestored)
+{
+    miral::WindowSpecification spec;
+    spec.state() = mir_window_state_maximized;
+    leaf_container->handle_modify(spec, true);
+
+    // Only fullscreen is honoured for tiled windows; a maximize request defers as restored.
+    EXPECT_CALL(*window_controller, show(window, testing::Field(&RestoreResult::state, mir_window_state_restored))).Times(1);
+    leaf_container->show();
+}
 
 TEST_F(LeafContainerTest, ShowingContainerCausesRaise)
 {
@@ -517,7 +550,7 @@ TEST_F(LeafContainerTest, HandleModifyChangeStateToFullscreenTriggersObserver)
 
     miral::WindowSpecification spec;
     spec.state() = mir_window_state_fullscreen;
-    leaf_container->handle_modify(spec);
+    leaf_container->handle_modify(spec, false);
 }
 
 TEST_F(LeafContainerTest, SetStateToFullscreenTriggersObserver)
@@ -856,4 +889,111 @@ TEST_F(LeafContainerTest, CommitChangesCallsSetRectangleWhenNotDragging)
         .Times(1);
 
     leaf_container->commit_changes();
+}
+
+// ---- urgency ----
+
+TEST_F(LeafContainerTest, UrgencyIsFalseByDefault)
+{
+    EXPECT_FALSE(leaf_container->urgent());
+}
+
+TEST_F(LeafContainerTest, SetUrgentOnlyReportsAChangeWhenTheValueActuallyChanges)
+{
+    EXPECT_TRUE(leaf_container->set_urgent(true));
+    EXPECT_TRUE(leaf_container->urgent());
+
+    // Setting the same value again is not a change, so observers must not be told.
+    EXPECT_FALSE(leaf_container->set_urgent(true));
+    EXPECT_TRUE(leaf_container->urgent());
+
+    EXPECT_TRUE(leaf_container->set_urgent(false));
+    EXPECT_FALSE(leaf_container->urgent());
+
+    EXPECT_FALSE(leaf_container->set_urgent(false));
+    EXPECT_FALSE(leaf_container->urgent());
+}
+
+TEST_F(LeafContainerTest, ToJsonReportsUrgency)
+{
+    EXPECT_FALSE(leaf_container->to_json(true)["urgent"]);
+
+    leaf_container->set_urgent(true);
+    EXPECT_TRUE(leaf_container->to_json(true)["urgent"]);
+}
+
+// ---- occlusion bypass ----
+
+TEST_F(LeafContainerTest, OcclusionBypassPutsANonIdentityTransformOnTheSurface)
+{
+    // Mir culls a fully covered surface before the renderer sees it, unless its
+    // transformation is something other than the identity.
+    glm::mat4 last(1.f);
+    EXPECT_CALL(*surface, set_transformation(testing::_))
+        .WillRepeatedly(testing::SaveArg<0>(&last));
+
+    EXPECT_FALSE(leaf_container->occlusion_bypass());
+    leaf_container->set_occlusion_bypass(true);
+
+    EXPECT_TRUE(leaf_container->occlusion_bypass());
+    EXPECT_NE(last, glm::mat4(1.f));
+}
+
+TEST_F(LeafContainerTest, OcclusionBypassSurvivesALaterEffectChange)
+{
+    // Every effect setter recomposes the surface's transform from scratch, so a
+    // bypass written straight to the surface would be wiped out by the next one.
+    auto const workspace_transform = glm::translate(glm::mat4(1.f), glm::vec3(100.f, 0.f, 0.f));
+    glm::mat4 last(1.f);
+    EXPECT_CALL(*surface, set_transformation(testing::_))
+        .WillRepeatedly(testing::SaveArg<0>(&last));
+
+    leaf_container->set_occlusion_bypass(true);
+    leaf_container->set_workspace_transform(workspace_transform);
+
+    EXPECT_EQ(last, workspace_transform * WindowContainer::occlusion_bypass_transform());
+    EXPECT_NE(last, glm::mat4(1.f));
+}
+
+TEST_F(LeafContainerTest, ClearingTheOcclusionBypassRestoresTheComposedTransform)
+{
+    auto const workspace_transform = glm::translate(glm::mat4(1.f), glm::vec3(100.f, 0.f, 0.f));
+    glm::mat4 last(1.f);
+    EXPECT_CALL(*surface, set_transformation(testing::_))
+        .WillRepeatedly(testing::SaveArg<0>(&last));
+
+    leaf_container->set_occlusion_bypass(true);
+    leaf_container->set_workspace_transform(workspace_transform);
+    leaf_container->set_occlusion_bypass(false);
+
+    EXPECT_FALSE(leaf_container->occlusion_bypass());
+    EXPECT_EQ(last, workspace_transform);
+}
+
+TEST_F(LeafContainerTest, TheOcclusionBypassTransformIsVisuallyInert)
+{
+    // Every vertex miracle tessellates has z == 0, so a scale in z moves nothing.
+    // This is the whole reason the bypass is free, and it must survive being
+    // composed with whatever the effects happen to be.
+    auto const bypass = WindowContainer::occlusion_bypass_transform();
+    ASSERT_NE(bypass, glm::mat4(1.f));
+
+    std::vector<glm::mat4> const matrices {
+        glm::mat4(1.f),
+        glm::translate(glm::mat4(1.f), glm::vec3(-320.f, 47.f, 0.f)),
+        glm::scale(glm::mat4(1.f), glm::vec3(0.4f, 0.4f, 1.f))
+    };
+
+    std::vector<glm::vec4> const corners {
+        { 0.f,   0.f,   0.f, 1.f },
+        { 400.f, 0.f,   0.f, 1.f },
+        { 0.f,   300.f, 0.f, 1.f },
+        { 400.f, 300.f, 0.f, 1.f }
+    };
+
+    for (auto const& matrix : matrices)
+    {
+        for (auto const& corner : corners)
+            EXPECT_EQ(matrix * bypass * corner, matrix * corner);
+    }
 }

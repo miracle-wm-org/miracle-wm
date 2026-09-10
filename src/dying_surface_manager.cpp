@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "forwarding_surface.h"
+#include "output_manager.h"
 #include "plugin_bridge.h"
 #include "window_controller.h"
 #include <mir/shell/surface_stack.h>
@@ -32,13 +33,15 @@ DyingSurfaceManager::DyingSurfaceManager(
     std::shared_ptr<Config> const& config,
     std::shared_ptr<Animator> const& animator,
     std::shared_ptr<PluginManager> const& plugin_manager,
-    std::shared_ptr<WindowController> const& window_controller) :
+    std::shared_ptr<WindowController> const& window_controller,
+    std::shared_ptr<OutputManager> const& output_manager) :
     surface_stack(surface_stack),
     compositor_state(compositor_state),
     config(config),
     animator(animator),
     plugin_manager(plugin_manager),
-    window_controller(window_controller)
+    window_controller(window_controller),
+    output_manager(output_manager)
 {
 }
 
@@ -57,14 +60,22 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
     if (!win)
         return;
 
-    auto const output_area = container->get_output()->get_area();
+    // A pinned floating window has no workspace, so get_output() is null. Fall
+    // back to the focused output for the cull area.
+    auto output = container->get_output();
+    if (!output)
+        output = output_manager->focused();
+    if (!output)
+        return;
+
+    auto const output_area = output->get_area();
     auto surface = win->operator std::shared_ptr<mir::scene::Surface>();
     auto animating_surface = std::make_shared<ForwardingSurface>(surface);
     auto const handle = animator->register_animateable();
     auto const transform = container->get_window_transform() * container->get_animation_transform();
     auto const alpha = container->get_alpha();
     auto const id = compositor_state->render_data_manager()->add(
-        { .surface = animating_surface.get(),
+        { .window = miral::Window(win->application(), animating_surface),
             .needs_outline = container->needs_outline(),
             .is_focused = false,
             .transform = transform,
@@ -88,7 +99,7 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
         handle,
         config->get_animation_definition(AnimateableEvent::window_close),
         std::move(anim_data),
-        [compositor_state = compositor_state, surface_stack = surface_stack, animating_surface, id = id, alpha = alpha, transform = transform](AnimationFrameResult const& result)
+        [compositor_state = compositor_state, surface_stack = surface_stack, window_controller = window_controller, animating_surface, id = id, alpha = alpha, transform = transform](AnimationFrameResult const& result)
     {
         if (result.transform)
         {
@@ -111,8 +122,17 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
 
         if (result.is_complete)
         {
-            compositor_state->render_data_manager()->remove(id);
-            surface_stack->remove_surface(animating_surface);
+            // remove_surface blocks in Surface::unregister_interest until in-flight
+            // observer callbacks drain, while holding the scene write lock. Calling it
+            // from the animator thread can deadlock against the WM thread (which takes
+            // the same locks in the opposite order via depth-layer changes), so it must
+            // be serialized under the window-management lock like every other shell
+            // scene operation.
+            window_controller->invoke_under_lock([compositor_state, surface_stack, animating_surface, id]
+            {
+                compositor_state->render_data_manager()->remove(id);
+                surface_stack->remove_surface(animating_surface);
+            });
         }
     }, plugin_manager));
 }

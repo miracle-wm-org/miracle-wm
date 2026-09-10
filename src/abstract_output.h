@@ -74,7 +74,13 @@ public:
     virtual void delete_container(std::shared_ptr<Container> const& container) = 0;
     virtual void advise_new_workspace(WorkspaceCreationData const&&) = 0;
     virtual void advise_workspace_deleted(WorkspaceManager& workspace_manager, uint32_t id) = 0;
-    virtual bool advise_workspace_active(WorkspaceManager& workspace_manager, uint32_t id) = 0;
+    /// Make the workspace with the given \p id the active one on this output.
+    ///
+    /// \param animate whether to slide the outgoing and incoming workspaces
+    ///                across. An effect that has already brought the incoming
+    ///                workspace on screen itself passes false, so that the
+    ///                switch only adopts what is already there.
+    virtual bool advise_workspace_active(WorkspaceManager& workspace_manager, uint32_t id, bool animate = true) = 0;
     virtual void advise_application_zone_create(miral::Zone const& application_zone) = 0;
     virtual void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original) = 0;
     virtual void advise_application_zone_delete(miral::Zone const& application_zone) = 0;

@@ -36,6 +36,7 @@ class WindowController;
 class Config;
 class Animator;
 class PluginManager;
+class OutputManager;
 
 /// When a [Container] is removed, we notify this service which
 /// manages any visual interaction on the container as it closes.
@@ -49,7 +50,8 @@ public:
         std::shared_ptr<Config> const& config,
         std::shared_ptr<Animator> const& animator,
         std::shared_ptr<PluginManager> const& plugin_manager,
-        std::shared_ptr<WindowController> const& window_controller);
+        std::shared_ptr<WindowController> const& window_controller,
+        std::shared_ptr<OutputManager> const& output_manager);
 
     void animate_dying_surface(std::shared_ptr<WindowContainer> const& container);
 
@@ -60,6 +62,7 @@ private:
     std::shared_ptr<Animator> animator;
     std::shared_ptr<PluginManager> plugin_manager;
     std::shared_ptr<WindowController> window_controller;
+    std::shared_ptr<OutputManager> output_manager;
 };
 
 } // miracle

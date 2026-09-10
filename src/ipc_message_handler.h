@@ -30,6 +30,7 @@ namespace miracle
 class AbstractCommandController;
 class Config;
 class WindowController;
+class PluginManager;
 
 /// This it taken directly from sway
 enum class IpcType
@@ -53,6 +54,11 @@ enum class IpcType
     IPC_GET_INPUTS = 100,
     IPC_GET_SEATS = 101,
 
+    // miracle-specific command types
+    IPC_GET_DEBUG_STATE = 200,
+    IPC_PLUGIN_COMMAND = 201,
+    IPC_GET_KEYBINDS = 202,
+
     // Events sent from sway to clients. Events have the highest bits set.
     IPC_EVENT_WORKSPACE = ((1 << 31) | 0),
     IPC_EVENT_OUTPUT = ((1 << 31) | 1),
@@ -66,6 +72,10 @@ enum class IpcType
     // sway-specific event types
     IPC_EVENT_BAR_STATE_UPDATE = ((1 << 31) | 20),
     IPC_EVENT_INPUT = ((1 << 31) | 21),
+
+    // miracle-specific event types
+    IPC_EVENT_CONFIG_ERRORS = ((1 << 31) | 22),
+    IPC_EVENT_PLUGIN = ((1 << 31) | 23),
 };
 
 struct MessageHandlerResult
@@ -75,6 +85,7 @@ struct MessageHandlerResult
     std::string payload = "";
     int subscribed_events = 0;
     bool send_tick_event = false;
+    std::vector<std::string> subscribed_plugin_namespaces;
 };
 
 class IpcMessageHandler
@@ -83,7 +94,8 @@ public:
     IpcMessageHandler(std::shared_ptr<AbstractCommandController> const&,
         std::shared_ptr<AbstractIpcCommandExecutor> const&,
         std::shared_ptr<Config> const&,
-        std::shared_ptr<WindowController> const&);
+        std::shared_ptr<WindowController> const&,
+        std::shared_ptr<PluginManager> const&);
     MessageHandlerResult handle_msg(IpcType payload_type,
         const char* payload,
         uint32_t payload_length);
@@ -93,6 +105,7 @@ private:
     std::shared_ptr<AbstractIpcCommandExecutor> ipc_command_executor;
     std::shared_ptr<Config> config;
     std::shared_ptr<WindowController> window_controller;
+    std::shared_ptr<PluginManager> plugin_manager;
 
     MessageHandlerResult process_msg(IpcType payload_type, const char* payload, uint32_t payload_length);
     std::vector<IpcValidationResult> process_ipc_command(const char* command);

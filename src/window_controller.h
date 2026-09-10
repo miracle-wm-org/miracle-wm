@@ -34,7 +34,6 @@ class WindowContainer;
 struct RestoreResult
 {
     MirWindowState state;
-    geom::Point position;
 };
 
 /**

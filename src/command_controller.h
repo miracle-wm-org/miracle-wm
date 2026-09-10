@@ -83,6 +83,7 @@ public:
     bool quit() override;
     bool try_toggle_fullscreen(std::vector<ContainerScope> const& scope) override;
     bool select_workspace(int number, bool allow_back_and_forth) override;
+    bool select_workspace_by_id(uint32_t id, bool animate) override;
     bool select_workspace(std::string const& name, bool allow_back_and_forth) override;
     bool select_workspace_with_scope(std::vector<ContainerScope> const& scope) override;
     bool next_workspace() override;
@@ -132,6 +133,9 @@ public:
     std::unordered_set<std::string> get_all_marks() const override;
     bool rename_selected_workspace(WorkspaceIdentifier const& new_identifier) override;
     bool rename_existing_workspace(WorkspaceIdentifier const& existing_identifier, WorkspaceIdentifier const& new_identifier) override;
+    bool set_workspace_placement_policy(
+        std::optional<WorkspaceIdentifier> const& identifier,
+        WindowPlacementPolicy policy) override;
     bool set_inner_gaps(uint32_t px, GapsChangeType type, bool current_workspace_only) override;
     bool set_outer_gaps(uint32_t px, OuterGapsChange outer_gaps_change, GapsChangeType, bool current_workspace_only) override;
     bool try_move_workspace_to_output(OutputSelection selection) override;
@@ -141,6 +145,8 @@ public:
     [[nodiscard]] nlohmann::json workspaces_json() const override;
     [[nodiscard]] nlohmann::json workspace_to_json(uint32_t) const override;
     [[nodiscard]] nlohmann::json mode_to_json() const override;
+    [[nodiscard]] nlohmann::json debug_state_to_json() const override;
+    [[nodiscard]] nlohmann::json key_bindings_json() const override;
 
 private:
     std::shared_ptr<Config> config;

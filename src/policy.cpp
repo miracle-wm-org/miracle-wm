@@ -15,15 +15,18 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include "abstract_output.h"
+#include <memory>
 #define MIR_LOG_COMPONENT "miracle"
 
-#include "policy.h"
+#include "abstract_workspace.h"
 #include "animator_loop.h"
 #include "binding_event.h"
 #include "config.h"
 #include "config_observer.h"
 #include "constants.h"
 #include "container_listener.h"
+#include "debug_overlay_controller.h"
 #include "dying_surface_manager.h"
 #include "freestyle_window_container.h"
 #include "internal_shell_application_spawner.h"
@@ -32,10 +35,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_factory.h"
 #include "output_listener.h"
 #include "output_manager.h"
+#include "overview_controller.h"
+#include "overview_scene_override.h"
 #include "parent_container.h"
 #include "plugin_bridge.h"
 #include "plugin_managed_container.h"
 #include "plugin_manager.h"
+#include "policy.h"
 #include "shell_application_manager.h"
 #include "shell_component_container.h"
 #include "window_container.h"
@@ -51,7 +57,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir_toolkit/events/enums.h>
 #include <miral/toolkit_event.h>
 #include <miral/window_specification.h>
+#include <miral/zone.h>
 #include <mutex>
+#include <unordered_map>
 
 using namespace miracle;
 
@@ -73,6 +81,19 @@ public:
 private:
     std::shared_ptr<mir::MainLoop> main_loop;
 };
+
+/// A container may only take focus when it is on the workspace that its own
+/// output is currently displaying. A container with a null workspace (e.g. a
+/// shell component) is always focusable.
+bool can_be_focused(std::shared_ptr<AbstractWorkspace> const& workspace)
+{
+    if (!workspace)
+        return true;
+
+    auto const output = workspace->get_output();
+    return output == nullptr || output->active() == workspace;
+}
+
 }
 
 class Policy::Self : public virtual WorkspaceObserver,
@@ -167,8 +188,6 @@ public:
 
     void on_config_changed(Config const& config) override
     {
-        // Note: We need to grab the lock because this notification comes from
-        // a different thread.
         for (auto const& output : policy.output_manager->outputs())
         {
             for (auto const& workspace : output->get_workspaces())
@@ -229,7 +248,7 @@ Policy::Policy(
     output_listener { output_listener },
     config_observer_registrar { config_observer_registrar },
     animator(std::make_shared<Animator>()),
-    plugin_manager(std::make_shared<PluginManager>()),
+    plugin_manager(load_plugin_manager()),
     window_id_map_(std::make_shared<WindowIdMap>()),
     application_id_map_(std::make_shared<ApplicationIdMap>()),
     window_controller(std::make_shared<WindowManagerToolsWindowController>(
@@ -258,13 +277,15 @@ Policy::Policy(
     drag_and_drop_service(std::make_unique<DragAndDropService>(command_controller, config, output_manager)),
     move_service(std::make_unique<MoveService>(command_controller, config, output_manager)),
     resize_service(std::make_unique<ResizeService>(command_controller, config, state, output_manager)),
-    ipc_command_executor(std::make_shared<IpcCommandExecutor>(command_controller, launcher)),
+    debug_overlay_controller(std::make_shared<DebugOverlayController>(external_client_launcher, config)),
+    ipc_command_executor(std::make_shared<IpcCommandExecutor>(command_controller, launcher, debug_overlay_controller)),
     ipc_connection_manager(std::make_shared<IpcConnectionManager>(
         server.the_main_loop(),
         command_controller,
         ipc_command_executor,
         config,
-        window_controller)),
+        window_controller,
+        plugin_manager)),
     binding_event_listener_ { ipc_connection_manager.get() },
     animator_loop(std::make_unique<ThreadedAnimatorLoop>(animator)),
     main_loop_(server.the_main_loop()),
@@ -274,10 +295,16 @@ Policy::Policy(
         config,
         animator,
         plugin_manager,
-        window_controller)),
-    magnifier(std::make_unique<MagnifierWrapper>(magnifier))
+        window_controller,
+        output_manager)),
+    magnifier(std::make_unique<MagnifierWrapper>(magnifier)),
+    overview_controller(std::make_unique<OverviewController>(state, output_manager, animator, window_controller, config, command_controller))
 {
-    plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_, animator, server.the_main_loop(), sampler_registry));
+    plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_, animator, server.the_main_loop(), sampler_registry,
+        [icm = ipc_connection_manager](std::string const& ns, std::string const& payload)
+    {
+        icm->on_plugin_event(ns, payload);
+    }));
     config->set_plugin_configure_hook([pm = plugin_manager]()
     {
         return pm->configure();
@@ -289,6 +316,7 @@ Policy::Policy(
     config_observer_registrar->register_interest(ipc_connection_manager);
     output_listener->register_listener(ipc_connection_manager);
     config_observer_registrar->register_interest(self);
+    config_observer_registrar->register_interest(debug_overlay_controller);
     animator_loop->start();
 
     server.set_exception_handler([ipc_connection_manager = ipc_connection_manager]
@@ -317,6 +345,15 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
     auto const action = miral::toolkit::mir_keyboard_event_action(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
     auto const keysym = miral::toolkit::mir_keyboard_event_keysym(event);
+
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+    {
+        overview_controller->break_tap();
+        scene_override->handle_keyboard_event(event);
+        return true;
+    }
+
+    overview_controller->handle_keyboard_event(event, modifiers);
 
     if (plugin_manager->handle_keyboard_event(*event))
         return true;
@@ -501,6 +538,16 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
     auto const buttons = mir_pointer_event_buttons(event);
     state->cursor_position = { x, y };
 
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+    {
+        overview_controller->break_tap();
+        scene_override->handle_pointer_event(event);
+        return true;
+    }
+
+    if (action == mir_pointer_action_button_down)
+        overview_controller->break_tap();
+
     // Select the output first
     auto const focused = output_manager->focused();
     for (auto const& output : output_manager->outputs())
@@ -604,8 +651,21 @@ auto Policy::place_new_window(
     }
     else
     {
-        auto const has_exclusive_rect = requested_specification.exclusive_rect().is_set();
-        auto const is_attached = requested_specification.attached_edges().is_set();
+        // We respect the desired output of the window if one is set.
+        std::shared_ptr<AbstractOutput> output;
+        if (new_spec.output_id())
+        {
+            output = output_manager->from(new_spec.output_id().value());
+            if (!output)
+                output = output_manager->focused();
+        }
+        else
+            output = output_manager->focused();
+
+        auto const target_workspace = output->active();
+
+        auto const has_exclusive_rect = requested_specification.exclusive_rect();
+        auto const is_attached = requested_specification.attached_edges();
         if (has_exclusive_rect || is_attached || requested_specification.state() == mir_window_state_attached)
             hint.container_type = AllocationType::shell;
         else
@@ -624,11 +684,31 @@ auto Policy::place_new_window(
                 hint.container_type = AllocationType::grid;
             else
                 hint.container_type = AllocationType::freestyle;
+
+            // The workspace may ask that everything opened on it floats instead of tiling.
+            if (hint.container_type == AllocationType::grid
+                && target_workspace
+                && target_workspace->placement_policy() == WindowPlacementPolicy::floating)
+            {
+                hint.container_type = AllocationType::freestyle;
+
+                // Nothing is going to lay this window out, so centre the size that the client
+                // asked for within the workspace, as we do for child windows.
+                auto const area = target_workspace->area();
+                auto const size = new_spec.size().value_or(geom::Size {});
+                if (size.width.as_int() > 0 && size.height.as_int() > 0)
+                {
+                    new_spec.top_left() = geom::Point {
+                        area.top_left.x.as_int() + (area.size.width.as_int() - size.width.as_int()) / 2,
+                        area.top_left.y.as_int() + (area.size.height.as_int() - size.height.as_int()) / 2
+                    };
+                }
+            }
         }
 
         if (hint.container_type != AllocationType::shell && hint.container_type != AllocationType::freestyle)
         {
-            auto parent = output_manager->focused()->active()->get_layout_container();
+            auto parent = output->active()->get_layout_container();
             std::optional<size_t> index;
 
             // If the plugin placement is tiled, then we're going to try and either:
@@ -658,6 +738,14 @@ auto Policy::place_new_window(
         }
     }
 
+    // If we're placing a shell window, try and set the output to the focused output.
+    // Only do this if the window does not already want to be placed on a specific output.
+    if (hint.container_type == AllocationType::shell && !new_spec.output_id())
+    {
+        if (auto const focused = output_manager->focused())
+            new_spec.output_id() = focused->id();
+    }
+
     pending_allocation = hint;
     return new_spec;
 }
@@ -673,6 +761,12 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     auto const container = command_controller->create_container(window_info, pending_allocation);
     (*window_id_map_)[container->id()] = window_info.window();
     pending_allocation.container_type = AllocationType::none;
+
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+    {
+        if (is_overview_window(container, *window_controller))
+            scene_override->handle_window_added(window_info.window());
+    }
 }
 
 void Policy::advise_new_app(miral::ApplicationInfo& app_info)
@@ -733,21 +827,17 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
     }
 
     auto const workspace = container->get_workspace();
-    // If the container has a null workspace, it is always selectable. Otherwise
-    // it needs to be on the active workspace.
-    if (output_manager->focused() && workspace != nullptr && workspace != output_manager->focused()->active())
-    {
-        // TODO: In this scenario, we may want to navigate to the focused workspace.
-        //  This was removed because it breaks workspace animations.
-        mir::log_warning("Policy::advise_focus_gained: not selecting a container on an inactive workspace");
+
+    if (!can_be_focused(workspace))
         return;
-    }
 
     state->focus_container(container);
     container->on_focus_gained();
     if (workspace)
         workspace->advise_focus_gained(container);
     window_observer_registrar->advise_window_focused(*container);
+    if (container->set_urgent(false))
+        window_observer_registrar->advise_urgency_changed(*container);
 
     // Warning: This must be enqueued because the plugin itself could have
     // triggered the focus, leading to a reentry on the plugin.
@@ -794,6 +884,9 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 
 void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 {
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+        scene_override->handle_window_closed(window_info.window());
+
     auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
@@ -855,6 +948,9 @@ void Policy::advise_resize(miral::WindowInfo const& window_info, geom::Size cons
 
 void Policy::advise_output_create(miral::Output const& output)
 {
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+        scene_override->handle_output_changed();
+
     mir::log_info("Policy::advise_output_create: %s", output.name().c_str());
     output_manager->create(output.name(), output.id(), output.extents(), *workspace_manager);
     output_listener->output_created(output);
@@ -862,12 +958,18 @@ void Policy::advise_output_create(miral::Output const& output)
 
 void Policy::advise_output_update(miral::Output const& updated, miral::Output const& original)
 {
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+        scene_override->handle_output_changed();
+
     output_manager->update(updated.id(), updated.extents());
     output_listener->output_updated(updated, original);
 }
 
 void Policy::advise_output_delete(miral::Output const& output)
 {
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+        scene_override->handle_output_changed();
+
     output_manager->remove(output.id(), *workspace_manager);
     output_listener->output_deleted(output);
 }
@@ -883,31 +985,49 @@ void Policy::handle_modify_window(
         return;
     }
 
-    auto const workspace = container->get_workspace();
-    if (workspace)
+    // A container is "hidden" when it is genuinely not being rendered: either its
+    // workspace is not the active workspace on the workspace's OWN output (note: a
+    // workspace active on a non-focused output is still rendered), or it is a hidden
+    // scratchpad window. When hidden, the container defers any requested state change
+    // until it is shown again; all other modifications are always applied.
+    bool hidden = false;
+    if (auto const workspace = container->get_workspace())
     {
-        auto focused_output = output_manager->focused();
-        if (!focused_output)
-        {
-            mir::log_error("Policy::handle_modify_window: focused_output unavailable");
-            return;
-        }
-
-        if (workspace != focused_output->active())
-            return;
+        auto const output = workspace->get_output();
+        hidden = output && output->active().get() != workspace.get();
     }
     else if (scratchpad_->contains(container) && !scratchpad_->is_showing(container))
-        return;
+    {
+        hidden = true;
+    }
 
-    container->handle_modify(modifications);
+    container->handle_modify(modifications, hidden);
 }
 
+#ifdef MIR_VERSION_2_29_OR_GREATER
+void Policy::handle_activate_window(miral::WindowInfo& window_info)
+#else
 void Policy::handle_raise_window(miral::WindowInfo& window_info)
+#endif
 {
     auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
-        mir::log_error("handle_raise_window: container is not provided");
+        mir::log_error("handle_activate_window: container is not provided");
+        return;
+    }
+
+    // A window that is not on screen must not steal focus. Flag it as urgent
+    // instead so that the bar (and the tree) can advertise that it wants attention.
+    // See handle_modify_window for the definition of "hidden".
+    auto const workspace = container->get_workspace();
+    bool const hidden = workspace
+        ? !can_be_focused(workspace)
+        : scratchpad_->contains(container) && !scratchpad_->is_showing(container);
+    if (hidden)
+    {
+        if (container->set_urgent(true))
+            window_observer_registrar->advise_urgency_changed(*container);
         return;
     }
 
@@ -916,7 +1036,9 @@ void Policy::handle_raise_window(miral::WindowInfo& window_info)
 
 bool Policy::handle_touch_event(const MirTouchEvent* event)
 {
-    return false;
+    // Swallow touch input while a scene override is active, consistent with
+    // keyboard and pointer handling.
+    return state->scene_override_manager()->try_resolve() != nullptr;
 }
 
 void Policy::handle_request_move(miral::WindowInfo& window_info, const MirInputEvent* input_event)

@@ -133,7 +133,7 @@ systemctl --user reset-failed
 systemctl --user import-environment $VARIABLES
 systemctl --user start "$SESSION_TARGET"
 
-@CMAKE_INSTALL_FULL_LIBEXECDIR@/miracle-wm-wait-sni-ready && systemctl --user start miracle-wm-xdg-autostart.target
+"$(dirname "$(readlink -f "$0")")/miracle-wm-wait-sni-ready" && systemctl --user start miracle-wm-xdg-autostart.target
 
 # Optionally, wait until the compositor exits and cleanup variables and services.
 if [ -z "$WITH_CLEANUP" ] ||

@@ -29,6 +29,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
+class SceneOverrideManager;
+
 enum class WindowManagerMode
 {
     normal = 0,
@@ -42,17 +44,24 @@ enum class WindowManagerMode
 
     moving,
 
+    /// The carousel ("overview") scene override is on screen: the windows on
+    /// the active workspace are laid out side by side, scaled down, so one can
+    /// be picked. The override owns input while this mode is set, so commands
+    /// are refused as they are in the other non-normal modes.
+    overview,
+
     max
 };
 
 constexpr std::array<std::string, static_cast<int>(WindowManagerMode::max)> BINDING_MODE_STRINGS = {
-    "default", "resize", "dragging", "moving"
+    "default", "resize", "dragging", "moving", "overview"
 };
 
 class CompositorState
 {
 public:
     CompositorState();
+    ~CompositorState();
     mir::geometry::Point cursor_position;
 
     [[nodiscard]] std::shared_ptr<Container> focused_container() const;
@@ -94,6 +103,10 @@ public:
     void mode(WindowManagerMode);
     std::shared_ptr<RenderDataManager> const& render_data_manager() const;
 
+    /// The manager is owned by (and outlives every user of) this object, so a
+    /// raw pointer is returned rather than a shared reference.
+    [[nodiscard]] SceneOverrideManager* scene_override_manager() const;
+
     /// Returns the next unique container ID, then increments the counter.
     uint64_t next_container_id();
 
@@ -109,6 +122,7 @@ private:
     std::vector<std::weak_ptr<WindowContainer>> focus_order;
     WindowManagerMode mode_ = WindowManagerMode::normal;
     std::shared_ptr<RenderDataManager> render_data_manager_;
+    std::unique_ptr<SceneOverrideManager> scene_override_manager_;
     std::atomic<uint64_t> next_container_id_ { 0 };
 };
 }

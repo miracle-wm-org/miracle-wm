@@ -41,8 +41,51 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
+namespace miracle
+{
+std::string to_string(WindowPlacementPolicy policy)
+{
+    switch (policy)
+    {
+    case WindowPlacementPolicy::floating:
+        return "float";
+    case WindowPlacementPolicy::tile:
+    default:
+        return "tile";
+    }
+}
+
+std::optional<WindowPlacementPolicy> window_placement_policy_from_string(std::string const& str)
+{
+    if (str == "float")
+        return WindowPlacementPolicy::floating;
+    if (str == "tile")
+        return WindowPlacementPolicy::tile;
+
+    return std::nullopt;
+}
+}
+
 namespace
 {
+/// Walks the container tree looking for a window that wants attention.
+bool has_urgent_container(std::shared_ptr<Container> const& container)
+{
+    if (auto const window = Container::as_window_container(container))
+        return window->urgent();
+
+    if (auto const parent = Container::as_parent(container))
+    {
+        for (auto const& child : parent->children())
+        {
+            if (has_urgent_container(child))
+                return true;
+        }
+    }
+
+    return false;
+}
+
 std::shared_ptr<ParentContainer> handle_remove_container(std::shared_ptr<Container> const& container)
 {
     auto parent = Container::as_parent(container->get_parent().lock());
@@ -174,7 +217,23 @@ geom::Rectangle Workspace::area() const
 
 void Workspace::recalculate_area()
 {
-    if (auto const sh_output = output.lock())
+    auto const sh_output = output.lock();
+
+    // A workspace that isn't being shown has all of its containers hidden, so resizing
+    // them now would push geometry at unmapped clients (and the windows may drift from
+    // their containers in the meantime). Instead, we note that a recalculation is pending
+    // and apply it the moment that this workspace is shown again.
+    //
+    // A workspace that an effect has forced into the scene is not the active one,
+    // but its containers are shown, so it can be resized like any other.
+    if (sh_output && sh_output->active().get() != this && !sync.lock()->containers_shown)
+    {
+        needs_area_recalculation_ = true;
+        return;
+    }
+
+    needs_area_recalculation_ = false;
+    if (sh_output)
     {
         root()->set_logical_area(get_output_area(sh_output), true);
         root()->commit_changes();
@@ -196,12 +255,20 @@ void Workspace::delete_container(std::shared_ptr<Container> const& container)
 {
     if (auto const leaf = Container::as_leaf(container))
     {
-        auto const parent = handle_remove_container(leaf);
-        parent->commit_changes();
+        if (auto const parent = handle_remove_container(leaf))
+            parent->commit_changes();
     }
     else
     {
         remove_other_container(container);
+    }
+
+    {
+        // The container is no longer ours, so we must not try to focus it when we
+        // are next shown.
+        auto const lock = sync.lock();
+        if (lock->last_selected_container.lock() == container)
+            lock->last_selected_container.reset();
     }
 
     if (is_empty())
@@ -217,8 +284,18 @@ void Workspace::advise_focus_gained(std::shared_ptr<Container> const& container)
 
 void Workspace::show(geom::Point const& origin)
 {
+    // The output area may have changed while we were hidden, in which case the
+    // recalculation was deferred until now.
+    if (needs_area_recalculation_)
+        recalculate_area();
+
     if (!config->are_animations_enabled() || origin == geom::Point(0, 0))
     {
+        // No animation will run to settle these to their final shown values,
+        // so reset them now. Otherwise stale state from a prior animated hide
+        // (alpha_=0, offscreen transform) keeps the windows invisible.
+        transform(glm::mat4(1.f));
+        alpha(1.f);
         on_animation_start(false);
         return;
     }
@@ -272,7 +349,10 @@ void Workspace::show(geom::Point const& origin)
 
 void Workspace::hide(geom::Point const& end)
 {
-    if (!config->are_animations_enabled())
+    // An end of (0, 0) means "do not slide anywhere", which is how a caller that
+    // has already animated this workspace off screen itself asks to simply have
+    // it put away. Mirrors the same convention in [show].
+    if (!config->are_animations_enabled() || end == geom::Point(0, 0))
     {
         on_animation_end(true);
         return;
@@ -397,8 +477,16 @@ bool Workspace::move_container(miracle::Direction direction, Container& containe
 
 bool Workspace::add_to_root(Container& to_move)
 {
-    root()->add_child(to_move.shared_from_this(), root()->num_children());
+    auto const container = to_move.shared_from_this();
+
+    // Detach from the previous parent first, otherwise the old tree keeps a reference
+    // to a container that it no longer owns.
+    if (auto const previous_parent = handle_remove_container(container))
+        previous_parent->commit_changes();
+
+    root()->add_child(container, root()->num_children());
     to_move.set_workspace(shared_from_this());
+    root()->commit_changes();
     return true;
 }
 
@@ -512,6 +600,16 @@ void Workspace::inner_gaps(std::optional<Gaps> const& gaps)
     recalculate_area();
 }
 
+WindowPlacementPolicy Workspace::placement_policy() const
+{
+    return sync.lock()->placement_policy_;
+}
+
+void Workspace::placement_policy(WindowPlacementPolicy policy)
+{
+    sync.lock()->placement_policy_ = policy;
+}
+
 void Workspace::transform(glm::mat4 const& transform)
 {
     sync.lock()->transform_ = transform;
@@ -540,54 +638,74 @@ float Workspace::alpha() const
     return sync.lock()->alpha_;
 }
 
+void Workspace::set_containers_shown(bool shown)
+{
+    sync.lock()->containers_shown = shown;
+    if (!shown)
+    {
+        for_each_container([](auto const& container)
+        {
+            container->hide();
+        });
+        return;
+    }
+
+    // The windows are entering the scene, so a geometry change that was deferred
+    // while they were out of it applies now.
+    if (needs_area_recalculation_)
+        recalculate_area();
+
+    // HACK: miral will try to select a newly visible window if none is currently
+    // selected. In most instances, we do not want this, as we would rather
+    // select our [last_selected_container] instead. To work around this, we set
+    // a flag that tells miral not to select the last focused container while we
+    // are in the process of becoming visible.
+    sync.lock()->is_showing = true;
+    for_each_container([](auto const& container)
+    {
+        container->show();
+    });
+    sync.lock()->is_showing = false;
+}
+
 void Workspace::on_animation_start(bool is_hiding)
 {
     if (!is_hiding)
     {
-        // HACK: miral will try to select a newly visible window if none is currently
-        // selected. In most instances, we do not want this, as we would rather
-        // select our [last_selected_container] instead. To work around this, we set
-        // a flag that tells miral not to select the last focused container while we
-        // are in the process of becoming visible.
-        sync.lock()->is_showing = true;
-        for_each_container([](auto const& container)
-        {
-            container->show();
-        });
-        sync.lock()->is_showing = false;
+        set_containers_shown(true);
 
-        if (auto const sh_last_selected = sync.lock()->last_selected_container.lock())
+        select_window();
+    }
+}
+
+void Workspace::select_window()
+{
+    if (auto const sh_last_selected = sync.lock()->last_selected_container.lock())
+    {
+        if (sh_last_selected->window().has_value())
+            window_controller->select_active_window(sh_last_selected->window().value());
+        return;
+    }
+
+    if (!for_each_window([&](std::shared_ptr<WindowContainer> const& container)
+    {
+        if (container->window().has_value())
         {
-            if (sh_last_selected->window().has_value())
-                window_controller->select_active_window(sh_last_selected->window().value());
-            return;
+            window_controller->select_active_window(container->window().value());
+            return true;
         }
 
-        if (!for_each_window([&](std::shared_ptr<WindowContainer> const& container)
-        {
-            if (container->window().has_value())
-            {
-                window_controller->select_active_window(container->window().value());
-                return true;
-            }
-
-            return false;
-        }))
-        {
-            window_controller->select_active_window({});
-        }
+        return false;
+    }))
+    {
+        window_controller->select_active_window({});
     }
 }
 
 void Workspace::on_animation_end(bool is_hiding)
 {
     if (is_hiding)
-    {
-        for_each_container([](auto const& container)
-        {
-            container->hide();
-        });
-    }
+        set_containers_shown(false);
 }
 
 ParentContainer* Workspace::get_layout_container() const
@@ -656,6 +774,20 @@ std::string Workspace::display_name() const
     return ss.str();
 }
 
+bool Workspace::urgent() const
+{
+    if (has_urgent_container(root()))
+        return true;
+
+    for (auto const& container : other_containers)
+    {
+        if (auto const locked = container.lock(); locked && has_urgent_container(locked))
+            return true;
+    }
+
+    return false;
+}
+
 nlohmann::json Workspace::get_workspaces_json(bool is_output_focused) const
 {
     auto const sh_output = output.lock();
@@ -676,8 +808,9 @@ nlohmann::json Workspace::get_workspaces_json(bool is_output_focused) const
         { "name", workspace_name },
         { "visible", is_active_on_output },
         { "focused", is_output_focused && is_active_on_output },
-        { "urgent", false },
+        { "urgent", urgent() },
         { "output", output_name },
+        { "policy", to_string(lock->placement_policy_) },
         { "rect", {
                       { "x", area.top_left.x.as_int() },
                       { "y", area.top_left.y.as_int() },
@@ -699,13 +832,20 @@ nlohmann::json Workspace::to_json(bool is_output_focused) const
 
     nlohmann::json floating_nodes = nlohmann::json::array();
     nlohmann::json nodes = nlohmann::json::array();
+    bool is_urgent = false;
     for (auto const& container : root()->children())
+    {
         nodes.push_back(container->to_json(is_active_on_output));
+        is_urgent = is_urgent || nodes.back().value("urgent", false);
+    }
 
     for (auto const& container : other_containers)
     {
         if (auto const locked = container.lock())
+        {
             floating_nodes.push_back(locked->to_json(is_active_on_output));
+            is_urgent = is_urgent || floating_nodes.back().value("urgent", false);
+        }
     }
 
     auto const num_ = sync.lock()->num_;
@@ -719,11 +859,12 @@ nlohmann::json Workspace::to_json(bool is_output_focused) const
         { "name", display_name() },
         { "visible", is_active_on_output },
         { "focused", is_output_focused && is_active_on_output },
-        { "urgent", false },
+        { "urgent", is_urgent },
         { "output", sh_output ? sh_output->name() : "N/A" },
         { "border", "none" },
         { "current_border_width", 0 },
         { "layout", to_string(root()->get_scheme()) },
+        { "policy", to_string(placement_policy()) },
         { "orientation", "none" },
         { "window_rect", {
                              { "x", 0 },

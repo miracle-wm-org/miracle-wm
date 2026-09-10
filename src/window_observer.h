@@ -37,6 +37,7 @@ public:
     virtual void on_window_move(Container const&) = 0;
     virtual void on_window_float(Container const&) = 0;
     virtual void on_window_marked(Container const&) = 0;
+    virtual void on_urgency_changed(Container const&) = 0;
 };
 
 class NullWindowObserver : public WindowObserver
@@ -49,6 +50,7 @@ public:
     void on_window_move(Container const&) override { }
     void on_window_float(Container const&) override { }
     void on_window_marked(Container const&) override { }
+    void on_urgency_changed(Container const&) override { }
 };
 
 class WindowObserverRegistrar : public ObserverRegistrar<WindowObserver>
@@ -61,6 +63,7 @@ public:
     void advise_window_move(Container const&) const;
     void advise_window_float(Container const&) const;
     void advise_window_marked(Container const&) const;
+    void advise_urgency_changed(Container const&) const;
 };
 
 }

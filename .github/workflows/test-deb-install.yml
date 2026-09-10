@@ -68,7 +68,7 @@ jobs:
               libmirwayland-dev libmircommon-dev \
               libmirserver-internal-dev libjson-c-dev \
               libxkbcommon-dev libboost-filesystem-dev libboost-system-dev \
-              libwasmedge-dev \
+              libwasmedge-dev libgtk-4-dev libgtk4-layer-shell-dev gettext \
               python3-tenacity python3-dbus-next
           "
 

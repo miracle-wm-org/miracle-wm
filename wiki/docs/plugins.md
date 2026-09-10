@@ -8,39 +8,16 @@ Plugins are written in **Rust** using the [`miracle-plugin`](https://crates.io/c
 
 Full API documentation is available at [docs.miracle-wm.org/miracle_plugin/](https://docs.miracle-wm.org/miracle_plugin/).
 
-### What you can hook into
-
-- **Window placement** — control where new windows are placed
-- **Input events** — intercept keystrokes and pointer events before the compositor handles them
-- **Animations** — trigger custom animations at any lifecycle event
-- **Workspace and output events** — react to workspace creation, deletion, and switching
-- **Configuration** — programmatically specify the configuration as a plugin data at runtime
-
-### Getting started
-
-Add the crate to your `Cargo.toml`:
-
-```toml
-[dependencies]
-miracle-plugin = "*"
-
-[lib]
-crate-type = ["cdylib"]
-```
-
-Then compile to WebAssembly:
-
-```sh
-rustup target add wasm32-wasip1  # This should be done once
-cargo build --target wasm32-wasip2 --release
-```
-
-The resulting `.wasm` file is what you load in your miracle-wm configuration.
-
 ## Examples
 
-- **[`miri-plugin` crate](https://github.com/miracle-wm-org/miri-plugin)** — the Miri plugin that turns any Miracle compositor into a scrolling window manager
+- **[miri](https://github.com/miracle-wm-org/miri-plugin)** — the Miri plugin that turns  Miracle into a scrolling window manager
+- **[focus-blur-plugin](https://github.com/miracle-wm-org/focus-blur-plugin)** — a plugin that blurs unfocused windows
+- **[night-light-plugin](https://github.com/miracle-wm-org/focus-blur-plugin)** — a plugin that applies an orange tint to your screen as the day progresses
 - **[mattkae/dotfiles](https://github.com/mattkae/dotfiles/tree/master/config/miracle-wm/matts-config)** — a real-world plugin used in the author's personal setup
 
-## Configuring Plugins
-Plugins still need to be specified in your configuration before they are loaded into Miracle. See [configuration/plugins.md](configuration/plugins.md) for how to load plugins and pass user data to them from your `miracle-wm/config.yaml`.
+## Loading Plugins
+To load your plugin, you can either specify them in your configuration
+(see [plugins](configuration/plugins.md)).
+
+Alternatively, you can place the `.wasm` file directly into 
+`$XDG_CONFIG_HOME/miracle-wm/config/plugins` and they will be loaded directly.

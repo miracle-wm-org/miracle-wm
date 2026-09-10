@@ -56,7 +56,6 @@ void ShellComponentContainer::commit_changes()
 
 mir::geometry::Rectangle ShellComponentContainer::get_logical_area() const
 {
-    auto const window_ = window_sync.lock()->window_;
     return {
         window_.top_left(),
         window_.size()
@@ -65,7 +64,6 @@ mir::geometry::Rectangle ShellComponentContainer::get_logical_area() const
 
 void ShellComponentContainer::set_logical_area(mir::geometry::Rectangle const& rectangle, bool with_animations)
 {
-    auto const window_ = window_sync.lock()->window_;
     window_controller->set_rectangle(window_, get_visible_area(), rectangle, with_animations);
 }
 
@@ -99,16 +97,16 @@ size_t ShellComponentContainer::get_min_width() const
 
 void ShellComponentContainer::handle_ready()
 {
-    auto const window_ = window_sync.lock()->window_;
     if (delegate)
         delegate->handle_ready(shared_from_this());
     else
         window_controller->select_active_window(window_);
 }
 
-void ShellComponentContainer::handle_modify(miral::WindowSpecification const& specification)
+void ShellComponentContainer::handle_modify(miral::WindowSpecification const& specification, bool /*hidden*/)
 {
-    auto const window_ = window_sync.lock()->window_;
+    // Shell components are output-level and are never on a hidden workspace, so there
+    // is nothing to defer.
     window_controller->modify(window_, specification);
 }
 
@@ -118,7 +116,6 @@ void ShellComponentContainer::handle_request_move(MirInputEvent const* input_eve
 
 void ShellComponentContainer::handle_raise()
 {
-    auto const window_ = window_sync.lock()->window_;
     window_controller->select_active_window(window_);
 }
 
@@ -151,7 +148,6 @@ void ShellComponentContainer::toggle_layout(bool)
 
 void ShellComponentContainer::on_focus_gained()
 {
-    auto const window_ = window_sync.lock()->window_;
     window_controller->raise(window_);
 }
 
@@ -176,7 +172,6 @@ std::shared_ptr<AbstractWorkspace> ShellComponentContainer::get_workspace() cons
 
 std::shared_ptr<AbstractOutput> ShellComponentContainer::get_output() const
 {
-    auto const window_ = window_sync.lock()->window_;
     auto const& info = window_controller->info_for(window_);
     if (info.has_output_id())
         return output_manager->from(info.output_id());
@@ -225,7 +220,6 @@ bool ShellComponentContainer::move_by(float dx, float dy)
 
 bool ShellComponentContainer::move_to(int x, int y, bool)
 {
-    auto const window_ = window_sync.lock()->window_;
     miral::WindowSpecification spec;
     spec.top_left() = { x, y };
     window_controller->modify(window_, spec);
@@ -244,7 +238,6 @@ bool ShellComponentContainer::can_animate()
 
 nlohmann::json ShellComponentContainer::to_json(bool is_workspace_visible) const
 {
-    auto const window_ = window_sync.lock()->window_;
     auto const app = window_.application();
     auto const& win_info = window_controller->info_for(window_);
     auto const visible_area = get_visible_area();
@@ -283,7 +276,7 @@ nlohmann::json ShellComponentContainer::to_json(bool is_workspace_visible) const
                           { "height", logical_area.size.height.as_int() },
                       }                                                                                                                                                                               },
         { "window",               0                                                                                                                                                                                        }, // TODO
-        { "urgent",               false                                                                                                                                                                                    },
+        { "urgent",               urgent()                                                                                                                                                                                 },
         { "floating_nodes",       std::vector<int>()                                                                                                                                                                       },
         { "sticky",               false                                                                                                                                                                                    },
         { "type",                 "dockarea"                                                                                                                                                                               },

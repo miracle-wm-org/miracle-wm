@@ -64,6 +64,8 @@ class WindowObserverRegistrar;
 class MagnifierWrapper;
 class PluginManager;
 class ShellApplicationManager;
+class DebugOverlayController;
+class OverviewController;
 
 class Policy : public miral::WindowManagementPolicy
 {
@@ -99,7 +101,11 @@ public:
     void advise_output_update(miral::Output const& updated, miral::Output const& original) override;
     void advise_output_delete(miral::Output const& output) override;
     void handle_modify_window(miral::WindowInfo& window_info, const miral::WindowSpecification& modifications) override;
+#ifdef MIR_VERSION_2_29_OR_GREATER
+    void handle_activate_window(miral::WindowInfo& window_info) override;
+#else
     void handle_raise_window(miral::WindowInfo& window_info) override;
+#endif
     auto confirm_placement_on_display(
         const miral::WindowInfo& window_info,
         MirWindowState new_state,
@@ -149,6 +155,7 @@ private:
     std::unique_ptr<DragAndDropService> drag_and_drop_service;
     std::unique_ptr<MoveService> move_service;
     std::unique_ptr<ResizeService> resize_service;
+    std::shared_ptr<DebugOverlayController> debug_overlay_controller;
     std::shared_ptr<IpcCommandExecutor> ipc_command_executor;
     std::shared_ptr<IpcConnectionManager> ipc_connection_manager;
     BindingEventListener* binding_event_listener_;
@@ -156,6 +163,7 @@ private:
     std::shared_ptr<mir::MainLoop> main_loop_;
     std::unique_ptr<DyingSurfaceManager> dying_surface_manager;
     std::unique_ptr<MagnifierWrapper> magnifier;
+    std::unique_ptr<OverviewController> overview_controller;
 
     bool is_starting_ = true;
     AllocationHint pending_allocation;

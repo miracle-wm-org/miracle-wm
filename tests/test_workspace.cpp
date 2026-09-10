@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include "compositor_state.h"
 #include "leaf_container.h"
 #include "mock_container.h"
@@ -31,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_controller.h"
 #include "workspace.h"
 #include "workspace_observer.h"
+#include <glm/gtx/transform.hpp>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -45,6 +47,11 @@ const int OUTPUT_HEIGHT = 720;
 const geom::Rectangle OUTPUT_SIZE {
     geom::Point(0, 0),
     geom::Size(OUTPUT_WIDTH, OUTPUT_HEIGHT)
+};
+
+const geom::Rectangle RESIZED_OUTPUT_SIZE {
+    geom::Point(0, 0),
+    geom::Size(800, 600)
 };
 
 const geom::Rectangle OTHER_OUTPUT_SIZE {
@@ -83,7 +90,7 @@ public:
             0,
             0,
             "0",
-            std::make_shared<test::StubConfiguration>(),
+            config,
             window_controller,
             state,
             registry,
@@ -123,9 +130,10 @@ public:
     std::shared_ptr<test::MockOutput> output;
     std::shared_ptr<StubWindowController> window_controller;
     std::shared_ptr<ShellApplicationManager> shell_application_manager;
+    std::shared_ptr<test::StubConfiguration> config = std::make_shared<test::StubConfiguration>();
     std::shared_ptr<WorkspaceObserverRegistrar> registry = std::make_shared<WorkspaceObserverRegistrar>();
     std::shared_ptr<Animator> animator = std::make_shared<Animator>();
-    std::shared_ptr<PluginManager> plugin_manager = std::make_shared<PluginManager>();
+    std::shared_ptr<PluginManager> plugin_manager = make_null_plugin_manager();
     std::shared_ptr<Workspace> workspace;
 };
 
@@ -278,6 +286,10 @@ TEST_F(WorkspaceTest, CanMoveContainerToTree)
     ASSERT_TRUE(other->add_to_root(*leaf1));
     ASSERT_EQ(leaf1->get_workspace(), other);
     ASSERT_EQ(leaf1->get_logical_area(), OTHER_OUTPUT_SIZE);
+
+    // The container must no longer be part of the workspace that it came from.
+    ASSERT_EQ(workspace->get_root()->num_children(), 0);
+    ASSERT_TRUE(workspace->is_empty());
 }
 
 TEST_F(WorkspaceTest, DraggedWindowsDoNotChangeTheirPositionWhenANewWindowIsAdded)
@@ -352,10 +364,43 @@ TEST_F(WorkspaceTest, GetWorkspaceJson)
     EXPECT_THAT(json["focused"], Eq(true));
     EXPECT_THAT(json["urgent"], Eq(false));
     EXPECT_THAT(json["output"], Eq("test"));
+    EXPECT_THAT(json["policy"], Eq("tile"));
     EXPECT_THAT(json["rect"]["x"], Eq(0));
     EXPECT_THAT(json["rect"]["y"], Eq(0));
     EXPECT_THAT(json["rect"]["width"], Eq(OUTPUT_WIDTH));
     EXPECT_THAT(json["rect"]["height"], Eq(OUTPUT_HEIGHT));
+}
+
+TEST_F(WorkspaceTest, PlacementPolicyDefaultsToTile)
+{
+    EXPECT_THAT(workspace->placement_policy(), Eq(WindowPlacementPolicy::tile));
+}
+
+TEST_F(WorkspaceTest, CanSetPlacementPolicy)
+{
+    workspace->placement_policy(WindowPlacementPolicy::floating);
+    EXPECT_THAT(workspace->placement_policy(), Eq(WindowPlacementPolicy::floating));
+}
+
+TEST_F(WorkspaceTest, GetWorkspaceJsonReportsTheFloatingPolicy)
+{
+    std::string const output_name = "test";
+    EXPECT_CALL(*output, name)
+        .WillOnce(ReturnRef(output_name));
+    EXPECT_CALL(*output, active)
+        .WillOnce(Return(workspace));
+
+    workspace->placement_policy(WindowPlacementPolicy::floating);
+    EXPECT_THAT(workspace->get_workspaces_json(true)["policy"], Eq("float"));
+}
+
+TEST_F(WorkspaceTest, ToJsonReportsThePlacementPolicy)
+{
+    std::string const output_name = "test-output";
+    ON_CALL(*output, name()).WillByDefault(ReturnRef(output_name));
+
+    workspace->placement_policy(WindowPlacementPolicy::floating);
+    EXPECT_THAT(workspace->to_json(false)["policy"], Eq("float"));
 }
 
 TEST_F(WorkspaceTest, CanSetNum)
@@ -446,4 +491,244 @@ TEST_F(WorkspaceTest, ToJson_OtherContainerAppearsInFloatingNodes)
     auto const j = workspace->to_json(false);
     EXPECT_EQ(j["floating_nodes"].size(), 1u);
     EXPECT_TRUE(j["nodes"].empty());
+}
+
+TEST_F(WorkspaceTest, RecalculateAreaIsDeferredWhileWorkspaceIsNotShown)
+{
+    create_leaf();
+
+    // The workspace is not the active workspace on its output.
+    ON_CALL(*output, get_area())
+        .WillByDefault(ReturnRef(RESIZED_OUTPUT_SIZE));
+    workspace->recalculate_area();
+
+    ASSERT_EQ(workspace->get_root()->get_logical_area(), OUTPUT_SIZE);
+}
+
+TEST_F(WorkspaceTest, DeferredAreaChangeIsAppliedWhenWorkspaceIsShown)
+{
+    auto leaf = create_leaf();
+
+    ON_CALL(*output, get_area())
+        .WillByDefault(ReturnRef(RESIZED_OUTPUT_SIZE));
+    workspace->recalculate_area();
+
+    // The output makes us the active workspace before showing us.
+    ON_CALL(*output, active())
+        .WillByDefault(Return(workspace));
+    workspace->show(geom::Point(0, 0));
+
+    ASSERT_EQ(workspace->get_root()->get_logical_area(), RESIZED_OUTPUT_SIZE);
+    ASSERT_EQ(leaf->get_logical_area(), RESIZED_OUTPUT_SIZE);
+    ASSERT_EQ(window_controller->get_window_data(leaf).rectangle, leaf->get_visible_area());
+}
+
+TEST_F(WorkspaceTest, RecalculateAreaAppliesImmediatelyWhenWorkspaceIsShown)
+{
+    auto leaf = create_leaf();
+
+    ON_CALL(*output, active())
+        .WillByDefault(Return(workspace));
+    ON_CALL(*output, get_area())
+        .WillByDefault(ReturnRef(RESIZED_OUTPUT_SIZE));
+    workspace->recalculate_area();
+
+    ASSERT_EQ(workspace->get_root()->get_logical_area(), RESIZED_OUTPUT_SIZE);
+    ASSERT_EQ(window_controller->get_window_data(leaf).rectangle, leaf->get_visible_area());
+}
+
+TEST_F(WorkspaceTest, ShowWithAnimationsDisabledResetsAlphaAndTransform)
+{
+    create_leaf();
+
+    // Simulate the state a workspace is left in after an animated hide:
+    // fully transparent and translated offscreen.
+    workspace->alpha(0.f);
+    workspace->transform(glm::translate(glm::mat4(1.f), glm::vec3(OUTPUT_WIDTH, 0, 0)));
+
+    // Animations are disabled (StubConfiguration), so this takes the instant
+    // path and must settle alpha/transform to their final shown values.
+    workspace->show(geom::Point(OUTPUT_WIDTH, 0));
+
+    EXPECT_EQ(workspace->alpha(), 1.f);
+    EXPECT_EQ(workspace->transform(), glm::mat4(1.f));
+}
+
+TEST_F(WorkspaceTest, ShowingContainersPutsTheWindowsOfAHiddenWorkspaceBackIntoTheScene)
+{
+    auto leaf = create_leaf();
+    workspace->hide(geom::Point(OUTPUT_WIDTH, 0));
+    ASSERT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_hidden);
+
+    // How an effect forces a workspace that is not the active one into the
+    // scene, without any of the focus handling of a real workspace switch.
+    workspace->set_containers_shown(true);
+    EXPECT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_restored);
+
+    workspace->set_containers_shown(false);
+    EXPECT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_hidden);
+}
+
+TEST_F(WorkspaceTest, ShowingContainersAppliesADeferredAreaRecalculation)
+{
+    auto leaf = create_leaf();
+    workspace->set_containers_shown(false);
+
+    // The workspace is not the active one and its windows are out of the scene,
+    // so the recalculation is deferred rather than pushed at hidden clients.
+    ON_CALL(*output, get_area())
+        .WillByDefault(ReturnRef(RESIZED_OUTPUT_SIZE));
+    workspace->recalculate_area();
+    ASSERT_EQ(workspace->get_root()->get_logical_area(), OUTPUT_SIZE);
+
+    workspace->set_containers_shown(true);
+    EXPECT_EQ(workspace->get_root()->get_logical_area(), RESIZED_OUTPUT_SIZE);
+    EXPECT_EQ(leaf->get_logical_area(), RESIZED_OUTPUT_SIZE);
+}
+
+TEST_F(WorkspaceTest, HideWithNoEndPointIsInstantEvenWhenAnimationsAreEnabled)
+{
+    config->animations_enabled = true;
+    auto leaf = create_leaf();
+
+    // An end of (0, 0) means "do not slide anywhere", which is how a caller that
+    // has already animated this workspace off screen itself asks to have it put
+    // away. The same convention [show] uses for its origin.
+    workspace->hide(geom::Point(0, 0));
+
+    EXPECT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_hidden);
+}
+
+TEST_F(WorkspaceTest, HideWithAnEndPointAnimatesWhenAnimationsAreEnabled)
+{
+    config->animations_enabled = true;
+    auto leaf = create_leaf();
+
+    // Nothing drives the animator in this fixture, so an animated hide leaves
+    // the windows exactly where they are: the containers are only hidden once
+    // the animation completes.
+    workspace->hide(geom::Point(OUTPUT_WIDTH, 0));
+
+    EXPECT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_restored);
+}
+
+TEST_F(WorkspaceTest, SelectWindowPrefersTheLastSelectedContainer)
+{
+    auto const first = create_leaf();
+    create_leaf();
+    workspace->advise_focus_gained(first);
+    window_controller->selected_windows.clear();
+
+    workspace->select_window();
+
+    ASSERT_THAT(window_controller->selected_windows, ElementsAre(first->window().value()));
+}
+
+TEST_F(WorkspaceTest, SelectWindowFallsBackToTheFirstWindowWhenNothingWasSelected)
+{
+    auto const first = create_leaf();
+    create_leaf();
+    window_controller->selected_windows.clear();
+
+    workspace->select_window();
+
+    ASSERT_THAT(window_controller->selected_windows, ElementsAre(first->window().value()));
+}
+
+TEST_F(WorkspaceTest, SelectWindowClearsFocusWhenTheWorkspaceIsEmpty)
+{
+    window_controller->selected_windows.clear();
+
+    workspace->select_window();
+
+    ASSERT_THAT(window_controller->selected_windows, ElementsAre(miral::Window()));
+}
+
+// ---- urgency ----
+
+TEST_F(WorkspaceTest, UrgentIsFalseWhenNothingWantsAttention)
+{
+    create_leaf();
+    EXPECT_FALSE(workspace->urgent());
+}
+
+TEST_F(WorkspaceTest, UrgentIsTrueWhenATiledWindowIsUrgent)
+{
+    create_leaf();
+    auto const leaf = create_leaf();
+
+    leaf->set_urgent(true);
+    EXPECT_TRUE(workspace->urgent());
+
+    leaf->set_urgent(false);
+    EXPECT_FALSE(workspace->urgent());
+}
+
+TEST_F(WorkspaceTest, UrgentIsTrueWhenAFloatingWindowIsUrgent)
+{
+    auto const floating = std::make_shared<LeafContainer>(
+        workspace,
+        window_controller,
+        geom::Rectangle {
+            { 0,   0   },
+            { 100, 100 }
+    },
+        config,
+        workspace->get_root(),
+        state);
+
+    auto const surface = std::make_shared<test::StubSurface>();
+    surfaces.push_back(surface);
+    miral::Window const window(nullptr, surface);
+    floating->associate_to_window(window);
+    pairs.push_back({ window, floating, geom::Rectangle(), mir_window_state_restored, std::nullopt });
+
+    workspace->add_other_container(floating, false);
+
+    EXPECT_FALSE(workspace->urgent());
+
+    floating->set_urgent(true);
+    EXPECT_TRUE(workspace->urgent());
+}
+
+TEST_F(WorkspaceTest, ToJsonReportsUrgencyOfAFloatingContainer)
+{
+    std::string const output_name = "test-output";
+    ON_CALL(*output, name()).WillByDefault(ReturnRef(output_name));
+
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    ON_CALL(*container, to_json(_)).WillByDefault(Return(nlohmann::json({
+        { "urgent", true }
+    })));
+    workspace->add_other_container(container, false);
+
+    EXPECT_TRUE(workspace->to_json(false)["urgent"]);
+}
+
+/// A container is not obliged to report urgency at all, so the aggregation must
+/// not index a key that may be missing.
+TEST_F(WorkspaceTest, ToJsonIsNotUrgentWhenAContainerOmitsTheUrgentKey)
+{
+    std::string const output_name = "test-output";
+    ON_CALL(*output, name()).WillByDefault(ReturnRef(output_name));
+
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    ON_CALL(*container, to_json(_)).WillByDefault(Return(nlohmann::json::object()));
+    workspace->add_other_container(container, false);
+
+    EXPECT_FALSE(workspace->to_json(false)["urgent"]);
+}
+
+/// GET_WORKSPACES does not build the container tree, so it has to gather urgency
+/// by walking the workspace instead of aggregating out of the child json.
+TEST_F(WorkspaceTest, GetWorkspacesJsonReportsUrgency)
+{
+    std::string const output_name = "test-output";
+    ON_CALL(*output, name()).WillByDefault(ReturnRef(output_name));
+
+    auto const leaf = create_leaf();
+    EXPECT_FALSE(workspace->get_workspaces_json(false)["urgent"]);
+
+    leaf->set_urgent(true);
+    EXPECT_TRUE(workspace->get_workspaces_json(false)["urgent"]);
 }

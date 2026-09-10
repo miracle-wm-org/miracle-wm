@@ -45,7 +45,17 @@ def server(request):
     log_file = open(log_path, "w")
 
     binary = os.environ.get("MIRACLE_VISUAL_TEST_BIN", "miracle-wm")
-    env = {**os.environ, "WAYLAND_DISPLAY": "wayland-98"}
+
+    # Make the bundled helper clients (e.g. miracle-wm-debug-overlay,
+    # miracle-wm-basic-error-reporter) discoverable on the compositor's PATH so
+    # they can be launched via IPC. When running against a build tree they live
+    # in sibling subdirectories of the compositor binary.
+    extra_path = []
+    build_dir = os.path.dirname(os.path.abspath(binary)) if os.path.dirname(binary) else None
+    if build_dir:
+        extra_path += [build_dir, os.path.join(build_dir, "debug-overlay"), os.path.join(build_dir, "error-reporter")]
+    path = os.pathsep.join(extra_path + [os.environ.get("PATH", "")])
+    env = {**os.environ, "WAYLAND_DISPLAY": "wayland-98", "PATH": path}
     cmd = [binary, "--no-config", "1", "--platform-display-libs=mir:virtual", "--platform-input-lib=mir:stub-input", "--virtual-output=800x600"]
     process = Popen(
         cmd,

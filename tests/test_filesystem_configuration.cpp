@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "config_observer.h"
 #include "yaml-cpp/yaml.h"
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -25,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <miracle/cpp/animation_definition.h>
+#include <miracle/cpp/modifiers.h>
 #include <miral/runner.h>
 #include <vector>
 #include <xkbcommon/xkbcommon-keysyms.h>
@@ -194,6 +196,117 @@ TEST_F(FilesystemConfigurationTest, CanCreateCustomAction)
     EXPECT_EQ(custom_action->command, "echo Hi");
     EXPECT_EQ(custom_action->key, XKB_KEY_x);
     EXPECT_EQ(custom_action->action, mir_keyboard_action_down);
+}
+
+TEST_F(FilesystemConfigurationTest, DefaultKeyBindingsAreReported)
+{
+    FilesystemConfiguration config(registrar, path, true);
+    auto const bindings = config.describe_key_bindings();
+    ASSERT_EQ(bindings.size(), static_cast<size_t>(DefaultKeyCommand::MAX));
+
+    auto const terminal = std::find_if(bindings.begin(), bindings.end(), [](KeyBindingInfo const& info)
+    {
+        return info.default_key_command == DefaultKeyCommand::Terminal;
+    });
+    ASSERT_NE(terminal, bindings.end());
+    EXPECT_EQ(terminal->source, KeyBindingSource::built_in_default);
+    EXPECT_EQ(terminal->keysym, XKB_KEY_Return);
+    EXPECT_EQ(terminal->action, mir_keyboard_action_down);
+    EXPECT_EQ(terminal->modifiers, static_cast<uint>(mir_input_event_modifier_meta));
+    EXPECT_TRUE(terminal->command.empty());
+}
+
+TEST_F(FilesystemConfigurationTest, CustomKeyBindingsAreReported)
+{
+    YAML::Node node;
+    YAML::Node custom_action_node;
+    custom_action_node["command"] = "echo Hi";
+    custom_action_node["action"] = "down";
+    custom_action_node["modifiers"].push_back("primary");
+    custom_action_node["key"] = "x";
+    node["custom_actions"].push_back(custom_action_node);
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const bindings = config.describe_key_bindings();
+    ASSERT_EQ(bindings.size(), static_cast<size_t>(DefaultKeyCommand::MAX) + 1);
+
+    // Custom actions are attempted first, so they are emitted first.
+    EXPECT_EQ(bindings[0].source, KeyBindingSource::custom);
+    EXPECT_EQ(bindings[0].command, "echo Hi");
+    EXPECT_EQ(bindings[0].keysym, XKB_KEY_x);
+    EXPECT_EQ(bindings[0].action, mir_keyboard_action_down);
+    EXPECT_EQ(bindings[0].default_key_command, DefaultKeyCommand::MAX);
+    EXPECT_EQ(bindings[0].modifiers, static_cast<uint>(mir_input_event_modifier_meta));
+}
+
+TEST_F(FilesystemConfigurationTest, BuiltInOverridesAreAdditiveInKeyBindings)
+{
+    YAML::Node node;
+    YAML::Node action_override_node;
+    action_override_node["name"] = "terminal";
+    action_override_node["action"] = "down";
+    action_override_node["modifiers"].push_back("primary");
+    action_override_node["key"] = "Escape";
+    node["default_action_overrides"].push_back(action_override_node);
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const bindings = config.describe_key_bindings();
+    ASSERT_EQ(bindings.size(), static_cast<size_t>(DefaultKeyCommand::MAX) + 1);
+
+    // matches_key_command tries the overrides and then the *whole* default table,
+    // so the original default binding still fires. Both must be reported.
+    std::vector<KeyBindingInfo> terminals;
+    for (auto const& info : bindings)
+    {
+        if (info.default_key_command == DefaultKeyCommand::Terminal)
+            terminals.push_back(info);
+    }
+    ASSERT_EQ(terminals.size(), 2u);
+    EXPECT_EQ(terminals[0].source, KeyBindingSource::built_in_override);
+    EXPECT_EQ(terminals[0].keysym, XKB_KEY_Escape);
+    EXPECT_EQ(terminals[1].source, KeyBindingSource::built_in_default);
+    EXPECT_EQ(terminals[1].keysym, XKB_KEY_Return);
+}
+
+TEST_F(FilesystemConfigurationTest, PrimaryModifierIsResolvedInKeyBindings)
+{
+    write_kvp("action_key", "alt");
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const bindings = config.describe_key_bindings();
+    ASSERT_FALSE(bindings.empty());
+
+    auto const terminal = std::find_if(bindings.begin(), bindings.end(), [](KeyBindingInfo const& info)
+    {
+        return info.default_key_command == DefaultKeyCommand::Terminal;
+    });
+    ASSERT_NE(terminal, bindings.end());
+    EXPECT_EQ(terminal->modifiers, static_cast<uint>(mir_input_event_modifier_alt));
+    EXPECT_TRUE(terminal->configured_modifiers & miracle_input_event_modifier_default);
+    EXPECT_FALSE(terminal->modifiers & miracle_input_event_modifier_default);
+}
+
+TEST_F(FilesystemConfigurationTest, KeyBindingsDoNotDeadlock)
+{
+    FilesystemConfiguration config(registrar, path, true);
+
+    // matches_key_command invokes the callback without holding the mutex, but
+    // describe_key_bindings must not reintroduce a lock-under-lock path either.
+    // If it does, this hangs until the ctest timeout.
+    bool called = false;
+    config.matches_key_command(
+        mir_keyboard_action_down,
+        XKB_KEY_Return,
+        mir_input_event_modifier_meta,
+        [&](DefaultKeyCommand)
+    {
+        called = true;
+        EXPECT_FALSE(config.describe_key_bindings().empty());
+        return true;
+    });
+    EXPECT_TRUE(called);
 }
 
 TEST_F(FilesystemConfigurationTest, CustomActionsInSnapIncludeUnsnapCommand)
@@ -394,6 +507,86 @@ TEST_F(FilesystemConfigurationTest, EnvironmentVariableCanBeParsed)
 
     FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.get_env_variables().size(), 1);
+}
+
+TEST_F(FilesystemConfigurationTest, BackgroundColorDefaultsToGrayWhenUnset)
+{
+    YAML::Node node;
+    node["resize_jump"] = 100;
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.background_color().r, 46.f / 255.f);
+    EXPECT_EQ(config.background_color().g, 52.f / 255.f);
+    EXPECT_EQ(config.background_color().b, 54.f / 255.f);
+}
+
+TEST_F(FilesystemConfigurationTest, BackgroundColorCanBeParsedFromHex)
+{
+    YAML::Node node;
+    node["background_color"] = "0xDD89DD";
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.background_color().r, 221.f / 255.f);
+    EXPECT_EQ(config.background_color().g, 137.f / 255.f);
+    EXPECT_EQ(config.background_color().b, 221.f / 255.f);
+}
+
+TEST_F(FilesystemConfigurationTest, BackgroundColorIgnoresAlphaInHex)
+{
+    YAML::Node node;
+    node["background_color"] = "0xDD89DD00";
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.background_color().r, 221.f / 255.f);
+    EXPECT_EQ(config.background_color().g, 137.f / 255.f);
+    EXPECT_EQ(config.background_color().b, 221.f / 255.f);
+}
+
+TEST_F(FilesystemConfigurationTest, BackgroundColorCanBeParsedFromArray)
+{
+    YAML::Node color_node;
+    color_node.push_back(255);
+    color_node.push_back(155);
+    color_node.push_back(55);
+
+    YAML::Node node;
+    node["background_color"] = color_node;
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.background_color().r, 1.f);
+    EXPECT_EQ(config.background_color().g, 155.f / 255.f);
+    EXPECT_EQ(config.background_color().b, 55.f / 255.f);
+}
+
+TEST_F(FilesystemConfigurationTest, BackgroundColorCanBeParsedFromMap)
+{
+    YAML::Node color_node;
+    color_node["r"] = 255;
+    color_node["g"] = 155;
+    color_node["b"] = 55;
+
+    YAML::Node node;
+    node["background_color"] = color_node;
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.background_color().r, 1.f);
+    EXPECT_EQ(config.background_color().g, 155.f / 255.f);
+    EXPECT_EQ(config.background_color().b, 55.f / 255.f);
+}
+
+TEST_F(FilesystemConfigurationTest, MalformedBackgroundColorProducesAnError)
+{
+    YAML::Node node;
+    node["background_color"] = "0xDD8";
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_FALSE(config.get_config_errors().empty());
 }
 
 TEST_F(FilesystemConfigurationTest, BorderCanBeParsedWithArrayColors)
@@ -831,4 +1024,70 @@ TEST_F(FilesystemConfigurationTest, NonWasmFilesInPluginsDirAreIgnored)
 TEST_F(FilesystemConfigurationTest, MissingPluginsDirDoesNotCrash)
 {
     EXPECT_NO_THROW(FilesystemConfiguration config(registrar, path, true));
+}
+
+TEST_F(FilesystemConfigurationTest, CleanConfigHasNoErrors)
+{
+    write_kvp("action_key", "alt");
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_TRUE(config.get_config_errors().empty());
+}
+
+TEST_F(FilesystemConfigurationTest, ErroneousConfigRetainsErrors)
+{
+    // A terminal that does not resolve to an existing program produces an error.
+    write_kvp("terminal", "definitely_not_a_real_program_xyz");
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_FALSE(config.get_config_errors().empty());
+}
+
+TEST_F(FilesystemConfigurationTest, ReloadClearsPreviousErrors)
+{
+    write_kvp("terminal", "definitely_not_a_real_program_xyz");
+    FilesystemConfiguration config(registrar, path, true);
+    ASSERT_FALSE(config.get_config_errors().empty());
+
+    // Replace the config with a clean one and reload.
+    SetUp();
+    write_kvp("action_key", "alt");
+    config.reload();
+    EXPECT_TRUE(config.get_config_errors().empty());
+}
+
+TEST_F(FilesystemConfigurationTest, ErrorReporterDefaultsToDefault)
+{
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.get_error_reporter_client(), "default");
+}
+
+TEST_F(FilesystemConfigurationTest, CanReadWmClientsErrorReporter)
+{
+    YAML::Node wm_clients_node;
+    wm_clients_node["error_reporter"] = "disabled";
+
+    YAML::Node root;
+    root["wm_clients"] = wm_clients_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.get_error_reporter_client(), "disabled");
+}
+
+TEST_F(FilesystemConfigurationTest, DebugOverlayDefaultsToDefault)
+{
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.get_debug_overlay_client(), "default");
+}
+
+TEST_F(FilesystemConfigurationTest, CanReadWmClientsDebugOverlay)
+{
+    YAML::Node wm_clients_node;
+    wm_clients_node["debug_overlay"] = "disabled";
+
+    YAML::Node root;
+    root["wm_clients"] = wm_clients_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.get_debug_overlay_client(), "disabled");
 }

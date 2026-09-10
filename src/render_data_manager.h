@@ -18,8 +18,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_SURFACE_TRACKER_H
 #define MIRACLEWM_SURFACE_TRACKER_H
 
+#include <cstdint>
 #include <glm/glm.hpp>
 #include <mir/scene/surface.h>
+#include <miral/window.h>
 #include <mutex>
 #include <vector>
 
@@ -32,7 +34,9 @@ typedef int RenderDataManagerId;
 struct RenderData
 {
     RenderDataManagerId id = 0;
-    mir::scene::Surface const* surface = nullptr;
+    /// The window whose surface this data describes. Holds the surface only
+    /// weakly, so it does not extend the surface's lifetime.
+    miral::Window window;
     bool needs_outline = false;
     bool is_focused = false;
     glm::mat4 transform = glm::mat4(1.f);
@@ -56,13 +60,18 @@ public:
     /// Reset every RenderData whose shader_id is in \p ids back to the default
     /// shader (std::nullopt). Used when the shaders are removed (e.g. on plugin unload).
     void reset_shaders(std::vector<uint8_t> const& ids);
-    std::vector<RenderData> const& get();
+    /// Copies the current render data into \p out and updates \p seen_generation,
+    /// or does nothing if no data has changed since \p seen_generation. Callers on
+    /// different threads must each provide their own \p seen_generation and \p out.
+    void copy_if_changed(uint64_t& seen_generation, std::vector<RenderData>& out);
 
 private:
     RenderDataManagerId next_id = 0;
+    uint64_t generation = 1;
     std::mutex mutex;
+    /// Sorted by ascending id: add() assigns monotonically increasing ids
+    /// and remove() preserves order.
     std::vector<RenderData> render_data;
-    std::vector<RenderData> copy_for_renderer;
 };
 
 } // miracle

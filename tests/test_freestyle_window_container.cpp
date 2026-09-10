@@ -184,7 +184,21 @@ TEST_F(FreestyleWindowContainerTest, HandleModifyWithStateChangeCallsChangeState
     miral::WindowSpecification spec;
     spec.state() = mir_window_state_fullscreen;
     EXPECT_CALL(*window_controller, change_state(window, mir_window_state_fullscreen)).Times(1);
-    container_with_border->handle_modify(spec);
+    container_with_border->handle_modify(spec, false);
+}
+
+TEST_F(FreestyleWindowContainerTest, HandleModifyWhileHiddenDefersStateUntilShown)
+{
+    miral::WindowSpecification spec;
+    spec.state() = mir_window_state_fullscreen;
+
+    // While the workspace is hidden the state must NOT be applied to the live window...
+    EXPECT_CALL(*window_controller, change_state(_, _)).Times(0);
+    container_with_border->handle_modify(spec, true);
+
+    // ...it is applied via the restore mechanism when the container is next shown.
+    EXPECT_CALL(*window_controller, show(window, Field(&RestoreResult::state, mir_window_state_fullscreen))).Times(1);
+    container_with_border->show();
 }
 
 // ---- workspace ----
@@ -219,9 +233,9 @@ TEST_F(FreestyleWindowContainerTest, SetWorkspaceNotifiesObserver)
 
 // ---- constrain ----
 
-TEST_F(FreestyleWindowContainerTest, ConstrainWithBorderClipsToVisibleArea)
+TEST_F(FreestyleWindowContainerTest, ConstrainWithBorderNeverclips)
 {
-    EXPECT_CALL(*window_controller, clip(window, _)).Times(1);
+    EXPECT_CALL(*window_controller, noclip(_)).Times(1);
     container_with_border->constrain();
 }
 
@@ -240,7 +254,7 @@ TEST_F(FreestyleWindowContainerTest, MoveToCallsModifyWithCorrectTopLeft)
 {
     EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
     {
-        return spec.top_left().is_set()
+        return spec.top_left()
             && spec.top_left().value() == geom::Point { 50, 75 };
     }))).Times(1);
 
@@ -254,7 +268,7 @@ TEST_F(FreestyleWindowContainerTest, MoveByRightIncreasesX)
     // window is at (100, 200), moving right by 30 → (130, 200)
     EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
     {
-        return spec.top_left().is_set()
+        return spec.top_left()
             && spec.top_left().value().x.as_int() == 130
             && spec.top_left().value().y.as_int() == 200;
     }))).Times(AtLeast(1));
@@ -267,7 +281,7 @@ TEST_F(FreestyleWindowContainerTest, MoveByLeftDecreasesX)
     // window is at (100, 200), moving left by 30 → (70, 200)
     EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
     {
-        return spec.top_left().is_set()
+        return spec.top_left()
             && spec.top_left().value().x.as_int() == 70
             && spec.top_left().value().y.as_int() == 200;
     }))).Times(AtLeast(1));
@@ -280,7 +294,7 @@ TEST_F(FreestyleWindowContainerTest, MoveByDownIncreasesY)
     // window is at (100, 200), moving down by 20 → (100, 220)
     EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
     {
-        return spec.top_left().is_set()
+        return spec.top_left()
             && spec.top_left().value().x.as_int() == 100
             && spec.top_left().value().y.as_int() == 220;
     }))).Times(AtLeast(1));
@@ -293,7 +307,7 @@ TEST_F(FreestyleWindowContainerTest, MoveByUpDecreasesY)
     // window is at (100, 200), moving up by 20 → (100, 180)
     EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
     {
-        return spec.top_left().is_set()
+        return spec.top_left()
             && spec.top_left().value().x.as_int() == 100
             && spec.top_left().value().y.as_int() == 180;
     }))).Times(AtLeast(1));
@@ -415,7 +429,7 @@ TEST_F(FreestyleWindowContainerTest, DragMovesWindow)
 
     EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
     {
-        return spec.top_left().is_set()
+        return spec.top_left()
             && spec.top_left().value() == geom::Point { 150, 250 };
     }))).Times(1);
 

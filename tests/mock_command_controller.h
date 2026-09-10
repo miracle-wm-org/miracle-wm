@@ -58,6 +58,7 @@ namespace test
         MOCK_METHOD(bool, quit, (), (override));
         MOCK_METHOD(bool, try_toggle_fullscreen, (std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, select_workspace, (int, bool), (override));
+        MOCK_METHOD(bool, select_workspace_by_id, (uint32_t, bool), (override));
         MOCK_METHOD(bool, select_workspace, (std::string const&, bool), (override));
         MOCK_METHOD(bool, select_workspace_with_scope, (std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, next_workspace, (), (override));
@@ -101,6 +102,7 @@ namespace test
         MOCK_METHOD(std::unordered_set<std::string>, get_all_marks, (), (const, override));
         MOCK_METHOD(bool, rename_selected_workspace, (WorkspaceIdentifier const&), (override));
         MOCK_METHOD(bool, rename_existing_workspace, (WorkspaceIdentifier const&, WorkspaceIdentifier const&), (override));
+        MOCK_METHOD(bool, set_workspace_placement_policy, (std::optional<WorkspaceIdentifier> const&, WindowPlacementPolicy), (override));
         MOCK_METHOD(bool, set_inner_gaps, (uint32_t px, GapsChangeType type, bool current_workspace_only), (override));
         MOCK_METHOD(bool, set_outer_gaps, (uint32_t px, OuterGapsChange outer_gaps_change, GapsChangeType, bool current_workspace_only), (override));
         MOCK_METHOD(bool, try_move_workspace_to_output, (OutputSelection), (override));
@@ -110,6 +112,8 @@ namespace test
         MOCK_METHOD(nlohmann::json, workspaces_json, (), (const, override));
         MOCK_METHOD(nlohmann::json, workspace_to_json, (uint32_t), (const, override));
         MOCK_METHOD(nlohmann::json, mode_to_json, (), (const, override));
+        MOCK_METHOD(nlohmann::json, debug_state_to_json, (), (const, override));
+        MOCK_METHOD(nlohmann::json, key_bindings_json, (), (const, override));
     };
 }
 }

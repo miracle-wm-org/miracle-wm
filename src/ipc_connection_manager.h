@@ -25,7 +25,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_listener.h"
 #include "window_observer.h"
 #include "workspace_observer.h"
+#include <functional>
+#include <memory>
 #include <mir/fd.h>
+#include <mutex>
+#include <string>
 #include <vector>
 
 namespace mir
@@ -38,6 +42,7 @@ namespace miracle
 class AbstractCommandController;
 class BindingEvent;
 class WindowController;
+class PluginManager;
 
 /// Manages IPC connections and routes requests to the [IpcMessageHandler].
 class IpcConnectionManager : public virtual WorkspaceObserver,
@@ -53,7 +58,8 @@ public:
         std::shared_ptr<AbstractCommandController> const&,
         std::shared_ptr<IpcCommandExecutor> const&,
         std::shared_ptr<Config> const&,
-        std::shared_ptr<WindowController> const&);
+        std::shared_ptr<WindowController> const&,
+        std::shared_ptr<PluginManager> const&);
     ~IpcConnectionManager() override;
     void on_workspace_created(uint32_t id) override;
     void on_workspace_empty(uint32_t id) override;
@@ -71,10 +77,14 @@ public:
     void on_window_move(Container const&) override;
     void on_window_float(Container const&) override;
     void on_window_marked(Container const&) override;
+    void on_urgency_changed(Container const&) override;
     void output_created(miral::Output const&) override;
     void output_deleted(miral::Output const&) override;
     void output_updated(miral::Output const& updated, miral::Output const& original) override;
     void on_binding_event(BindingEvent const& binding_event) override;
+
+    /// Publish a plugin event on \p ns to every client subscribed to that namespace.
+    void on_plugin_event(std::string const& ns, std::string const& payload_json);
 
 private:
     struct IpcClient
@@ -85,15 +95,36 @@ private:
         std::vector<char> buffer;
         uint32_t write_buffer_len = 0;
         int subscribed_events = 0;
+        std::vector<std::string> subscribed_plugin_namespaces;
     };
 
     std::shared_ptr<mir::MainLoop> main_loop;
+
+    /// Guards [clients] only. It must never be held while sending to a client, because
+    /// [send_reply] may disconnect that client, which erases it from [clients].
     std::mutex clients_mutex;
     std::shared_ptr<AbstractCommandController> command_controller;
+    std::shared_ptr<Config> config;
     std::unique_ptr<IpcMessageHandler> ipc_message_handler;
     mir::Fd ipc_socket;
     sockaddr_un* ipc_sockaddr = nullptr;
     std::vector<std::shared_ptr<IpcClient>> clients;
+
+    /// Reset in the destructor so that actions still sitting on the main loop queue
+    /// can detect that this manager is gone.
+    std::shared_ptr<bool> alive = std::make_shared<bool>(true);
+
+    /// Runs \p action on the main loop thread. Every mutation of a client's write buffer
+    /// must happen there, otherwise events broadcast from the window management thread
+    /// race with the IPC socket's read handler.
+    void run_on_main_loop(std::function<void()> action);
+
+    /// Returns a copy of [clients] so that callers may iterate without holding
+    /// [clients_mutex] and without risking elements being erased mid-iteration.
+    std::vector<std::shared_ptr<IpcClient>> snapshot_clients();
+
+    /// Sends \p payload to every client subscribed to \p type, on the main loop thread.
+    void broadcast(IpcType type, std::string payload);
 
     /// Disconnects the provided client.
     void disconnect(IpcClient& client);

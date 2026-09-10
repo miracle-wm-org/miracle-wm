@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16) # PCH support needs 3.16+
 cmake_policy(SET CMP0015 NEW)
 cmake_policy(SET CMP0022 NEW)
 
-project(miracle-wm VERSION 0.9.1)
+project(miracle-wm VERSION 0.10.1)
 
 # ----------------------------------------
 # Speed tweaks
@@ -56,6 +56,8 @@ endif()
 # Feature flags
 option(FEATURE_PLUGIN_SYSTEM "Enable the plugin system" ON)
 option(FEATURE_PARENT_CONTAINER_WALLPAPERS "Enable parent container wallpapers feature" OFF)
+option(BUILD_ERROR_REPORTER "Build the miracle-wm-basic-error-reporter GTK client" ON)
+option(BUILD_DEBUG_OVERLAY "Build the miracle-wm-debug-overlay GTK client" ON)
 
 if(FEATURE_PLUGIN_SYSTEM)
   set(FEATURE_PLUGIN_SYSTEM 1)
@@ -147,6 +149,8 @@ add_library(miracle-wm-implementation STATIC
         src/ipc_message_handler.cpp
         src/ipc_connection_manager.cpp
         src/auto_restarting_launcher.cpp
+        src/error_reporter_controller.cpp
+        src/debug_overlay_controller.cpp
         src/workspace_observer.cpp
         src/workspace.cpp
         src/leaf_container.cpp
@@ -184,7 +188,8 @@ add_library(miracle-wm-implementation STATIC
         src/binding_event.cpp
         src/magnifier_wrapper.cpp
         src/math_helpers.cpp
-        src/plugin_manager.cpp
+        src/plugin_manager_null.cpp
+        src/plugin_manager_loader.cpp
         src/plugin_bridge.h src/plugin_bridge.cpp
         src/shell_application_manager.cpp src/shell_application_manager.h
         src/shell_application_spawner.h
@@ -195,9 +200,19 @@ add_library(miracle-wm-implementation STATIC
         src/container_effect.h src/container_effect.cpp
         src/window_container.cpp src/window_container.h
         src/sampler_registry.h src/sampler_registry.cpp
+        src/scene_override.cpp src/scene_override.h
+        src/overview_controller.cpp src/overview_controller.h
+        src/carousel_layout.cpp src/carousel_layout.h
+        src/overview_scene_override.cpp src/overview_scene_override.h
+        src/overview_scene_override_delegate.h
+        src/workspace_preview.cpp src/workspace_preview.h
+        src/occlusion_bypass.cpp src/occlusion_bypass.h
 )
 
-target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV} FEATURE_PLUGIN_SYSTEM=${FEATURE_PLUGIN_SYSTEM})
+target_compile_definitions(miracle-wm-implementation PRIVATE
+        COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV}
+        FEATURE_PLUGIN_SYSTEM=${FEATURE_PLUGIN_SYSTEM}
+        MIRACLE_PLUGIN_MODULE_PATH="${CMAKE_INSTALL_FULL_LIBDIR}/libmiracle-wm-plugins.so")
 
 # ----------------------------------------
 # Precompiled headers for speed
@@ -249,10 +264,6 @@ target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
         ${CMAKE_CURRENT_BINARY_DIR}/src
 )
 
-if (FEATURE_PLUGIN_SYSTEM)
-  target_include_directories(miracle-wm-implementation PRIVATE ${WASMEDGE_INCLUDE_DIR})
-endif()
-
 target_link_libraries(miracle-wm-implementation
         ${MIRAL_LDFLAGS}
         ${MIRRENDERER_LDFLAGS}
@@ -272,8 +283,37 @@ target_link_libraries(miracle-wm-implementation
         xdg-shell-protocol
 )
 
+# ----------------------------------------
+# miracle-wm-plugins shared module (WasmEdge-backed plugin system)
+# ----------------------------------------
+# The WasmEdge runtime links LLVM. When that LLVM sits in the process's global
+# symbol scope it interposes on Mesa's software renderer (llvmpipe), which also
+# uses LLVM, and breaks rendering (issue #865 — black screen in QEMU). To avoid
+# this, the WasmEdge-backed PluginManager lives in its own shared module that the
+# main binary loads with dlopen()/RTLD_LOCAL only when needed, so libwasmedge and
+# its LLVM never enter the global scope. The module resolves host symbols against
+# the main executable at load time (hence ENABLE_EXPORTS on miracle-wm below).
 if (FEATURE_PLUGIN_SYSTEM)
-  target_link_libraries(miracle-wm-implementation ${WASMEDGE_LIB})
+  add_library(miracle-wm-plugins SHARED src/plugin_manager_impl.cpp)
+
+  target_compile_definitions(miracle-wm-plugins PRIVATE
+          COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV}
+          FEATURE_PLUGIN_SYSTEM=1)
+
+  target_include_directories(miracle-wm-plugins PRIVATE SYSTEM
+          $<TARGET_PROPERTY:miracle-wm-implementation,INTERFACE_INCLUDE_DIRECTORIES>
+          ${WASMEDGE_INCLUDE_DIR})
+
+  # miracle-wm-c provides config-cpp headers/symbols; nlohmann is header-only.
+  # The host (miracle-wm-implementation) symbols are intentionally NOT linked
+  # here — they are resolved against the main executable at dlopen() time.
+  target_link_libraries(miracle-wm-plugins
+          PkgConfig::YAML
+          nlohmann_json::nlohmann_json
+          miracle-wm-c
+          ${WASMEDGE_LIB})
+
+  install(TARGETS miracle-wm-plugins DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
 
 # ----------------------------------------
@@ -281,7 +321,13 @@ endif()
 # ----------------------------------------
 add_executable(miracle-wm src/main.cpp)
 target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
-target_link_libraries(miracle-wm PUBLIC ${MIRAL_LDFLAGS} PRIVATE miracle-wm-implementation)
+# Export the executable's dynamic symbols so the dlopen'd plugin module can
+# resolve host symbols against the main binary, and force every object of the
+# (static) implementation library into the executable so none are dropped.
+set_target_properties(miracle-wm PROPERTIES ENABLE_EXPORTS ON)
+target_link_libraries(miracle-wm
+        PUBLIC ${MIRAL_LDFLAGS}
+        PRIVATE -Wl,--whole-archive miracle-wm-implementation -Wl,--no-whole-archive)
 
 # ----------------------------------------
 # Install rules
@@ -333,3 +379,11 @@ add_subdirectory(protocols/)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w") # Disable warnings for miraclemsg, since its a fork
 add_subdirectory(miraclemsg/)
+
+if (BUILD_ERROR_REPORTER)
+  add_subdirectory(error-reporter/)
+endif()
+
+if (BUILD_DEBUG_OVERLAY)
+  add_subdirectory(debug-overlay/)
+endif()

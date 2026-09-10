@@ -21,6 +21,7 @@ set(SOURCES
     mock_configuration.h
     mock_container.h
     mock_ipc_command_executor.h
+    mock_plugin_manager.h
     mock_output.h
     mock_output_factory.h
     mock_surface_stack.h
@@ -33,6 +34,12 @@ set(SOURCES
     test_drag_and_drop_service.cpp
     test_resize_service.cpp
     test_render_data_manager.cpp
+    test_scene_override_manager.cpp
+    test_carousel_layout.cpp
+    test_overview_scene_override.cpp
+    test_workspace_preview.cpp
+    test_occlusion_bypass.cpp
+    mock_workspace.h
     test_sampler_registry.cpp
     test_output_manager.cpp
     test_output.cpp

@@ -702,6 +702,11 @@ pub struct Configuration {
     /// Whether switching to the current workspace goes back to the previous one.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace_back_and_forth: Option<bool>,
+
+    /// The color that the compositor clears the screen to, as a hex string
+    /// (`"RRGGBB"`) or an RGB array `[r, g, b]` (0-255). Always fully opaque.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub background_color: Option<String>,
 }
 
 fn is_false(v: &bool) -> bool {

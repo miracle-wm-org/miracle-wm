@@ -31,30 +31,29 @@ OutputManager::OutputManager(
 std::shared_ptr<AbstractOutput> OutputManager::create(
     std::string name, int id, mir::geometry::Rectangle area, WorkspaceManager& workspace_manager)
 {
-    auto const locked = state.lock();
-    if (locked->outputs_.size() == 1 && locked->outputs_[0]->is_defunct())
+    if (outputs_.size() == 1 && outputs_[0]->is_defunct())
     {
-        locked->outputs_[0]->unset_defunct();
-        locked->outputs_[0]->set_info(id, name);
-        locked->outputs_[0]->update_area(area);
+        outputs_[0]->unset_defunct();
+        outputs_[0]->set_info(id, name);
+        outputs_[0]->update_area(area);
     }
     else
     {
         auto const created = output_factory->create(name, id, area);
-        locked->outputs_.push_back(created);
+        outputs_.push_back(created);
         if (created)
             workspace_manager.request_first_available_workspace(created.get());
     }
 
-    if (locked->focused_.expired())
-        focus_internal(*locked, locked->outputs_.back()->id());
+    if (focused_.expired())
+        focus_internal(outputs_.back()->id());
 
-    return locked->outputs_.back();
+    return outputs_.back();
 }
 
 void OutputManager::update(int id, mir::geometry::Rectangle area)
 {
-    for (auto const& output : state.lock()->outputs_)
+    for (auto const& output : outputs_)
     {
         if (output->id() == id)
         {
@@ -66,19 +65,18 @@ void OutputManager::update(int id, mir::geometry::Rectangle area)
 
 bool OutputManager::remove(int id, WorkspaceManager& workspace_manager)
 {
-    auto const locked = state.lock();
-    for (auto it = locked->outputs_.begin(); it != locked->outputs_.end(); ++it)
+    for (auto it = outputs_.begin(); it != outputs_.end(); ++it)
     {
         auto const& output = *it;
         if (output->id() != id)
             continue;
 
-        if (output == locked->focused_.lock())
-            unfocus_internal(*locked, id);
+        if (output == focused_.lock())
+            unfocus_internal(id);
 
-        if (locked->outputs_.size() == 1)
+        if (outputs_.size() == 1)
         {
-            locked->outputs_[0]->set_defunct();
+            outputs_[0]->set_defunct();
             return true;
         }
 
@@ -89,15 +87,15 @@ bool OutputManager::remove(int id, WorkspaceManager& workspace_manager)
 
         // Find the next available output
         auto next_it = it + 1;
-        if (next_it == locked->outputs_.end())
-            next_it = locked->outputs_.begin();
+        if (next_it == outputs_.end())
+            next_it = outputs_.begin();
 
         // Move workspaces to the next available output
         for (auto const workspace_id : workspaces)
             workspace_manager.move_workspace_to_output(workspace_id, next_it->get());
 
         focus(next_it->get()->id());
-        locked->outputs_.erase(it);
+        outputs_.erase(it);
         return true;
     }
 
@@ -106,22 +104,21 @@ bool OutputManager::remove(int id, WorkspaceManager& workspace_manager)
 
 std::vector<std::shared_ptr<AbstractOutput>> OutputManager::outputs() const
 {
-    return state.lock()->outputs_;
+    return outputs_;
 }
 
 bool OutputManager::focus(int id)
 {
-    auto const locked = state.lock();
-    return focus_internal(*locked, id);
+    return focus_internal(id);
 }
 
-bool OutputManager::focus_internal(State& state, int id)
+bool OutputManager::focus_internal(int id)
 {
-    for (auto const& output : state.outputs_)
+    for (auto const& output : outputs_)
     {
         if (output->id() == id)
         {
-            state.focused_ = output;
+            focused_ = output;
             return true;
         }
     }
@@ -131,31 +128,29 @@ bool OutputManager::focus_internal(State& state, int id)
 
 bool OutputManager::unfocus(int id)
 {
-    auto const locked = state.lock();
-    return unfocus_internal(*locked, id);
+    return unfocus_internal(id);
 }
 
-bool OutputManager::unfocus_internal(State& state, int id)
+bool OutputManager::unfocus_internal(int id)
 {
-    if (state.focused_.expired())
+    if (focused_.expired())
         return false;
 
-    if (state.focused_.lock()->id() != id)
+    if (focused_.lock()->id() != id)
         return false;
 
-    state.focused_.reset();
+    focused_.reset();
     return true;
 }
 
 std::shared_ptr<AbstractOutput> OutputManager::focused()
 {
-    return state.lock()->focused_.lock();
+    return focused_.lock();
 }
 
 std::shared_ptr<AbstractOutput> OutputManager::primary()
 {
-    auto const locked = state.lock();
-    for (auto const& output : locked->outputs_)
+    for (auto const& output : outputs_)
     {
         if (output->is_primary())
             return output;
@@ -166,8 +161,7 @@ std::shared_ptr<AbstractOutput> OutputManager::primary()
 
 std::shared_ptr<AbstractOutput> OutputManager::non_primary()
 {
-    auto const locked = state.lock();
-    for (auto const& output : locked->outputs_)
+    for (auto const& output : outputs_)
     {
         if (!output->is_primary())
             return output;
@@ -178,49 +172,46 @@ std::shared_ptr<AbstractOutput> OutputManager::non_primary()
 
 std::shared_ptr<AbstractOutput> OutputManager::prev()
 {
-    auto const locked = state.lock();
-    for (size_t i = locked->outputs_.size() - 1;; i--)
+    for (size_t i = outputs_.size() - 1;; i--)
     {
-        if (locked->outputs_[i] == locked->focused_.lock())
+        if (outputs_[i] == focused_.lock())
         {
-            auto const j = i == 0 ? locked->outputs_.size() - 1 : i - 1;
-            return locked->outputs_[j];
+            auto const j = i == 0 ? outputs_.size() - 1 : i - 1;
+            return outputs_[j];
         }
 
         if (i == 0)
             break;
     }
 
-    return locked->focused_.lock();
+    return focused_.lock();
 }
 
 std::shared_ptr<AbstractOutput> OutputManager::next()
 {
-    auto const locked = state.lock();
-    for (size_t i = 0; i < locked->outputs_.size(); i++)
+    for (size_t i = 0; i < outputs_.size(); i++)
     {
-        auto const& output = locked->outputs_[i];
-        if (output == locked->focused_.lock())
+        auto const& output = outputs_[i];
+        if (output == focused_.lock())
         {
-            if (i + 1 == locked->outputs_.size())
-                return locked->outputs_[0];
+            if (i + 1 == outputs_.size())
+                return outputs_[0];
             else
-                return locked->outputs_[i + 1];
+                return outputs_[i + 1];
         }
     }
 
-    return locked->focused_.lock();
+    return focused_.lock();
 }
 
 std::shared_ptr<AbstractOutput> OutputManager::next(Direction direction)
 {
-    auto const locked = state.lock();
-    auto const active = locked->focused_.lock();
+    auto const active = focused_.lock();
     if (!active)
         return nullptr;
 
     auto const& active_area = active->get_area();
-    for (auto const& output : locked->outputs_)
+    for (auto const& output : outputs_)
     {
         if (output == active)
             continue;
@@ -287,20 +278,18 @@ std::shared_ptr<AbstractOutput> OutputManager::next_in_list(std::vector<std::str
     if (next == names.size())
         next = 0;
 
-    auto const locked = state.lock();
-    for (auto const& output : locked->outputs_)
+    for (auto const& output : outputs_)
     {
         if (output->name() == names[next])
             return output;
     }
 
-    return locked->focused_.lock();
+    return focused_.lock();
 }
 
 std::shared_ptr<AbstractOutput> OutputManager::from(int id)
 {
-    auto const locked = state.lock();
-    for (auto const& output : locked->outputs_)
+    for (auto const& output : outputs_)
     {
         if (output->id() == id)
             return output;

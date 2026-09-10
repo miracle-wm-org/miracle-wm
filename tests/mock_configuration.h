@@ -42,9 +42,13 @@ namespace test
 
         MOCK_METHOD(void, reload, (), (override));
         MOCK_METHOD(std::string const&, get_filename, (), (const, override));
+        MOCK_METHOD(std::vector<miracle::Error> const&, get_config_errors, (), (const, override));
+        MOCK_METHOD(std::string, get_error_reporter_client, (), (const, override));
+        MOCK_METHOD(std::string, get_debug_overlay_client, (), (const, override));
         MOCK_METHOD(MirInputEventModifier, get_input_event_modifier, (), (const, override));
         MOCK_METHOD(CustomKeyCommand const*, matches_custom_key_command, (MirKeyboardAction action, uint32_t keysym, unsigned int modifiers), (const, override));
         MOCK_METHOD(bool, matches_key_command, (MirKeyboardAction action, uint32_t keysym, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f), (const, override));
+        MOCK_METHOD(std::vector<KeyBindingInfo>, describe_key_bindings, (), (const, override));
         MOCK_METHOD(Gaps, get_inner_gaps, (), (const, override));
         MOCK_METHOD(Gaps, get_outer_gaps, (), (const, override));
         MOCK_METHOD(void, override_inner_gaps, (Gaps const&), (override));
@@ -76,6 +80,7 @@ namespace test
         MOCK_METHOD(StickyKeysConfiguration, sticky_keys, (), (const, override));
         MOCK_METHOD(TouchpadConfiguration, touchpad, (), (const, override));
         MOCK_METHOD(bool, get_workspace_back_and_forth, (), (const, override));
+        MOCK_METHOD(glm::vec3, background_color, (), (const, override));
     };
 }
 }

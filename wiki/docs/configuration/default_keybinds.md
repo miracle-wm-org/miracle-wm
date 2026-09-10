@@ -1,6 +1,6 @@
 # Default Keybinds
 
-The compositors comes ships with a number of built-in commands. By default, these
+The compositors ships with a number of built-in commands. By default, these
 commands are bound to preset keybinds, but the user may change them to whatever
 they want. These commands may be overridden more than once and will respond to multiple key combinations as a result. Defining at least one override disables the default action.
 
@@ -10,12 +10,12 @@ The default commands defined in the compositor are described in this table:
 | ---------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------- |
 | `terminal`                   | Opens a new terminal                                                                   | `❖ Super + Enter`                   |
 | `reload_config`              | Reload the configuration                                                               | `❖ Super + Shift + R`               |
-| `request_vertical`           | Requests that the current window layout future windows vertially                       | `❖ Super + v`                       |
-| `request_horizontal`         | Requests that the current window layout future windows horizontaly                     | `❖ Super + h`                       |
-| `select_up`                  | Select the window above currently selected window                                      | `❖ Super + ↑`                       |
-| `select_down`                | Select the window above currently selected window                                      | `❖ Super + ↓`                       |
-| `select_left`                | Select the window above currently selected window                                      | `❖ Super + ←`                       |
-| `select_right`               | Select the window above currently selected window                                      | `❖ Super + →`                       |
+| `request_vertical_layout`    | Requests that the current window layout future windows vertically                      | `❖ Super + v`                       |
+| `request_horizontal_layout`  | Requests that the current window layout future windows horizontaly                     | `❖ Super + h`                       |
+| `select_up`                  | Select the window above the currently selected window                                  | `❖ Super + ↑`                       |
+| `select_down`                | Select the window below the currently selected window                                  | `❖ Super + ↓`                       |
+| `select_left`                | Select the window left to the currently selected window                                | `❖ Super + ←`                       |
+| `select_right`               | Select the window right to the currently selected window                               | `❖ Super + →`                       |
 | `move_up`                    | Move the currently selected window upwards                                             | `❖ Super + ⇧ Shift + ↑`             |
 | `move_down`                  | Move the currently selected window downwards                                           | `❖ Super + ⇧ Shift + ↓`             |
 | `move_left`                  | Move the currently selected window to the left                                         | `❖ Super + ⇧ Shift + ←`             |
@@ -24,18 +24,17 @@ The default commands defined in the compositor are described in this table:
 | `resize_up`                  | When resize mode is toggled on, this will decrease the size of the window vertically   | `❖ Super + ↑` (only in resize mode) |
 | `resize_down`                | When resize mode is toggled on, this will increase the size of the window vertically   | `❖ Super + ↓` (only in resize mode) |
 | `resize_left`                | When resize mode is toggled on, this will decrease the size of the window horizontally | `❖ Super + ←` (only in resize mode) |
-| `resize_down`                | When resize mode is toggled on, this will increase the size of the window horizontally | `❖ Super + →` (only in resize mode) |
+| `resize_right`               | When resize mode is toggled on, this will increase the size of the window horizontally | `❖ Super + →` (only in resize mode) |
 | `fullscreen`                 | Fullscreen the currently selected window                                               | `❖ Super + f`                       |
 | `quit_active_window`         | Close the currently selected window                                                    | `❖ Super + ⇧ Shift + Q`             |
-| `quit_compostior`            | Exit the compositor                                                                    | `❖ Super + ⇧ Shift + E`             |
+| `quit_compositor`            | Exit the compositor                                                                    | `❖ Super + ⇧ Shift + E`             |
 | `select_workspace_[0-9]`     | Select the workspace between 0-9                                                       | `❖ Super + [0-9]`                   |
-| `select_workspace_[0-9]`     | Move the currently selected window to the workspace between 0-9                        | `❖ Super + ⇧ Shift + [0-9]`         |
+| `move_to_workspace_[0-9]`    | Move the currently selected window to the workspace between 0-9                        | `❖ Super + ⇧ Shift + [0-9]`         |
 | `toggle_floating`            | Toggle whether or not the currently selected window is floating                        | `❖ Super + Space`                   |
 | `toggle_pinned_to_workspace` | Toggle whether a floating window is pinned outside of a workspace or not               | `❖ Super + ⇧ Shift + P`             |
 | `toggle_tabbing`             | Toggle whether or not the currently selected container is in a tabbed layout mode      | `❖ Super + W`                       |
 | `toggle_stacking`            | Toggle whether or not the currently selected container is in a stacking layout mode    | `❖ Super + S`                       |
-| `magnifier_on`               | Toggle whether the magnifier accessibility feature is enabled                          | `❖ Super + Shift + =`               |
-| `magnifier_off`              | Enable the magnifier accessibility feature                                             | `❖ Super + Esc`                     |
+| `magnifier_on`               | Enable the magnifier accessibility feature                                             | `❖ Super + Esc`                     |
 | `magnifier_off`              | Disable the magnifier accessibility feature                                            | `❖ Super + Esc`                     |
 | `magnifier_increase_size`    | Increase the area of the magnifier                                                     | `❖ Super + Shift + =`               |
 | `magnifier_decrease_size`    | Decrease the area of the magnifier                                                     | `❖ Super + Shift + -`               |

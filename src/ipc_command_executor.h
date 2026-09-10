@@ -29,6 +29,7 @@ class AbstractCommandController;
 class Launcher;
 class WindowController;
 class OutputManager;
+class DebugOverlayController;
 
 struct IpcValidationResult
 {
@@ -82,13 +83,15 @@ class IpcCommandExecutor : public AbstractIpcCommandExecutor
 public:
     IpcCommandExecutor(
         std::shared_ptr<AbstractCommandController> const&,
-        std::shared_ptr<Launcher> const&);
+        std::shared_ptr<Launcher> const&,
+        std::shared_ptr<DebugOverlayController> const&);
     std::vector<IpcValidationResult> process(IpcParseResult const&) override;
     void apply_startup_commands_to(std::shared_ptr<WindowContainer> const& container) override;
 
 private:
     std::shared_ptr<AbstractCommandController> command_controller;
     std::shared_ptr<Launcher> launcher;
+    std::shared_ptr<DebugOverlayController> debug_overlay_controller;
     mir::Synchronised<std::vector<IpcParseResult>> apply_on_startup;
 
     IpcValidationResult process_exec(IpcCommand const&, IpcParseResult const&) const;
@@ -110,6 +113,7 @@ private:
     IpcValidationResult process_rename(IpcCommand const&, IpcParseResult const&) const;
     IpcValidationResult process_gap(IpcCommand const&, IpcParseResult const&) const;
     IpcValidationResult process_nop(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_debug(IpcCommand const&, IpcParseResult const&) const;
 };
 
 } // miracle

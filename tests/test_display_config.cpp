@@ -173,3 +173,168 @@ TEST_F(DisplayConfigTest, ConfiguredMonitorPositionUnaffected)
     EXPECT_EQ(display_conf.outputs[0].top_left.x.as_int(), 0);
     EXPECT_EQ(display_conf.outputs[0].top_left.y.as_int(), 0);
 }
+
+// An output marked as disabled in the display config should be turned off.
+TEST_F(DisplayConfigTest, DisabledMonitorIsTurnedOff)
+{
+    write_display_yaml(
+        "outputs:\n"
+        "  - name: \"HDMI-1\"\n"
+        "    enabled: true\n"
+        "    position:\n"
+        "      x: 0\n"
+        "      y: 0\n"
+        "    size:\n"
+        "      width: 1920\n"
+        "      height: 1080\n"
+        "    scale: 1\n"
+        "    group_id: 0\n"
+        "    orientation: normal\n"
+        "  - name: \"HDMI-2\"\n"
+        "    enabled: false\n"
+        "    position:\n"
+        "      x: 1920\n"
+        "      y: 0\n"
+        "    size:\n"
+        "      width: 1920\n"
+        "      height: 1080\n"
+        "    scale: 1\n"
+        "    group_id: 0\n"
+        "    orientation: normal\n");
+
+    DisplayConfig config(config_path);
+    mtd::StubDisplayConfig display_conf({ make_output(1, "HDMI-1", 1920, 1080),
+        make_output(2, "HDMI-2", 1920, 1080) });
+
+    config.apply_to_config(display_conf);
+
+    EXPECT_TRUE(display_conf.outputs[0].used);
+    EXPECT_EQ(display_conf.outputs[0].power_mode, mir_power_mode_on);
+    EXPECT_FALSE(display_conf.outputs[1].used);
+    EXPECT_EQ(display_conf.outputs[1].power_mode, mir_power_mode_off);
+}
+
+// Disabling every output would leave the user with nothing to look at, so the
+// request is refused and all outputs stay enabled.
+TEST_F(DisplayConfigTest, DisablingEveryMonitorIsRefused)
+{
+    write_display_yaml(
+        "outputs:\n"
+        "  - name: \"HDMI-1\"\n"
+        "    enabled: false\n"
+        "    position:\n"
+        "      x: 0\n"
+        "      y: 0\n"
+        "    size:\n"
+        "      width: 1920\n"
+        "      height: 1080\n"
+        "    scale: 1\n"
+        "    group_id: 0\n"
+        "    orientation: normal\n"
+        "  - name: \"HDMI-2\"\n"
+        "    enabled: false\n"
+        "    position:\n"
+        "      x: 1920\n"
+        "      y: 0\n"
+        "    size:\n"
+        "      width: 1920\n"
+        "      height: 1080\n"
+        "    scale: 1\n"
+        "    group_id: 0\n"
+        "    orientation: normal\n");
+
+    DisplayConfig config(config_path);
+    mtd::StubDisplayConfig display_conf({ make_output(1, "HDMI-1", 1920, 1080),
+        make_output(2, "HDMI-2", 1920, 1080) });
+
+    config.apply_to_config(display_conf);
+
+    EXPECT_TRUE(display_conf.outputs[0].used);
+    EXPECT_EQ(display_conf.outputs[0].power_mode, mir_power_mode_on);
+    EXPECT_TRUE(display_conf.outputs[1].used);
+    EXPECT_EQ(display_conf.outputs[1].power_mode, mir_power_mode_on);
+}
+
+namespace
+{
+class RecordingListener : public DisplayConfigListener
+{
+public:
+    void display_configuration_changed(OutputConfigDetailList const& configuration) override
+    {
+        last = configuration;
+        count++;
+    }
+
+    OutputConfigDetailList last;
+    int count = 0;
+};
+
+std::string const one_enabled_one_disabled = "outputs:\n"
+                                             "  - name: \"HDMI-1\"\n"
+                                             "    enabled: true\n"
+                                             "    position:\n"
+                                             "      x: 0\n"
+                                             "      y: 0\n"
+                                             "    size:\n"
+                                             "      width: 1920\n"
+                                             "      height: 1080\n"
+                                             "    scale: 1\n"
+                                             "    group_id: 0\n"
+                                             "    orientation: normal\n"
+                                             "  - name: \"HDMI-2\"\n"
+                                             "    enabled: false\n"
+                                             "    position:\n"
+                                             "      x: 1920\n"
+                                             "      y: 0\n"
+                                             "    size:\n"
+                                             "      width: 1920\n"
+                                             "      height: 1080\n"
+                                             "    scale: 1\n"
+                                             "    group_id: 0\n"
+                                             "    orientation: normal\n";
+}
+
+// A disabled output must remain in the snapshot that the wlr-output-management
+// extension reads, otherwise its head would be dropped instead of advertised as
+// "enabled: 0".
+TEST_F(DisplayConfigTest, DisabledMonitorRemainsInTheConfigurationSnapshot)
+{
+    write_display_yaml(one_enabled_one_disabled);
+
+    DisplayConfig config(config_path);
+    mtd::StubDisplayConfig display_conf({ make_output(1, "HDMI-1", 1920, 1080),
+        make_output(2, "HDMI-2", 1920, 1080) });
+
+    config.apply_to_config(display_conf);
+
+    auto const configuration = config.configuration();
+    ASSERT_EQ(configuration.size(), 2);
+    EXPECT_EQ(configuration[0].name, "HDMI-1");
+    EXPECT_TRUE(configuration[0].connected);
+    EXPECT_TRUE(configuration[0].used);
+    EXPECT_EQ(configuration[1].name, "HDMI-2");
+    EXPECT_TRUE(configuration[1].connected);
+    EXPECT_FALSE(configuration[1].used);
+}
+
+// Listeners are told about the configuration, including the disabled outputs.
+TEST_F(DisplayConfigTest, ListenersAreNotifiedOfDisabledMonitors)
+{
+    write_display_yaml(one_enabled_one_disabled);
+
+    DisplayConfig config(config_path);
+    auto const listener = std::make_shared<RecordingListener>();
+    config.register_listener(listener);
+
+    mtd::StubDisplayConfig display_conf({ make_output(1, "HDMI-1", 1920, 1080),
+        make_output(2, "HDMI-2", 1920, 1080) });
+
+    config.apply_to_config(display_conf);
+
+    EXPECT_GT(listener->count, 0);
+    ASSERT_EQ(listener->last.size(), 2);
+    EXPECT_TRUE(listener->last[0].used);
+    EXPECT_FALSE(listener->last[1].used);
+    EXPECT_TRUE(listener->last[1].connected);
+}

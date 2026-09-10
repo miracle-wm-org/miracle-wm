@@ -34,7 +34,7 @@ namespace test
         MOCK_METHOD(void, delete_container, (std::shared_ptr<Container> const& container), (override));
         MOCK_METHOD(void, advise_new_workspace, (WorkspaceCreationData const&&), (override));
         MOCK_METHOD(void, advise_workspace_deleted, (WorkspaceManager&, uint32_t id), (override));
-        MOCK_METHOD(bool, advise_workspace_active, (WorkspaceManager&, uint32_t id), (override));
+        MOCK_METHOD(bool, advise_workspace_active, (WorkspaceManager&, uint32_t id, bool animate), (override));
         MOCK_METHOD(void, advise_application_zone_create, (miral::Zone const& application_zone), (override));
         MOCK_METHOD(void, advise_application_zone_update,
             (miral::Zone const& updated, miral::Zone const& original),

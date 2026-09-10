@@ -1,7 +1,20 @@
-use std::env;
-use std::path::PathBuf;
-
 fn main() {
+    // `src/bindings.rs` is checked into the repository and shipped in the published crate, so
+    // plugin authors need neither libclang nor Mir's development headers to build against this
+    // SDK. Bindings are only regenerated when the `regen-bindings` feature is enabled:
+    //
+    //     cargo build --features regen-bindings
+    //
+    // Run that (and commit the result) whenever plugin.h changes.
+    #[cfg(feature = "regen-bindings")]
+    generate_bindings();
+}
+
+#[cfg(feature = "regen-bindings")]
+fn generate_bindings() {
+    use std::env;
+    use std::path::PathBuf;
+
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let manifest_path = PathBuf::from(&manifest_dir);
     let plugin_header = manifest_path.join("plugin.h");
@@ -9,18 +22,7 @@ fn main() {
 
     println!("cargo:rerun-if-changed={}", plugin_header.display());
 
-    let target = env::var("TARGET").unwrap();
-
-    if !target.contains("wasm") {
-        // Allow non-wasm builds to succeed silently (e.g. during `cargo publish`)
-        println!(
-            "cargo:warning=miracle-plugin is only functional on wasm targets; skipping build script for target '{}'",
-            target
-        );
-        return;
-    }
-
-    let mut builder = bindgen::Builder::default()
+    let builder = bindgen::Builder::default()
         .header(plugin_header.to_str().unwrap())
         .header("/usr/include/mircore/mir_toolkit/events/enums.h")
         .clang_arg("-I/usr/include/mircore")
@@ -33,11 +35,9 @@ fn main() {
         .derive_default(true)
         .derive_debug(true)
         // Disable layout tests as they fail for cross-compilation targets with different pointer sizes
-        .layout_tests(false);
-
-    // Use C mode with wasm32 target to avoid C++ header requirements
-    // The plugin.h header is designed to be C compatible via extern "C"
-    builder = builder
+        .layout_tests(false)
+        // Use C mode with wasm32 target to avoid C++ header requirements. The bindings always
+        // describe the wasm ABI, whatever target we happen to be building for.
         .clang_arg("--target=wasm32")
         .clang_arg("-xc")
         // Undefine __cplusplus so the header skips extern "C" blocks

@@ -15,22 +15,30 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include "animator.h"
 #include "command_controller.h"
 #include "drag_and_drop_service.h"
 #include "mock_configuration.h"
 #include "mock_container.h"
 #include "mock_output.h"
 #include "mock_output_factory.h"
+#include "mock_session.h"
+#include "mock_surface.h"
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
 #include "mode_observer.h"
 #include "output_manager.h"
 #include "scratchpad.h"
+#include "window_observer.h"
 #include "workspace_manager.h"
 #include "workspace_observer.h"
 #include <gtest/gtest.h>
 #include <memory>
+#include <miracle/cpp/modifiers.h>
+#include <miral/window_info.h>
+#include <miral/window_specification.h>
 #include <mutex>
+#include <xkbcommon/xkbcommon-keysyms.h>
 
 using namespace miracle;
 using namespace testing;
@@ -304,6 +312,101 @@ TEST_F(CommandControllerTest, CanRenameExistingWorkspace)
             .name = "hi" });
 }
 
+TEST_F(CommandControllerTest, CanSetThePlacementPolicyOfTheFocusedWorkspace)
+{
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
+    EXPECT_CALL(*output, get_workspaces)
+        .WillRepeatedly(Invoke([&workspaces]()
+    { return workspaces; }));
+    output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
+
+    auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
+    Mock::AllowLeak(workspace.get());
+    EXPECT_CALL(*workspace, get_output())
+        .WillRepeatedly(Return(output));
+    EXPECT_CALL(*output, active())
+        .WillRepeatedly(Return(workspace));
+    workspaces.push_back(workspace);
+
+    EXPECT_CALL(*workspace, placement_policy(WindowPlacementPolicy::floating));
+    EXPECT_TRUE(command_controller->set_workspace_placement_policy(std::nullopt, WindowPlacementPolicy::floating));
+}
+
+TEST_F(CommandControllerTest, CanSetThePlacementPolicyOfAWorkspaceByNumber)
+{
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
+    EXPECT_CALL(*output, get_workspaces)
+        .WillRepeatedly(Invoke([&workspaces]()
+    { return workspaces; }));
+    output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
+
+    auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
+    Mock::AllowLeak(workspace.get());
+    EXPECT_CALL(*workspace, num())
+        .WillRepeatedly(Return(1));
+    EXPECT_CALL(*workspace, get_output())
+        .WillRepeatedly(Return(output));
+    EXPECT_CALL(*output, active())
+        .WillRepeatedly(Return(nullptr));
+    workspaces.push_back(workspace);
+
+    // The name is not part of the identifier, so it must not take part in the match.
+    EXPECT_CALL(*workspace, placement_policy(WindowPlacementPolicy::floating));
+    EXPECT_TRUE(command_controller->set_workspace_placement_policy(
+        WorkspaceIdentifier { .number = 1, .name = std::nullopt },
+        WindowPlacementPolicy::floating));
+}
+
+TEST_F(CommandControllerTest, CanSetThePlacementPolicyOfAWorkspaceByName)
+{
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
+    EXPECT_CALL(*output, get_workspaces)
+        .WillRepeatedly(Invoke([&workspaces]()
+    { return workspaces; }));
+    output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
+
+    auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
+    Mock::AllowLeak(workspace.get());
+    std::optional<std::string> name = "hello";
+    EXPECT_CALL(*workspace, name())
+        .WillRepeatedly(ReturnRef(name));
+    EXPECT_CALL(*workspace, get_output())
+        .WillRepeatedly(Return(output));
+    EXPECT_CALL(*output, active())
+        .WillRepeatedly(Return(nullptr));
+    workspaces.push_back(workspace);
+
+    EXPECT_CALL(*workspace, placement_policy(WindowPlacementPolicy::tile));
+    EXPECT_TRUE(command_controller->set_workspace_placement_policy(
+        WorkspaceIdentifier { .number = std::nullopt, .name = "hello" },
+        WindowPlacementPolicy::tile));
+}
+
+TEST_F(CommandControllerTest, SetPlacementPolicyFailsWhenTheWorkspaceIsNotFound)
+{
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
+    EXPECT_CALL(*output, get_workspaces)
+        .WillRepeatedly(Invoke([&workspaces]()
+    { return workspaces; }));
+    output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
+
+    auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
+    Mock::AllowLeak(workspace.get());
+    EXPECT_CALL(*workspace, num())
+        .WillRepeatedly(Return(1));
+    EXPECT_CALL(*workspace, get_output())
+        .WillRepeatedly(Return(output));
+    EXPECT_CALL(*output, active())
+        .WillRepeatedly(Return(nullptr));
+    workspaces.push_back(workspace);
+
+    EXPECT_CALL(*workspace, placement_policy(_))
+        .Times(0);
+    EXPECT_FALSE(command_controller->set_workspace_placement_policy(
+        WorkspaceIdentifier { .number = 7, .name = std::nullopt },
+        WindowPlacementPolicy::floating));
+}
+
 TEST_F(CommandControllerTest, CannotResizeWhileNotInNormalOrResizingState)
 {
     state->mode(WindowManagerMode::moving);
@@ -340,11 +443,31 @@ TEST_F(CommandControllerTest, CanToggleResizeModeToNormal)
     EXPECT_THAT(state->mode(), Eq(WindowManagerMode::normal));
 }
 
+TEST_F(CommandControllerTest, ModeToJsonNamesEveryMode)
+{
+    // Every mode must have a name: an unhandled one makes GET_BINDING_STATE
+    // log an error and return an empty object.
+    for (size_t i = 0; i < static_cast<size_t>(WindowManagerMode::max); i++)
+    {
+        state->mode(static_cast<WindowManagerMode>(i));
+        EXPECT_THAT(command_controller->mode_to_json(),
+            Eq(nlohmann::json {
+                { "name", BINDING_MODE_STRINGS[i] }
+        }))
+            << "mode " << i << " has no name";
+    }
+}
+
 // Fixture with two outputs to test cross-output workspace transfers
 class TwoOutputCommandControllerTest : public Test
 {
 public:
-    TwoOutputCommandControllerTest()
+    TwoOutputCommandControllerTest() :
+        session(std::make_shared<NiceMock<test::MockSession>>()),
+        surface(std::make_shared<NiceMock<test::MockSurface>>()),
+        app(session),
+        window(app, surface),
+        stub_info(window, miral::WindowSpecification {})
     {
         Mock::AllowLeak(output1.get());
         Mock::AllowLeak(output2.get());
@@ -370,8 +493,17 @@ public:
         ON_CALL(*output2, get_workspaces()).WillByDefault(Return(workspaces2));
         ON_CALL(*output1, active()).WillByDefault(Return(workspace1));
         ON_CALL(*output2, active()).WillByDefault(Return(workspace2));
-        ON_CALL(*output1, advise_workspace_active(_, _)).WillByDefault(Return(true));
-        ON_CALL(*output2, advise_workspace_active(_, _)).WillByDefault(Return(true));
+        ON_CALL(*output1, advise_workspace_active(_, _, _)).WillByDefault(Return(true));
+        ON_CALL(*output2, advise_workspace_active(_, _, _)).WillByDefault(Return(true));
+
+        // Wiring needed when a container is actually constructed (create_container ->
+        // FreestyleWindowContainer -> associate_to_window reads the output geometry/transform).
+        ON_CALL(*output1, get_area()).WillByDefault(ReturnRef(output1_area));
+        ON_CALL(*output2, get_area()).WillByDefault(ReturnRef(output2_area));
+        ON_CALL(*output1, get_transform()).WillByDefault(Return(glm::mat4(1.f)));
+        ON_CALL(*output2, get_transform()).WillByDefault(Return(glm::mat4(1.f)));
+        ON_CALL(*workspace1, transform()).WillByDefault(Return(glm::mat4(1.f)));
+        ON_CALL(*workspace2, transform()).WillByDefault(Return(glm::mat4(1.f)));
 
         auto factory = std::make_unique<NiceMock<test::MockOutputFactory>>();
         EXPECT_CALL(*factory, create)
@@ -384,6 +516,12 @@ public:
         workspace_registry = std::make_shared<WorkspaceObserverRegistrar>();
         workspace_manager = std::make_shared<WorkspaceManager>(workspace_registry, config, output_manager);
         scratchpad = std::make_shared<Scratchpad>(window_controller, output_manager);
+
+        // Needed by create_container when it actually constructs a FreestyleWindowContainer.
+        ON_CALL(*config, get_border_config()).WillByDefault(ReturnRef(border_config));
+        ON_CALL(*window_controller, info_for(An<miral::Window const&>()))
+            .WillByDefault(ReturnRef(stub_info));
+
         command_controller = std::make_shared<CommandController>(
             config,
             state,
@@ -393,9 +531,9 @@ public:
             std::make_unique<StubCommandControllerInterface>(),
             scratchpad,
             output_manager,
+            animator,
             nullptr,
-            nullptr,
-            nullptr,
+            window_observer_registrar,
             nullptr,
             nullptr);
 
@@ -418,6 +556,22 @@ public:
     std::shared_ptr<Scratchpad> scratchpad;
     std::shared_ptr<ModeObserverRegistrar> mode_observer_registrar = std::make_shared<ModeObserverRegistrar>();
     std::shared_ptr<CompositorState> state = std::make_shared<CompositorState>();
+    std::shared_ptr<Animator> animator = std::make_shared<Animator>();
+    std::shared_ptr<WindowObserverRegistrar> window_observer_registrar = std::make_shared<WindowObserverRegistrar>();
+    geom::Rectangle output1_area {
+        { 0,    0   },
+        { 1280, 720 }
+    };
+    geom::Rectangle output2_area {
+        { 1280, 0   },
+        { 1280, 720 }
+    };
+    BorderConfig border_config {};
+    std::shared_ptr<test::MockSession> session;
+    std::shared_ptr<test::MockSurface> surface;
+    miral::Application app;
+    miral::Window window;
+    miral::WindowInfo stub_info;
     std::shared_ptr<CommandController> command_controller;
 };
 
@@ -437,6 +591,55 @@ TEST_F(TwoOutputCommandControllerTest, MoveContainerToWorkspaceOnDifferentOutput
     EXPECT_CALL(*output2, graft(base_container));
 
     ASSERT_TRUE(command_controller->try_move_to_workspace({}, 2, false));
+}
+
+// ---- create_container: window is placed on its requested output ----
+
+TEST_F(TwoOutputCommandControllerTest, FreestyleWindowIsPlacedOnRequestedOutput)
+{
+    miral::WindowSpecification spec;
+    spec.output_id() = 2;
+    miral::WindowInfo info(window, spec);
+
+    AllocationHint hint;
+    hint.container_type = AllocationType::freestyle;
+
+    // The window asked for output 2, so it must land on output 2's active workspace,
+    // not on the focused output (output 1).
+    EXPECT_CALL(*workspace2, add_other_container(_, _));
+    EXPECT_CALL(*workspace1, add_other_container(_, _)).Times(0);
+
+    ASSERT_NE(command_controller->create_container(info, hint), nullptr);
+}
+
+TEST_F(TwoOutputCommandControllerTest, FreestyleWindowWithUnknownOutputFallsBackToFocusedOutput)
+{
+    miral::WindowSpecification spec;
+    spec.output_id() = 999; // no live output has this id
+    miral::WindowInfo info(window, spec);
+
+    AllocationHint hint;
+    hint.container_type = AllocationType::freestyle;
+
+    // The requested output does not exist, so we fall back to the focused output
+    // (output 1) instead of dereferencing a null output.
+    EXPECT_CALL(*workspace1, add_other_container(_, _));
+    EXPECT_CALL(*workspace2, add_other_container(_, _)).Times(0);
+
+    ASSERT_NE(command_controller->create_container(info, hint), nullptr);
+}
+
+TEST_F(TwoOutputCommandControllerTest, FreestyleWindowWithoutRequestedOutputUsesFocusedOutput)
+{
+    miral::WindowInfo info(window, miral::WindowSpecification {}); // no requested output
+
+    AllocationHint hint;
+    hint.container_type = AllocationType::freestyle;
+
+    EXPECT_CALL(*workspace1, add_other_container(_, _));
+    EXPECT_CALL(*workspace2, add_other_container(_, _)).Times(0);
+
+    ASSERT_NE(command_controller->create_container(info, hint), nullptr);
 }
 
 // ---- try_toggle_fullscreen ----
@@ -466,4 +669,70 @@ TEST_F(CommandControllerTest, TryToggleFullscreen_ReturnsFalse_WhenNotInNormalMo
 
     EXPECT_CALL(*container, toggle_fullscreen()).Times(0);
     EXPECT_FALSE(command_controller->try_toggle_fullscreen({}));
+}
+
+TEST_F(CommandControllerTest, KeyBindingsJson)
+{
+    std::vector<KeyBindingInfo> const bindings = {
+        { .source = KeyBindingSource::custom,
+         .action = mir_keyboard_action_down,
+         .configured_modifiers = miracle_input_event_modifier_default,
+         .modifiers = mir_input_event_modifier_meta,
+         .keysym = XKB_KEY_x,
+         .default_key_command = DefaultKeyCommand::MAX,
+         .command = "echo Hi" },
+        { .source = KeyBindingSource::built_in_override,
+         .action = mir_keyboard_action_down,
+         .configured_modifiers = miracle_input_event_modifier_default,
+         .modifiers = mir_input_event_modifier_meta,
+         .keysym = XKB_KEY_Escape,
+         .default_key_command = DefaultKeyCommand::Terminal,
+         .command = ""        },
+        { .source = KeyBindingSource::built_in_default,
+         .action = mir_keyboard_action_down,
+         .configured_modifiers = miracle_input_event_modifier_default,
+         .modifiers = mir_input_event_modifier_meta,
+         .keysym = XKB_KEY_Return,
+         .default_key_command = DefaultKeyCommand::Terminal,
+         .command = ""        }
+    };
+    EXPECT_CALL(*config, describe_key_bindings)
+        .WillOnce(Return(bindings));
+    EXPECT_CALL(*config, get_primary_modifier)
+        .WillRepeatedly(Return(mir_input_event_modifier_meta));
+
+    auto const result_json = command_controller->key_bindings_json();
+    EXPECT_THAT(result_json["primary_modifier"]["modifiers"], Eq(nlohmann::json::array({ "meta" })));
+    EXPECT_THAT(result_json["primary_modifier"]["modifier_mask"], Eq(mir_input_event_modifier_meta));
+
+    auto const& keybinds = result_json["keybinds"];
+    ASSERT_THAT(keybinds.size(), Eq(3u));
+
+    // Emitted in match-attempt order: custom, then override, then default. Exactly
+    // one of `action` / `command` is non-null on every entry; which of the three
+    // internal tables a binding came from is not reported.
+    EXPECT_THAT(keybinds[0]["command"], Eq("echo Hi"));
+    EXPECT_TRUE(keybinds[0]["action"].is_null());
+    EXPECT_THAT(keybinds[0]["xkb_keysym"], Eq(XKB_KEY_x));
+    EXPECT_THAT(keybinds[0]["xkb_keysym_name"], Eq("x"));
+    EXPECT_THAT(keybinds[0]["keyboard_action"], Eq("down"));
+
+    EXPECT_THAT(keybinds[1]["action"], Eq("terminal"));
+    EXPECT_TRUE(keybinds[1]["command"].is_null());
+    EXPECT_THAT(keybinds[1]["xkb_keysym_name"], Eq("Escape"));
+
+    EXPECT_THAT(keybinds[2]["action"], Eq("terminal"));
+    EXPECT_TRUE(keybinds[2]["command"].is_null());
+    EXPECT_THAT(keybinds[2]["xkb_keysym_name"], Eq("Return"));
+
+    // The resolved modifiers are what the user physically holds; the configured
+    // ones are what the config file said. Getting these backwards would emit
+    // ["primary"] with the real meta bit missing.
+    for (auto const& keybind : keybinds)
+    {
+        EXPECT_FALSE(keybind.contains("source"));
+        EXPECT_THAT(keybind["modifiers"], Eq(nlohmann::json::array({ "meta" })));
+        EXPECT_THAT(keybind["modifier_mask"], Eq(mir_input_event_modifier_meta));
+        EXPECT_THAT(keybind["configured_modifiers"], Eq(nlohmann::json::array({ "primary" })));
+    }
 }

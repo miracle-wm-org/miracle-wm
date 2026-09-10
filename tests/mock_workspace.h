@@ -38,6 +38,7 @@ namespace test
         MOCK_METHOD(bool, move_container, (Direction direction, Container&), (override));
         MOCK_METHOD(void, show, (geom::Point const&), (override));
         MOCK_METHOD(void, hide, (geom::Point const&), (override));
+        MOCK_METHOD(void, set_containers_shown, (bool), (override));
         MOCK_METHOD(bool, add_to_root, (Container&), (override));
 
         MOCK_METHOD(bool, for_each_window,
@@ -45,11 +46,14 @@ namespace test
 
         MOCK_METHOD(void, advise_focus_gained, (std::shared_ptr<Container> const& container), (override));
 
+        MOCK_METHOD(void, select_window, (), (override));
+
         MOCK_METHOD(std::shared_ptr<AbstractOutput>, get_output, (), (const, override));
 
         MOCK_METHOD(void, set_output, (std::shared_ptr<AbstractOutput> const&), (override));
 
         MOCK_METHOD(bool, is_empty, (), (const, override));
+        MOCK_METHOD(bool, urgent, (), (const, override));
         MOCK_METHOD(void, graft, (std::shared_ptr<Container> const&), (override));
 
         MOCK_METHOD(uint32_t, id, (), (const, override));
@@ -69,6 +73,9 @@ namespace test
 
         MOCK_METHOD(std::optional<Gaps>, inner_gaps, (), (const, override));
         MOCK_METHOD(void, inner_gaps, (std::optional<Gaps> const&), (override));
+
+        MOCK_METHOD(WindowPlacementPolicy, placement_policy, (), (const, override));
+        MOCK_METHOD(void, placement_policy, (WindowPlacementPolicy), (override));
 
         MOCK_METHOD(void, transform, (glm::mat4 const&), (override));
         MOCK_METHOD(glm::mat4, transform, (), (const, override));

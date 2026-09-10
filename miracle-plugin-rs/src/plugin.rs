@@ -166,6 +166,18 @@ pub trait Plugin {
     fn handle_pointer_event(&mut self, _event: PointerEvent) -> bool {
         false
     }
+
+    /// Handle an IPC command addressed to this plugin's namespace.
+    ///
+    /// `payload` is the raw JSON string sent by the IPC client under the command's
+    /// `"payload"` field. Return `Some(response_json)` to reply with an arbitrary JSON
+    /// string, or `None` to decline the command (the client receives `success: false`).
+    ///
+    /// Only invoked when this plugin has claimed a namespace via [`register_namespace`]
+    /// and the incoming command targets that namespace.
+    fn handle_command(&mut self, _payload: &str) -> Option<String> {
+        None
+    }
 }
 
 /// Lists the windows that are managed by this plugin.
@@ -211,6 +223,44 @@ pub fn managed_windows() -> Vec<Window> {
             }
         })
         .collect()
+}
+
+/// Register a namespace that this plugin owns for IPC commands and events.
+///
+/// Once registered, IPC clients can send commands to `{ "plugin": <ns>, "payload": ... }`
+/// (routed to [`Plugin::handle_command`]) and subscribe to this plugin's events by `<ns>`.
+///
+/// A plugin may own at most one namespace, and each namespace may be owned by at most one
+/// plugin. Returns `Ok(())` on success, or `Err(())` if this plugin already owns a
+/// namespace or `ns` is already taken by another plugin.
+pub fn register_namespace(ns: &str) -> Result<(), ()> {
+    let handle = unsafe { miracle_get_plugin_handle() };
+    let result = unsafe {
+        miracle_plugin_register_namespace(handle as i32, ns.as_ptr() as i32, ns.len() as i32)
+    };
+    if result == 0 {
+        Ok(())
+    } else {
+        Err(())
+    }
+}
+
+/// Publish an event on this plugin's registered namespace.
+///
+/// `payload` should be a JSON string; it is delivered to every IPC client subscribed to
+/// this plugin's namespace, wrapped as `{ "plugin": <ns>, "payload": <payload> }`.
+///
+/// Returns `Ok(())` on success, or `Err(())` if this plugin has not registered a namespace.
+pub fn publish_event(payload: &str) -> Result<(), ()> {
+    let handle = unsafe { miracle_get_plugin_handle() };
+    let result = unsafe {
+        miracle_plugin_publish_event(handle as i32, payload.as_ptr() as i32, payload.len() as i32)
+    };
+    if result == 0 {
+        Ok(())
+    } else {
+        Err(())
+    }
 }
 
 /// Get the number of outputs.
@@ -971,6 +1021,44 @@ macro_rules! miracle_plugin {
             };
 
             if plugin.handle_pointer_event(event) { 1 } else { 0 }
+        }
+
+        #[unsafe(no_mangle)]
+        pub extern "C" fn handle_plugin_command(buf_ptr: i32, in_len: i32, buf_cap: i32) -> i32 {
+            let plugin = unsafe {
+                match _MIRACLE_PLUGIN.as_mut() {
+                    Some(p) => p,
+                    None => return -1,
+                }
+            };
+
+            // Read the request payload the host wrote into the shared buffer.
+            let payload = if in_len > 0 {
+                let bytes = unsafe {
+                    core::slice::from_raw_parts(buf_ptr as *const u8, in_len as usize)
+                };
+                String::from_utf8_lossy(bytes).into_owned()
+            } else {
+                String::new()
+            };
+
+            match plugin.handle_command(&payload) {
+                Some(response) => {
+                    let bytes = response.as_bytes();
+                    if bytes.len() > buf_cap as usize {
+                        return -1;
+                    }
+                    unsafe {
+                        core::ptr::copy_nonoverlapping(
+                            bytes.as_ptr(),
+                            buf_ptr as *mut u8,
+                            bytes.len(),
+                        );
+                    }
+                    bytes.len() as i32
+                }
+                None => -1,
+            }
         }
     };
 }

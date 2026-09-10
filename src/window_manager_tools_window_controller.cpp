@@ -174,12 +174,14 @@ void WindowManagerToolsWindowController::clip(miral::Window const& window, geom:
 void WindowManagerToolsWindowController::noclip(miral::Window const& window)
 {
     auto& window_info = tools.info_for(window);
-    window_info.clip_area(mir::optional_value<geom::Rectangle>());
+    window_info.clip_area({});
 }
 
 void WindowManagerToolsWindowController::select_active_window(miral::Window const& window)
 {
-    if (state->mode() != WindowManagerMode::normal)
+    // The carousel focuses whatever is centered when it is dismissed, so
+    // [overview] selects just like [normal] does.
+    if (state->mode() != WindowManagerMode::normal && state->mode() != WindowManagerMode::overview)
         return;
 
     tools.select_active_window(window);
@@ -325,16 +327,9 @@ void WindowManagerToolsWindowController::invoke_under_lock(std::function<void()>
 RestoreResult WindowManagerToolsWindowController::hide(miral::Window const& window)
 {
     RestoreResult result {
-        .state = get_state(window),
-        .position = window.top_left()
+        .state = get_state(window)
     };
     move_to_offscreen_workspace(window);
-    // HACK: Move the window far offscreen to work around an X11 bug where windows
-    // assigned to the offscreen workspace may still be visible. This may be
-    // resolved in a future Mir release.
-    miral::WindowSpecification spec;
-    spec.top_left() = geom::Point { 1000000, 1000000 };
-    tools.modify_window(window, spec);
     change_state(window, mir_window_state_hidden);
     return result;
 }
@@ -342,9 +337,6 @@ RestoreResult WindowManagerToolsWindowController::hide(miral::Window const& wind
 void WindowManagerToolsWindowController::show(miral::Window const& window, RestoreResult const& result)
 {
     move_to_onscreen_workspace(window);
-    miral::WindowSpecification spec;
-    spec.top_left() = result.position;
-    tools.modify_window(window, spec);
     auto const restore_state = result.state == mir_window_state_hidden
         ? mir_window_state_restored
         : result.state;

@@ -1422,6 +1422,26 @@ extern "C"
     bool miracle_config_get_workspace_back_and_forth(const miracle_config_data_t* config);
     void miracle_config_set_workspace_back_and_forth(miracle_config_data_t* config, bool enabled);
 
+    /// A fully opaque color, with each component in the range [0, 1].
+    typedef struct
+    {
+        float r;
+        float g;
+        float b;
+    } miracle_color_rgb_t;
+
+    /// Retrieve the color that the compositor clears the screen to.
+    ///
+    /// \param config the config
+    /// \returns the background color
+    miracle_color_rgb_t miracle_config_get_background_color(const miracle_config_data_t* config);
+
+    /// Modify the color that the compositor clears the screen to.
+    ///
+    /// \param config the config
+    /// \param color the new background color
+    void miracle_config_set_background_color(miracle_config_data_t* config, miracle_color_rgb_t color);
+
 #ifdef __cplusplus
 }
 #endif

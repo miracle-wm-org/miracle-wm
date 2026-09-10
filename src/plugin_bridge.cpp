@@ -173,7 +173,8 @@ PluginBridge::PluginBridge(std::shared_ptr<OutputManager> const& output_manager,
     std::shared_ptr<ApplicationIdMap> const& application_id_map,
     std::shared_ptr<Animator> const& animator,
     std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
-    std::shared_ptr<SamplerRegistry> const& sampler_registry) :
+    std::shared_ptr<SamplerRegistry> const& sampler_registry,
+    PluginEventSink plugin_event_sink) :
     output_manager(output_manager),
     window_controller(window_controller),
     workspace_manager(workspace_manager),
@@ -182,8 +183,51 @@ PluginBridge::PluginBridge(std::shared_ptr<OutputManager> const& output_manager,
     application_id_map(application_id_map),
     animator(animator),
     server_action_queue(server_action_queue),
-    sampler_registry_(sampler_registry)
+    sampler_registry_(sampler_registry),
+    plugin_event_sink_(std::move(plugin_event_sink))
 {
+}
+
+int32_t PluginBridge::register_plugin_namespace(uint32_t handle, std::string ns)
+{
+    // A plugin may own at most one namespace.
+    for (auto const& [existing_ns, existing_handle] : namespace_to_handle_)
+    {
+        if (existing_handle == handle)
+            return -1;
+    }
+
+    // A namespace may be owned by at most one plugin.
+    if (namespace_to_handle_.contains(ns))
+        return -1;
+
+    namespace_to_handle_.emplace(std::move(ns), handle);
+    return 0;
+}
+
+std::optional<uint32_t> PluginBridge::handle_for_namespace(std::string const& ns) const
+{
+    auto const it = namespace_to_handle_.find(ns);
+    if (it == namespace_to_handle_.end())
+        return std::nullopt;
+    return it->second;
+}
+
+int32_t PluginBridge::publish_plugin_event(uint32_t handle, std::string payload_json)
+{
+    if (!plugin_event_sink_)
+        return -1;
+
+    for (auto const& [ns, owner] : namespace_to_handle_)
+    {
+        if (owner == handle)
+        {
+            plugin_event_sink_(ns, payload_json);
+            return 0;
+        }
+    }
+
+    return -1;
 }
 
 uint8_t PluginBridge::register_window_shader(std::vector<std::string> passes, std::optional<uint32_t> plugin_handle)
@@ -202,6 +246,11 @@ void PluginBridge::on_plugin_unloaded(uint32_t plugin_handle)
     auto const removed = sampler_registry_->remove_shaders_for_plugin(plugin_handle);
     if (!removed.empty())
         compositor_state->render_data_manager()->reset_shaders(removed);
+
+    std::erase_if(namespace_to_handle_, [plugin_handle](auto const& entry)
+    {
+        return entry.second == plugin_handle;
+    });
 }
 
 uint64_t PluginBridge::find_window_id(miral::Window const& window) const

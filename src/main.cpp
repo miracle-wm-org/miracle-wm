@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "config_observer.h"
 #include "display_config.h"
+#include "error_reporter_controller.h"
 #include "output_listener.h"
 #include "parent_background_internal_client.h"
 #include "policy.h"
@@ -232,24 +233,21 @@ int main(int argc, char const* argv[])
     auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration, keymap, hover_click, simulated_secondary_click, cursor_scale, slow_keys, sticky_keys);
     config_observer_registrar->register_interest(input_config_observer);
 
-    WaylandExtensions wayland_extensions = WaylandExtensions {}
-                                               .enable(WaylandExtensions::zwlr_layer_shell_v1)
-                                               .enable(WaylandExtensions::zwlr_foreign_toplevel_manager_v1)
-                                               .enable(WaylandExtensions::zxdg_output_manager_v1)
-                                               .enable(WaylandExtensions::zwp_virtual_keyboard_manager_v1)
-                                               .enable(WaylandExtensions::zwlr_virtual_pointer_manager_v1)
-                                               .enable(WaylandExtensions::zwp_input_method_manager_v2)
-                                               .enable(WaylandExtensions::zwlr_screencopy_manager_v1)
-                                               .enable(WaylandExtensions::ext_session_lock_manager_v1);
+    auto const error_reporter_controller = std::make_shared<miracle::ErrorReporterController>(external_client_launcher, config);
+    config_observer_registrar->register_interest(error_reporter_controller);
 
-    for (auto const& extension : { "zwp_pointer_constraints_v1", "zwp_relative_pointer_manager_v1" })
+    // TODO: Come up with a reasonable security filter for supporting Wayland extensiona cce
+    WaylandExtensions wayland_extensions;
+    for (auto const& extension : WaylandExtensions::supported())
+    {
         wayland_extensions.enable(extension);
+    }
 
     wayland_extensions.add_extension({ .name = mir::wayland::OutputManagerV1::interface_name,
-        .build = [output_listener = output_listener, display_config = display_config](WaylandExtensions::Context const* context)
+        .build = [display_config = display_config](WaylandExtensions::Context const* context)
     {
-        auto extension = std::make_shared<miracle::WlrOutputManagementUnstableV1>(context->display(), display_config);
-        output_listener->register_listener(extension);
+        auto extension = std::make_shared<miracle::WlrOutputManagementUnstableV1>(context, display_config);
+        display_config->register_listener(extension);
         return extension;
     } });
     wayland_extensions.enable(mir::wayland::OutputManagerV1::interface_name);

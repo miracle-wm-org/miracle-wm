@@ -39,6 +39,26 @@ namespace miracle
 {
 class ConfigObserverRegistrar;
 
+/// Where a key binding in a [KeyBindingInfo] snapshot came from.
+enum class KeyBindingSource
+{
+    built_in_default,
+    built_in_override,
+    custom
+};
+
+/// A read-only view of a single key binding, for viewing and serialization only.
+struct KeyBindingInfo
+{
+    KeyBindingSource source;
+    MirKeyboardAction action = mir_keyboard_action_down;
+    uint configured_modifiers = 0;
+    uint modifiers = 0;
+    uint keysym = 0;
+    DefaultKeyCommand default_key_command = DefaultKeyCommand::MAX;
+    std::string command;
+};
+
 class Config
 {
 public:
@@ -46,9 +66,20 @@ public:
     virtual void operator()(mir::Server& server) = 0;
     virtual void reload() = 0;
     [[nodiscard]] virtual std::string const& get_filename() const = 0;
+    /// Errors collected during the most recent configuration load. Empty if the
+    /// configuration loaded cleanly.
+    [[nodiscard]] virtual std::vector<Error> const& get_config_errors() const = 0;
+    /// The configured error reporter client (the raw `wm_clients.error_reporter`
+    /// value: "default", "disabled", or a path/name of an executable).
+    [[nodiscard]] virtual std::string get_error_reporter_client() const = 0;
+    /// The configured debug overlay client (the raw `wm_clients.debug_overlay`
+    /// value: "default", "disabled", or a path/name of an executable).
+    [[nodiscard]] virtual std::string get_debug_overlay_client() const = 0;
     [[nodiscard]] virtual MirInputEventModifier get_input_event_modifier() const = 0;
     [[nodiscard]] virtual CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers) const = 0;
     virtual bool matches_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const = 0;
+    /// A snapshot of every effective key binding, in the order that [matches_custom_key_command] and [matches_key_command] attempt them.
+    [[nodiscard]] virtual std::vector<KeyBindingInfo> describe_key_bindings() const = 0;
     [[nodiscard]] virtual Gaps get_inner_gaps() const = 0;
     virtual void override_inner_gaps(Gaps const&) = 0;
     [[nodiscard]] virtual Gaps get_outer_gaps() const = 0;
@@ -81,6 +112,8 @@ public:
     [[nodiscard]] virtual StickyKeysConfiguration sticky_keys() const = 0;
     [[nodiscard]] virtual TouchpadConfiguration touchpad() const = 0;
     [[nodiscard]] virtual bool get_workspace_back_and_forth() const = 0;
+    /// The fully opaque color that the compositor clears the screen to.
+    [[nodiscard]] virtual glm::vec3 background_color() const = 0;
 
     /// Register a hook that is called during reload() to allow plugins to
     /// override configuration values. The hook is called after the file config
@@ -100,9 +133,13 @@ public:
     void operator()(mir::Server& server) override;
     void reload() override;
     [[nodiscard]] std::string const& get_filename() const override;
+    [[nodiscard]] std::vector<Error> const& get_config_errors() const override;
+    [[nodiscard]] std::string get_error_reporter_client() const override;
+    [[nodiscard]] std::string get_debug_overlay_client() const override;
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override;
     [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers) const override;
     bool matches_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const override;
+    [[nodiscard]] std::vector<KeyBindingInfo> describe_key_bindings() const override;
     [[nodiscard]] Gaps get_inner_gaps() const override;
     void override_inner_gaps(Gaps const&) override;
     [[nodiscard]] Gaps get_outer_gaps() const override;
@@ -134,6 +171,7 @@ public:
     [[nodiscard]] StickyKeysConfiguration sticky_keys() const override;
     [[nodiscard]] TouchpadConfiguration touchpad() const override;
     [[nodiscard]] bool get_workspace_back_and_forth() const override;
+    [[nodiscard]] glm::vec3 background_color() const override;
     void set_plugin_configure_hook(std::function<PluginConfigData()>&& hook) override;
 
 private:
@@ -144,9 +182,11 @@ private:
     std::string default_config_path;
     std::string config_path;
     bool no_config = false;
+    bool no_plugins = false;
     std::mutex mutable mutex;
     bool is_loaded_ = false;
     ConfigData options;
+    std::vector<Error> config_errors_;
     std::optional<StartupApp> cached_systemd_app_;
     std::optional<StartupApp> cached_exec_app_;
     std::function<PluginConfigData()> plugin_configure_hook_;

@@ -22,6 +22,8 @@ The `change` string is one of the following:
 | move   | The workspace was moved to a different output                                                 |
 | rename | The workspace was renamed                                                                     |
 | reload | The configuration file has been reloaded                                                      |
+| urgent | A window on the workspace has started or stopped wanting attention                            |
+| policy | The current window placement policy, either `"tile"` or `"float"`                             |
 
 ## Example
 ```json
@@ -44,6 +46,7 @@ The `change` string is one of the following:
             "border": "none",
             "current_border_width": 0,
             "layout": "splith",
+            "policy": "tile",
             "percent": null,
             "window_rect": {
                 "x": 0,

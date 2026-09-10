@@ -71,7 +71,14 @@ public:
         get_window_data(window)->clip = std::nullopt;
     }
 
-    void select_active_window(miral::Window const&) override { }
+    void select_active_window(miral::Window const& window) override
+    {
+        selected_windows.push_back(window);
+    }
+
+    /// Every window passed to [select_active_window], in order. A default
+    /// constructed [miral::Window] means that focus was cleared.
+    std::vector<miral::Window> selected_windows;
 
     std::shared_ptr<Container> get_container(miral::Window const& window)
     {
@@ -145,8 +152,18 @@ public:
 
     void move_to_offscreen_workspace(miral::Window const&) override { }
     void move_to_onscreen_workspace(miral::Window const&) override { }
-    miracle::RestoreResult hide(miral::Window const&) override { return { mir_window_state_restored, {} }; }
-    void show(miral::Window const&, miracle::RestoreResult const&) override { }
+    miracle::RestoreResult hide(miral::Window const& window) override
+    {
+        miracle::RestoreResult const result { .state = get_state(window) };
+        change_state(window, mir_window_state_hidden);
+        return result;
+    }
+
+    void show(miral::Window const& window, miracle::RestoreResult const& result) override
+    {
+        change_state(window,
+            result.state == mir_window_state_hidden ? mir_window_state_restored : result.state);
+    }
 
 private:
     std::vector<StubWindowData>& pairs;

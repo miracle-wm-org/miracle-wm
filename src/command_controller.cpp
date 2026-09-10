@@ -34,9 +34,47 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace_manager.h"
 
 #include <mir/log.h>
+#include <mir/scene/surface.h>
+#include <mir_toolkit/common.h>
+#include <miracle/cpp/keyboard.h>
+#include <miracle/cpp/modifiers.h>
 #include <miral/runner.h>
+#include <xkbcommon/xkbcommon.h>
+
+#ifndef XKB_KEYSYM_NAME_MAX_SIZE
+#define XKB_KEYSYM_NAME_MAX_SIZE 64
+#endif
 
 using namespace miracle;
+
+namespace
+{
+nlohmann::json modifier_names(uint mask)
+{
+    nlohmann::json array = nlohmann::json::array();
+    for (auto const& [name, value] : mir_input_event_modifier_opts)
+    {
+        if (mask & value)
+            array.push_back(name);
+    }
+    return array;
+}
+
+nlohmann::json keysym_name(uint keysym)
+{
+    char buf[XKB_KEYSYM_NAME_MAX_SIZE];
+    int const n = xkb_keysym_get_name(static_cast<xkb_keysym_t>(keysym), buf, sizeof(buf));
+    return n < 0 ? nlohmann::json("NoSymbol") : nlohmann::json(buf);
+}
+
+nlohmann::json keyboard_action_name(MirKeyboardAction action)
+{
+    auto const index = static_cast<size_t>(action);
+    if (index >= mir_keyboard_actions_strings.size())
+        return nlohmann::json(static_cast<int>(action));
+    return nlohmann::json(mir_keyboard_actions_strings[index].first);
+}
+}
 
 CommandController::CommandController(
     std::shared_ptr<Config> const& config,
@@ -236,7 +274,19 @@ std::shared_ptr<WindowContainer> CommandController::create_container(miral::Wind
     break;
     case AllocationType::freestyle:
     {
-        std::shared_ptr<AbstractWorkspace> workspace = output_manager->focused()->active();
+        // Determine the workspace for the window. If the window has an output ID, use that, otherwise use the focused output.
+        // If the requested output has no matching live output, fall back to the focused output.
+        std::shared_ptr<AbstractWorkspace> workspace;
+        if (window_info.has_output_id())
+        {
+            if (auto const output = output_manager->from(window_info.output_id()))
+                workspace = output->active();
+            else
+                workspace = output_manager->focused()->active();
+        }
+        else
+            workspace = output_manager->focused()->active();
+
         if (window_info.parent())
         {
             if (auto const parent_container = window_controller->get_window_container(window_info.parent()))
@@ -833,6 +883,17 @@ bool CommandController::select_workspace(int number, bool allow_back_and_forth)
     return true;
 }
 
+bool CommandController::select_workspace_by_id(uint32_t id, bool animate)
+{
+    // The overview is allowed through: picking a workspace out of it is the
+    // whole point, and it hands the desktop back immediately afterwards.
+    if (state->mode() != WindowManagerMode::normal && state->mode() != WindowManagerMode::overview)
+        return false;
+
+    mir::log_info("select_workspace_by_id: %u", id);
+    return workspace_manager->request_focus(id, animate);
+}
+
 bool CommandController::select_workspace(std::string const& name, bool allow_back_and_forth)
 {
     if (state->mode() != WindowManagerMode::normal)
@@ -938,6 +999,8 @@ bool CommandController::move_container_to_workspace(
     if (auto const target = request())
     {
         target->graft(container);
+        if (container->window())
+            window_controller->select_active_window(container->window().value());
         return true;
     }
     return false;
@@ -1204,6 +1267,7 @@ bool CommandController::toggle_floating_internal(std::shared_ptr<Container> cons
             auto const gap_x = output_area.size.width.as_int() * gap_size / 2.f;
             auto const gap_y = output_area.size.height.as_int() * gap_size / 2.f;
             miral::WindowSpecification spec;
+            spec.depth_layer() = mir_depth_layer_always_on_top;
             window_controller->modify(window_info.window(), spec);
             window_controller->set_rectangle(
                 window_info.window(),
@@ -1886,6 +1950,48 @@ bool CommandController::rename_existing_workspace(
     return false;
 }
 
+bool CommandController::set_workspace_placement_policy(
+    std::optional<WorkspaceIdentifier> const& identifier,
+    WindowPlacementPolicy policy)
+{
+    if (!identifier)
+    {
+        auto const output = output_manager->focused();
+        if (!output)
+        {
+            mir::log_error("set_workspace_placement_policy: no focused output");
+            return false;
+        }
+
+        auto const selected_workspace = output->active();
+        if (!selected_workspace)
+        {
+            mir::log_error("set_workspace_placement_policy: could not find selected workspace");
+            return false;
+        }
+
+        selected_workspace->placement_policy(policy);
+        return true;
+    }
+
+    // Only the components that the identifier actually provides take part in the
+    // match, so that "workspace 2 policy float" finds a workspace named "2: web".
+    for (auto const& workspace : workspace_manager->workspaces())
+    {
+        if (identifier->number && workspace->num() != identifier->number)
+            continue;
+
+        if (identifier->name && workspace->name() != identifier->name)
+            continue;
+
+        workspace->placement_policy(policy);
+        return true;
+    }
+
+    mir::log_error("set_workspace_placement_policy: could not find requested workspace");
+    return false;
+}
+
 bool CommandController::set_inner_gaps(uint32_t px, GapsChangeType type, bool current_workspace_only)
 {
     auto const gaps_opt = [&]() -> std::optional<Gaps>
@@ -2171,6 +2277,121 @@ nlohmann::json CommandController::to_json() const
     return root;
 }
 
+nlohmann::json CommandController::debug_state_to_json() const
+{
+    auto const cursor = state->cursor_position;
+    auto const cursor_x = cursor.x.as_int();
+    auto const cursor_y = cursor.y.as_int();
+
+    // Determine the window directly underneath the cursor (if any).
+    int64_t window_under_cursor = -1;
+    for (auto const& output : output_manager->outputs())
+    {
+        if (output->is_defunct())
+            continue;
+        if (!output->point_is_in_output(cursor_x, cursor_y))
+            continue;
+        if (auto const container = output->intersect(
+                static_cast<float>(cursor_x), static_cast<float>(cursor_y)))
+            window_under_cursor = static_cast<int64_t>(container->id());
+        break;
+    }
+
+    // Flat list of every window across every output/workspace. Each entry reuses
+    // the per-container JSON (which carries `rect` and `window_rect`) and is
+    // annotated with a stable `debug_id` plus output/workspace context.
+    nlohmann::json windows = nlohmann::json::array();
+    for (auto const& output : output_manager->outputs())
+    {
+        if (output->is_defunct())
+            continue;
+
+        bool const output_focused = output_manager->focused() == output;
+        for (auto const& workspace : output->get_workspaces())
+        {
+            bool const workspace_visible = output->active() == workspace;
+            workspace->for_each_window([&](std::shared_ptr<WindowContainer> container)
+            {
+                nlohmann::json w = container->to_json(workspace_visible);
+                w["debug_id"] = container->id();
+                w["output"] = output->name();
+                w["output_focused"] = output_focused;
+                w["workspace_id"] = workspace->id();
+                if (auto const& name = workspace->name())
+                    w["workspace_name"] = name.value();
+
+                // Input geometry queried directly from the Mir scene surface, for
+                // debugging input bugs. `input_bounds` is the global bounding box
+                // of the input area; `input_region` are the individual accepting
+                // rectangles in global coordinates (an empty array means the whole
+                // surface accepts input, i.e. equal to `input_bounds`).
+                if (auto const win = container->window())
+                {
+                    if (auto const surface = win->operator std::shared_ptr<mir::scene::Surface>())
+                    {
+                        auto const bounds = surface->input_bounds();
+                        w["input_bounds"] = {
+                            { "x",      bounds.top_left.x.as_int()  },
+                            { "y",      bounds.top_left.y.as_int()  },
+                            { "width",  bounds.size.width.as_int()  },
+                            { "height", bounds.size.height.as_int() }
+                        };
+
+                        auto const top_left = surface->top_left();
+                        nlohmann::json regions = nlohmann::json::array();
+                        for (auto const& region : surface->get_input_region())
+                        {
+                            regions.push_back({
+                                { "x",      top_left.x.as_int() + region.top_left.x.as_int() },
+                                { "y",      top_left.y.as_int() + region.top_left.y.as_int() },
+                                { "width",  region.size.width.as_int()                       },
+                                { "height", region.size.height.as_int()                      }
+                            });
+                        }
+                        w["input_region"] = regions;
+
+                        // Surface content size (what the client has actually been
+                        // resized/c
+                        // onfigured to) — distinct from the logical `rect`.
+                        auto const content = surface->content_size();
+                        w["content_size"] = {
+                            { "width",  content.width.as_int()  },
+                            { "height", content.height.as_int() }
+                        };
+
+                        // The REAL applied clip area (global coords). Mir gates input
+                        // hit-testing on this (BasicSurface::input_area_contains), so a
+                        // stale clip here makes regions non-interactable even when the
+                        // surface is full-size. null means unclipped.
+                        if (auto const clip = surface->clip_area())
+                        {
+                            w["applied_clip"] = {
+                                { "x",      clip->top_left.x.as_int()  },
+                                { "y",      clip->top_left.y.as_int()  },
+                                { "width",  clip->size.width.as_int()  },
+                                { "height", clip->size.height.as_int() }
+                            };
+                        }
+                        else
+                        {
+                            w["applied_clip"] = nullptr;
+                        }
+                    }
+                }
+
+                windows.push_back(std::move(w));
+                return false;
+            });
+        }
+    }
+
+    return {
+        { "cursor",              { { "x", cursor_x }, { "y", cursor_y } } },
+        { "window_under_cursor", window_under_cursor                      },
+        { "windows",             windows                                  }
+    };
+}
+
 nlohmann::json CommandController::outputs_json() const
 {
 
@@ -2232,10 +2453,40 @@ nlohmann::json CommandController::mode_to_json() const
         return {
             { "name", "moving" }
         };
+    case WindowManagerMode::overview:
+        return {
+            { "name", "overview" }
+        };
     default:
     {
-        mir::fatal_error("handle_command: unknown binding state: %d", (int)state->mode());
+        mir::log_error("handle_command: unknown binding state: %d", (int)state->mode());
         return {};
     }
     }
+}
+
+nlohmann::json CommandController::key_bindings_json() const
+{
+    using json = nlohmann::json;
+    json keybinds = json::array();
+    for (auto const& info : config->describe_key_bindings())
+    {
+        bool const is_custom = info.source == KeyBindingSource::custom;
+        keybinds.push_back({
+            { "action",               is_custom ? json(nullptr) : json(default_key_command_strings[static_cast<int>(info.default_key_command)]) },
+            { "command",              is_custom ? json(info.command) : json(nullptr)                                                            },
+            { "keyboard_action",      keyboard_action_name(info.action)                                                                         },
+            { "modifiers",            modifier_names(info.modifiers)                                                                            },
+            { "modifier_mask",        info.modifiers                                                                                            },
+            { "configured_modifiers", modifier_names(info.configured_modifiers)                                                                 },
+            { "xkb_keysym",           info.keysym                                                                                               },
+            { "xkb_keysym_name",      keysym_name(info.keysym)                                                                                  },
+        });
+    }
+
+    auto const primary = config->get_primary_modifier();
+    return {
+        { "primary_modifier", { { "modifiers", modifier_names(primary) }, { "modifier_mask", primary } } },
+        { "keybinds",         keybinds                                                                   }
+    };
 }

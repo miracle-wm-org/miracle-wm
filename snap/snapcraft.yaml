@@ -6,7 +6,7 @@ description: |
 confinement: classic
 base: core26
 version: 0.0.0
-grade: devel
+grade: stable
 
 platforms:
   amd64:
@@ -37,6 +37,10 @@ apps:
     command: usr/bin/miraclemsg
     environment: *_environment
 
+  miracle-wm-basic-error-reporter:
+    command: usr/bin/miracle-wm-basic-error-reporter
+    environment: *_environment
+
 parts:
   miracle-wm:
     build-attributes:
@@ -50,12 +54,13 @@ parts:
       published=`git describe --tags --abbrev=0`
       version=`git describe --tags`
       craftctl set version=$version
-      if [[ "$published" != *"$version"* ]]; then craftctl set grade=devel; else craftctl set grade=stable; fi
+    # if [[ "$published" != *"$version"* ]]; then craftctl set grade=devel; else craftctl set grade=stable; fi
     plugin: cmake
     cmake-parameters:
       - -DSNAP_BUILD=ON
       - -DCMAKE_BUILD_TYPE=Release
       - -DCMAKE_INSTALL_PREFIX=/usr
+      - -DSYSTEMD_INTEGRATION=1
     source: .
     override-build: |
       apt-get install -y libmirrenderer-dev || true
@@ -91,6 +96,10 @@ parts:
       - libboost-filesystem-dev
       - libboost-system-dev
       - libwasmedge-dev
+      # miracle-wm-basic-error-reporter (GTK4 client)
+      - libgtk-4-dev
+      - libgtk4-layer-shell-dev
+      - gettext
     stage-packages:
       - libmiral7
       - mir-graphics-drivers-desktop
@@ -102,6 +111,11 @@ parts:
       - libgl1-mesa-dri
       - libdrm-nouveau2
       - libwasmedge0
+      # miracle-wm-basic-error-reporter (GTK4 client) runtime
+      - libgtk-4-1
+      - libgtk4-layer-shell0
+      - libjson-c5
+      - adwaita-icon-theme
     prime:
       - -lib/udev
       - -usr/doc
@@ -124,6 +138,8 @@ parts:
   session:
     plugin: dump
     source: session
+    organize:
+      usr/bin/libexec/miracle-wm-session-setup.in: usr/bin/libexec/miracle-wm-session-setup
 
   mesa-no-patchelf:
     plugin: nil

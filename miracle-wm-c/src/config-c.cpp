@@ -1327,4 +1327,17 @@ extern "C"
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->workspace_back_and_forth = enabled;
     }
+
+    miracle_color_rgb_t miracle_config_get_background_color(const miracle_config_data_t* config)
+    {
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
+        glm::vec3 const& background_color = data->background_color;
+        return { background_color.r, background_color.g, background_color.b };
+    }
+
+    void miracle_config_set_background_color(miracle_config_data_t* config, miracle_color_rgb_t color)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->background_color = glm::vec3(color.r, color.g, color.b);
+    }
 } // extern "C"

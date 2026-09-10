@@ -32,7 +32,7 @@ namespace test
         MockContainer() :
             WindowContainer(0, std::make_shared<RenderDataManager>(), nullptr)
         {
-            window_sync.lock()->render_id = 0;
+            render_id_ = 0;
         }
         MOCK_METHOD(void, show, (), (override));
         MOCK_METHOD(void, hide, (), (override));
@@ -46,7 +46,7 @@ namespace test
         MOCK_METHOD(size_t, get_min_height, (), (const, override));
         MOCK_METHOD(size_t, get_min_width, (), (const, override));
         MOCK_METHOD(void, handle_ready, (), (override));
-        MOCK_METHOD(void, handle_modify, (miral::WindowSpecification const&), (override));
+        MOCK_METHOD(void, handle_modify, (miral::WindowSpecification const&, bool), (override));
         MOCK_METHOD(void, handle_request_move, (MirInputEvent const*), (override));
         MOCK_METHOD(void, handle_raise, (), (override));
         MOCK_METHOD(bool, resize, (Direction, int), (override));

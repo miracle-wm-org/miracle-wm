@@ -31,6 +31,9 @@ namespace test
         void operator()(mir::Server& server) override { }
         void reload() override { }
         [[nodiscard]] std::string const& get_filename() const override { return filename; }
+        [[nodiscard]] std::vector<miracle::Error> const& get_config_errors() const override { return config_errors; }
+        [[nodiscard]] std::string get_error_reporter_client() const override { return "default"; }
+        [[nodiscard]] std::string get_debug_overlay_client() const override { return "default"; }
         [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override { return mir_input_event_modifier_none; }
         [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers) const override
         {
@@ -40,6 +43,11 @@ namespace test
         bool matches_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const override
         {
             return false;
+        }
+
+        [[nodiscard]] std::vector<KeyBindingInfo> describe_key_bindings() const override
+        {
+            return {};
         }
 
         [[nodiscard]] Gaps get_inner_gaps() const override
@@ -87,8 +95,13 @@ namespace test
 
         [[nodiscard]] bool are_animations_enabled() const override
         {
-            return false;
+            return animations_enabled;
         }
+
+        /// Off by default, because most tests want the instant code paths.
+        /// Flip it when the thing under test is the difference between an
+        /// animated and an immediate transition.
+        bool animations_enabled = false;
 
         [[nodiscard]] WorkspaceConfig get_workspace_config(std::optional<int> const& num, std::optional<std::string> const& name) const override
         {
@@ -182,10 +195,16 @@ namespace test
             return true;
         }
 
+        glm::vec3 background_color() const override
+        {
+            return {};
+        }
+
     private:
         miracle::BorderConfig border_config;
         std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> animations;
         std::string filename;
+        std::vector<miracle::Error> config_errors;
         std::vector<StartupApp> startup_apps;
         std::optional<std::string> terminal_command;
         std::vector<EnvironmentVariable> env;

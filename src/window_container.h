@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "container_effect.h"
-#include "synchronized_recursive.h"
 #include <optional>
 
 namespace miracle
@@ -41,7 +40,15 @@ public:
     WindowContainer(uint64_t id, std::shared_ptr<RenderDataManager> const& rdm, std::shared_ptr<WindowController> const& window_controller, bool enable_render_data = true);
     ~WindowContainer() override;
     virtual void handle_ready() = 0;
-    virtual void handle_modify(miral::WindowSpecification const&) = 0;
+
+    /// Handle a client-requested modification of this container's window.
+    ///
+    /// \param hidden true when this container's workspace is not currently
+    ///        rendered (a background workspace or a hidden scratchpad). When
+    ///        hidden, a requested window-state change must be deferred until the
+    ///        container is next shown, so its workspace is not revealed
+    ///        prematurely. Non-state modifications are still applied immediately.
+    virtual void handle_modify(miral::WindowSpecification const&, bool hidden) = 0;
     virtual void handle_request_move(MirInputEvent const* input_event) = 0;
     virtual void on_open();
     virtual bool needs_outline() const;
@@ -81,8 +88,8 @@ public:
     /// \param window to associate
     void associate_to_window(miral::Window const& window);
 
-    [[nodiscard]] std::optional<miral::Window> window() const override { return window_sync.lock()->window_; }
-    [[nodiscard]] bool has_render_data() const { return window_sync.lock()->render_id.has_value(); }
+    [[nodiscard]] std::optional<miral::Window> window() const override { return window_; }
+    [[nodiscard]] bool has_render_data() const { return render_id_.has_value(); }
 
     /// Push this container's current output area into its render data.
     ///
@@ -123,28 +130,51 @@ public:
     /// Check if animations are turned on for this type of window.
     virtual bool can_animate();
 
+    /// Keep this container's window in the render list even when something
+    /// else completely covers it.
+    ///
+    /// TODO: This is largely a hack for the wffects system.
+    ///
+    /// \param bypass whether to keep the window out of the occlusion cull
+    void set_occlusion_bypass(bool bypass);
+
+    /// Whether this container's window is opted out of occlusion culling.
+    [[nodiscard]] bool occlusion_bypass() const { return occlusion_bypass_; }
+
+    /// The visually inert matrix that [set_occlusion_bypass] composes in.
+    [[nodiscard]] static glm::mat4 occlusion_bypass_transform();
+
+    /// Change the urgency of the window.
+    ///
+    /// \param urgent new urgency
+    /// \returns `true` if the urgency changed, otherwise `false`
+    bool set_urgent(bool urgent);
+
+    /// The urgency of the window.
+    ///
+    /// \returns the window's urgency
+    bool urgent() const;
+
 protected:
     void update_window_margins(int border_size, bool entering_fullscreen);
-
-    struct State
-    {
-        miral::Window window_;
-        bool resizable_ = true;
-        bool movable_ = true;
-        std::optional<uint32_t> render_id;
-        uint32_t animation_handle_;
-        ContainerEffect workspace_effect;
-        ContainerEffect window_effect;
-        ContainerEffect animation_effect;
-    };
 
     void rerender();
     std::weak_ptr<RenderDataManager> rdm;
     std::shared_ptr<WindowController> window_controller_;
-    SynchronisedRecursive<State> window_sync;
+
+    miral::Window window_;
+    bool resizable_ = true;
+    bool movable_ = true;
+    std::optional<uint32_t> render_id_;
+    uint32_t animation_handle_;
+    ContainerEffect workspace_effect;
+    ContainerEffect window_effect;
+    ContainerEffect animation_effect;
 
 private:
     bool enable_render_data_ = true;
+    bool urgent_ = false;
+    bool occlusion_bypass_ = false;
 };
 
 } // namespace miracle

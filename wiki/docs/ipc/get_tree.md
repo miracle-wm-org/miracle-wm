@@ -32,6 +32,11 @@ contains other containers, or a window.
     // Current layout scheme on the node.
     "layout": "output" | "splith" | "splitv" | "stacking" | "tabbed" | "none",
 
+    // How windows that are newly opened on the workspace are placed.
+    //
+    // For workspace nodes only.
+    "policy": "tile" | "float",
+
     // Whether or not the node is visible.
     "visible": boolean,
 
@@ -40,9 +45,12 @@ contains other containers, or a window.
 
     // Whether or not the node is "urgent".
     //
-    // Urgent means that the node currently wants focus.
-    // This is always 'false' as of now.
-    "urgent": false,
+    // Urgent means that the node currently wants focus. A window becomes urgent
+    // when it asks to be raised while it is not on screen, and stops being
+    // urgent once it is focused. A node that is not a window is urgent when any
+    // node beneath it is urgent, so urgency propagates up to the workspace and
+    // the output.
+    "urgent": boolean,
 
     // The border style of the node.
     "border": "normal" | "none" | "pixel",
@@ -346,6 +354,7 @@ being `kitty` in a hosted wayland session:
           "num": 1,
           "orientation": "none",
           "output": "unknown-1",
+          "policy": "tile",
           "rect": {
             "height": 1014,
             "width": 1270,

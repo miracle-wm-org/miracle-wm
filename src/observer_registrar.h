@@ -46,7 +46,8 @@ public:
                 return true;
 
             return other.lock().get() == observer;
-        }));
+        }),
+            observers.end());
     }
 
     void for_each_observer(std::function<void(T*)> const& f)

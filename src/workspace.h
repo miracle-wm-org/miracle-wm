@@ -65,11 +65,14 @@ public:
     bool add_to_root(Container& to_move) override;
     void show(mir::geometry::Point const& origin) override;
     void hide(mir::geometry::Point const& end) override;
+    void set_containers_shown(bool shown) override;
     bool for_each_window(std::function<bool(std::shared_ptr<WindowContainer>)> const&) const override;
     void advise_focus_gained(std::shared_ptr<Container> const& container) override;
+    void select_window() override;
     [[nodiscard]] std::shared_ptr<AbstractOutput> get_output() const override;
     void set_output(std::shared_ptr<AbstractOutput> const&) override;
     [[nodiscard]] bool is_empty() const override;
+    [[nodiscard]] bool urgent() const override;
     void graft(std::shared_ptr<Container> const&) override;
     void on_animation_end(bool is_hiding);
     [[nodiscard]] uint32_t id() const override { return id_; }
@@ -82,6 +85,8 @@ public:
     void outer_gaps(std::optional<Gaps> const& gaps) override;
     [[nodiscard]] std::optional<Gaps> inner_gaps() const override;
     void inner_gaps(std::optional<Gaps> const& gaps) override;
+    [[nodiscard]] WindowPlacementPolicy placement_policy() const override;
+    void placement_policy(WindowPlacementPolicy) override;
     void transform(glm::mat4 const&) override;
     glm::mat4 transform() const override;
     void alpha(float) override;
@@ -114,6 +119,10 @@ private:
     std::weak_ptr<AbstractOutput> output;
     uint32_t id_;
     mutable std::shared_ptr<ParentContainer> root_;
+
+    /// Set when [recalculate_area] is called while this workspace is not being shown.
+    /// The recalculation is applied the next time that the workspace is shown.
+    bool needs_area_recalculation_ = false;
     std::vector<std::weak_ptr<Container>> other_containers;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> state;
@@ -131,8 +140,13 @@ private:
         std::weak_ptr<Container> last_selected_container;
         std::optional<Gaps> workspace_outer_gaps;
         std::optional<Gaps> workspace_inner_gaps;
+        WindowPlacementPolicy placement_policy_ = WindowPlacementPolicy::tile;
         glm::mat4 transform_ = glm::mat4(1.f);
         float alpha_ = 1.f;
+        /// Whether the windows of this workspace are currently in the scene.
+        /// True for the active workspace, and for one that an effect has forced
+        /// into the scene via [set_containers_shown].
+        bool containers_shown = false;
     };
 
     mir::Synchronised<State> sync;
