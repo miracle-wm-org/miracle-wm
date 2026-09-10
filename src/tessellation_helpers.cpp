@@ -76,11 +76,7 @@ auto mgl::committed_window_rect(
     };
 }
 
-namespace
-{
-/// The body of tessellate_renderable_into_rectangle, spelled out in the three values it
-/// reads off the renderable.
-mgl::Primitive tessellate_into_rectangle(
+mgl::Primitive mgl::tessellate_into_rectangle(
     geom::Rectangle const& screen_position,
     geom::Size const& buffer_size,
     geom::RectangleD const& src_bounds,
@@ -172,7 +168,6 @@ mgl::Primitive tessellate_into_rectangle(
     };
     return rectangle;
 }
-}
 
 mgl::Primitive mgl::tessellate_renderable_into_rectangle(
     mg::Renderable const& renderable,
@@ -181,7 +176,7 @@ mgl::Primitive mgl::tessellate_renderable_into_rectangle(
     std::optional<geom::Rectangle> const& clip_area,
     std::optional<Stretch> const& stretch)
 {
-    return ::tessellate_into_rectangle(
+    return tessellate_into_rectangle(
         renderable.screen_position(), renderable.buffer()->size(), renderable.src_bounds(),
         offset, is_flipped, clip_area, stretch);
 }

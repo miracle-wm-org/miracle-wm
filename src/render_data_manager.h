@@ -47,6 +47,17 @@ struct ContentStretch
     /// before the compositor has asked for anything new.
     mir::geometry::Size source;
 
+    /// How far through the animation this frame is, in [0, 1], held monotone. Once the
+    /// client swaps buffers mid-animation the renderer cross-fades the content it was showing
+    /// out over whatever is left of this, so the fade rides the same curve the motion does
+    /// rather than a duration of its own.
+    ///
+    /// Unlike the fields above this changes every frame, so it costs the early-out in
+    /// stretch_change() the frames where the stretch has frozen at the client's limit. That
+    /// is the only case the early-out ever caught - during the rest of a resize the size is
+    /// moving anyway - so the cost is a render-data copy on those frames.
+    float progress = 0.f;
+
     friend bool operator==(ContentStretch const&, ContentStretch const&) = default;
 };
 

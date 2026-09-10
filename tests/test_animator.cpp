@@ -147,6 +147,15 @@ AnimationDefinition const linear_slide {
     } }
 };
 
+AnimationDefinition const elastic_slide {
+    false,
+    1.f,
+    BuiltInAnimationList { BuiltInAnimationDefinition {
+        .type = BultInAnimationType::slide,
+        .function = EaseFunction::ease_out_elastic,
+    } }
+};
+
 AnimationData slide_data(mir::geometry::Rectangle const& from, mir::geometry::Rectangle const& to)
 {
     return AnimationData { AnimateableEvent::window_move, from, to, 1, 1 };
@@ -259,6 +268,80 @@ TEST_F(AnimatorTest, AResizeFrameCarriesThePreResizeSize)
     ASSERT_TRUE(first_frame.has_value());
     ASSERT_TRUE(first_frame->resize.has_value());
     EXPECT_EQ(first_frame->resize->source, mir::geometry::Size(800, 600));
+}
+
+TEST_F(AnimatorTest, ProgressNeverGoesBackDownUnderAnOscillatingEase)
+{
+    // ease_out_elastic reaches 1 early and then oscillates around it. The motion is welcome
+    // to overshoot; the cross-fade the renderer drives off `progress` is not - a fade that
+    // reverses reads as a flicker. This is niri's value() / clamped_value() split.
+    Animator animator;
+    auto const handle = animator.register_animateable();
+    std::vector<float> progress;
+    animator.append(Animation(
+        handle,
+        elastic_slide,
+        slide_data(
+            mir::geometry::Rectangle({ 0, 0 }, { 800, 600 }),
+            mir::geometry::Rectangle({ 0, 0 }, { 400, 600 })),
+        [&](AnimationFrameResult const& result)
+    {
+        if (result.resize)
+            progress.push_back(result.resize->progress);
+    },
+        std::shared_ptr<PluginManager>()));
+
+    for (int i = 0; i < 9; ++i)
+        animator.tick(0.1f);
+
+    ASSERT_GE(progress.size(), 5u);
+    for (size_t i = 1; i < progress.size(); ++i)
+        EXPECT_GE(progress[i], progress[i - 1]) << "frame " << i;
+
+    // And it is genuinely being held up rather than trivially monotone: by the third frame
+    // the raw curve has fallen back below 1 while progress has not.
+    BuiltInAnimationDefinition const elastic {
+        .type = BultInAnimationType::slide,
+        .function = EaseFunction::ease_out_elastic,
+    };
+    EXPECT_LT(miracle::ease(elastic, 0.3f), 1.f);
+    EXPECT_FLOAT_EQ(progress[2], 1.f);
+}
+
+TEST_F(AnimatorTest, ARetargetedAnimationRestartsItsProgress)
+{
+    // A resize replacing one still in flight continues from what is on screen, so its
+    // cross-fade has to start over too - carrying the old progress would leave the
+    // replacement with almost no fade span left.
+    Animator animator;
+    auto const handle = animator.register_animateable();
+    std::optional<float> latest;
+    auto const record = [&](AnimationFrameResult const& result)
+    {
+        if (result.resize)
+            latest = result.resize->progress;
+    };
+
+    animator.append(Animation(
+        handle, linear_slide,
+        slide_data(
+            mir::geometry::Rectangle({ 0, 0 }, { 800, 600 }),
+            mir::geometry::Rectangle({ 0, 0 }, { 400, 600 })),
+        record, std::shared_ptr<PluginManager>()));
+    animator.tick(0.75f);
+    ASSERT_TRUE(latest.has_value());
+    EXPECT_FLOAT_EQ(*latest, 0.75f);
+
+    animator.append(Animation(
+        handle, linear_slide,
+        slide_data(
+            mir::geometry::Rectangle({ 0, 0 }, { 400, 600 }),
+            mir::geometry::Rectangle({ 0, 0 }, { 900, 600 })),
+        record, std::shared_ptr<PluginManager>()));
+    animator.tick(0.1f);
+
+    ASSERT_TRUE(latest.has_value());
+    EXPECT_FLOAT_EQ(*latest, 0.1f);
 }
 
 TEST_F(AnimatorTest, ASizeChangeTooSmallToSeeIsNotAnimated)

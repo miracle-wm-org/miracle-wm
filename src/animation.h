@@ -56,6 +56,12 @@ struct ResizeFrame
     /// uses it to learn, once, how far a client's buffer overshoots its window - see
     /// ContentStretch::source.
     mir::geometry::Size source;
+
+    /// How far through the animation this frame is, in [0, 1], held monotone. The renderer
+    /// cross-fades the pre-resize content out over the animation's *remaining* progress once
+    /// the client swaps buffers, so it needs the same clock the motion is on rather than one
+    /// of its own - see ContentStretch::progress.
+    float progress = 0.f;
 };
 
 struct AnimationData
@@ -185,6 +191,12 @@ private:
     std::function<void(AnimationFrameResult const&)> on_tick;
     bool is_being_removed_ = false;
     std::shared_ptr<PluginManager> plugin_manager;
+
+    /// The eased value, clamped to [0, 1] and never allowed to go back down; see
+    /// ResizeFrame::progress. `ease_out_back` and the elastic curves both dip below 1 after
+    /// first reaching it, and a cross-fade that reverses reads as a flicker. This is niri's
+    /// value() / clamped_value() split.
+    float clamped_progress = 0.f;
 };
 }
 

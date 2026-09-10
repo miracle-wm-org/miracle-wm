@@ -290,6 +290,7 @@ void Animation::retarget_from(State const& state)
         data_.area_start = *state.area;
     data_.opacity_start = state.opacity;
     runtime_seconds = 0.f;
+    clamped_progress = 0.f;
 }
 
 bool Animation::tick(float dt)
@@ -397,9 +398,19 @@ AnimationFrameResult Animation::tick_built_in(BuiltInAnimationDefinition const& 
                 ? geom::Size { clip_area_size.x, clip_area_size.y }
                 : data_.area_end.size
         };
+        // Monotone by construction: an overshooting ease is welcome in the motion but not in
+        // the cross-fade the renderer drives off this.
+        clamped_progress = std::max(clamped_progress, std::clamp(p, 0.f, 1.f));
+
         std::optional<ResizeFrame> resize;
         if (is_resize)
-            resize = ResizeFrame { .target = data_.area_end.size, .source = data_.area_start.size };
+        {
+            resize = ResizeFrame {
+                .target = data_.area_end.size,
+                .source = data_.area_start.size,
+                .progress = clamped_progress
+            };
+        }
         return {
             .is_complete = false,
             .rectangle = window_rect,

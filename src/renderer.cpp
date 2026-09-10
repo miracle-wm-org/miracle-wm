@@ -60,6 +60,25 @@ namespace
 /// output.
 std::chrono::steady_clock::time_point const g_program_start = std::chrono::steady_clock::now();
 
+/// How much of an animation has to be left at the moment the client swaps buffers for a
+/// cross-fade to be worth starting. Below this the dissolve is a frame or two long, which is
+/// a cut with extra steps.
+constexpr float kMinimumFadeSpan = 0.15f;
+
+/// Maps [0, w] x [0, h] onto NDC with y *up*, so the first row the target stores is the
+/// image's top - the convention run_offscreen_passes leaves its targets in, and the one
+/// draw() samples back with is_flipped = false. The screen's own projection
+/// (update_gl_viewport) flips y instead, because that is what the display wants.
+glm::mat4 offscreen_projection(mir::geometry::Size const& size)
+{
+    return glm::scale(
+        glm::translate(glm::mat4(1.f), glm::vec3 { -1.f, -1.f, 0.f }),
+        glm::vec3 {
+            2.f / static_cast<float>(std::max(size.width.as_int(), 1)),
+            2.f / static_cast<float>(std::max(size.height.as_int(), 1)),
+            1.f });
+}
+
 auto make_output_current(std::unique_ptr<mg::gl::OutputSurface> output) -> std::unique_ptr<mg::gl::OutputSurface>
 {
     output->make_current();
@@ -507,7 +526,7 @@ Renderer::PassTarget::~PassTarget()
         glDeleteTextures(1, &texture_id);
 }
 
-void Renderer::PassTarget::ensure(mir::geometry::Size requested)
+void Renderer::PassTarget::ensure(mir::geometry::Size requested, GLenum filter)
 {
     if (requested.width.as_int() <= size.width.as_int() && requested.height.as_int() <= size.height.as_int())
         return;
@@ -525,8 +544,10 @@ void Renderer::PassTarget::ensure(mir::geometry::Size requested)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
         size.width.as_int(), size.height.as_int(), 0,
         GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(filter));
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(filter));
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     glGenFramebuffers(1, &framebuffer_id);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer_id);
@@ -1070,6 +1091,54 @@ void Renderer::draw(
     }();
 
     glUseProgram(prog->id);
+
+    // The pre-resize content, kept so the cut on the frame the client swaps buffers can be
+    // dissolved rather than shown. A multi-pass shader gets none: the off-screen chain runs
+    // on the live texture into a single pair of ping-pong targets, so there is no second
+    // layer to be had. Such a window keeps the stretch and loses only the fade.
+    ResizeGhost const* ghost = nullptr;
+    float fade = 1.f;
+    if (stretch && !is_multipass)
+    {
+        auto& entry = ghosts[renderable.id()];
+        if (!entry.captured)
+        {
+            // The first animated frame. The controller installs the stretch *before*
+            // modify_window(), so this frame is still holding the pre-resize buffer. A client
+            // quick enough to have swapped already leaves the capture holding the new content
+            // instead and the fade degenerates to a no-op - never worse than the live layer
+            // alone. The capture has to be eager: by the frame the swap is *detectable* the
+            // content it was meant to keep is already gone.
+            capture_ghost(*prog, *texture, renderable, data, entry);
+
+            // The capture overwrote the screen-global uniforms. -1 rather than 0 because
+            // frameno starts there.
+            prog->last_used_frameno = -1;
+        }
+        else if (!entry.progress_at_swap
+            && renderable.screen_position().size != entry.captured_buffer_size)
+        {
+            // The client committed at its new size. That frame is the cut.
+            entry.progress_at_swap = data.data.stretch->progress;
+        }
+
+        if (entry.captured && entry.progress_at_swap)
+        {
+            // The fade spans whatever is left of the animation, so it rides the same clock
+            // the motion does rather than a duration of its own.
+            float const span = 1.f - *entry.progress_at_swap;
+            if (span > kMinimumFadeSpan)
+            {
+                fade = std::clamp(
+                    (data.data.stretch->progress - *entry.progress_at_swap) / span, 0.f, 1.f);
+                if (fade < 1.f)
+                    ghost = &entry;
+            }
+        }
+    }
+    else
+        ghosts.erase(renderable.id());
+
     if (prog->last_used_frameno != frameno)
     { // Avoid reloading the screen-global uniforms on every renderable
         // TODO: We actually only need to bind these *once*, right? Not once per frame?
@@ -1125,6 +1194,43 @@ void Renderer::draw(
     glEnableVertexAttribArray(static_cast<GLuint>(prog->position_attr));
     glEnableVertexAttribArray(static_cast<GLuint>(prog->texcoord_attr));
 
+    // The retained content goes down first, still opaque, and the live surface is faded in on
+    // top of it. That order - rather than fading the ghost out over a live layer - lets both
+    // draws reuse the existing blend paths with nothing changed but their alpha.
+    if (ghost)
+    {
+        // Mapped by the very same rule the live layer is, from the rectangle captured
+        // alongside the content rather than read off the live surface: its delta from the
+        // captured screen position is the client's own inset, while the map anchors at the
+        // live clip and so tracks the animation. Same rule, same anchor: the two layers
+        // cannot slide against each other mid-fade.
+        mgl::Stretch const ghost_stretch { stretch->target, ghost->source };
+
+        // The target is grow-only, so it may be larger than what was captured into it. Naming
+        // the captured region as the source bounds against the allocated size is what samples
+        // only the valid part of it.
+        auto const captured = ghost->captured_buffer_size;
+        auto const ghost_quad = mgl::tessellate_into_rectangle(
+            ghost->screen_position, ghost->target.size,
+            geom::RectangleD {
+                geom::PointD { 0,                         0                          },
+                geom::SizeD { captured.width.as_value(), captured.height.as_value() }
+        },
+            geom::Displacement { 0, 0 },
+            false, // the capture stores the image's top row first; see offscreen_projection
+            clip_area, ghost_stretch);
+
+        // Scaled by the same rule the live layer's surface size is, so the rounded-corner SDF
+        // measures both layers against the same stretched rectangle.
+        auto ghost_size = miracle::geometry_helpers::to_glm(ghost->screen_position.size);
+        auto const [ghost_scale_x, ghost_scale_y] = mgl::stretch_scale(ghost->source.size, ghost_stretch.target);
+        ghost_size.x *= ghost_scale_x;
+        ghost_size.y *= ghost_scale_y;
+
+        draw_layer(*prog, ghost_quad, *texture, ghost_size, alpha, ghost->shaped, -1,
+            ghost->target.texture_id);
+    }
+
     primitives.clear();
     // For multi-pass shaders, the intermediate texture is in GL convention (y=0 at bottom),
     // so tessellate with is_flipped=false regardless of the original Mir texture layout.
@@ -1153,11 +1259,97 @@ void Renderer::draw(
         }
     }
 
-    draw_layer(*prog, primitives[0], *texture, surface_size, alpha,
-        renderable.shaped(), is_multipass ? offscreen_result_target : -1);
+    // While the ghost is still fully opaque there is nothing of the live surface to show, so
+    // the whole draw is skipped rather than blended away to nothing.
+    if (!ghost || fade >= 0.005f)
+    {
+        draw_layer(*prog, primitives[0], *texture, surface_size, alpha * fade,
+            renderable.shaped(), is_multipass ? offscreen_result_target : -1);
+    }
 
     glDisableVertexAttribArray(static_cast<GLuint>(prog->texcoord_attr));
     glDisableVertexAttribArray(static_cast<GLuint>(prog->position_attr));
+}
+
+void Renderer::capture_ghost(
+    ProgramData const& prog,
+    mg::gl::Texture& texture,
+    mg::Renderable const& renderable,
+    DrawData const& data,
+    ResizeGhost& ghost) const
+{
+    auto const screen_position = renderable.screen_position();
+    auto const size = screen_position.size;
+
+    // Saved before anything is touched, exactly as run_offscreen_passes does: this runs in
+    // the middle of a frame that is otherwise drawing to the screen. Before ensure() in
+    // particular, which leaves the draw framebuffer bound to 0 when it allocates.
+    GLint saved_fbo = 0;
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &saved_fbo);
+    GLint saved_vp[4];
+    glGetIntegerv(GL_VIEWPORT, saved_vp);
+    GLfloat saved_clear[4];
+    glGetFloatv(GL_COLOR_CLEAR_VALUE, saved_clear);
+    GLboolean const blend_was_enabled = glIsEnabled(GL_BLEND);
+
+    ghost.target.ensure(size, GL_LINEAR);
+    if (!ghost.target.framebuffer_id)
+    {
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(saved_fbo));
+        return;
+    }
+
+    int const w = std::max(size.width.as_int(), 1);
+    int const h = std::max(size.height.as_int(), 1);
+
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, ghost.target.framebuffer_id);
+    glViewport(0, 0, w, h);
+    glDisable(GL_BLEND);
+    glClearColor(0.f, 0.f, 0.f, 0.f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // Identity everything. The copy is the window's own pixels at its own size; the clip,
+    // the stretch, the workspace transform and the rounding are all applied when the ghost
+    // is *drawn*, so it goes through the very same map the live layer does and the two
+    // cannot slide against each other mid-fade.
+    glUniformMatrix4fv(prog.screen_to_gl_coords_uniform, 1, GL_FALSE,
+        glm::value_ptr(offscreen_projection(size)));
+    glUniformMatrix4fv(prog.display_transform_uniform, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.f)));
+    glUniformMatrix4fv(prog.transform_uniform, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.f)));
+    glUniformMatrix4fv(prog.workspace_transform_uniform, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.f)));
+    glUniform2f(prog.center_uniform, static_cast<GLfloat>(w) / 2.f, static_cast<GLfloat>(h) / 2.f);
+    glUniform1f(prog.border_radius_uniform, 0.f);
+
+    geom::Rectangle const at_origin { geom::Point {}, size };
+    auto const quad = mgl::tessellate_into_rectangle(
+        at_origin,
+        renderable.buffer()->size(), renderable.src_bounds(),
+        geom::Displacement { 0, 0 },
+        texture.layout() == mg::gl::Texture::Layout::TopRowFirst,
+        std::nullopt, std::nullopt);
+
+    glEnableVertexAttribArray(static_cast<GLuint>(prog.position_attr));
+    glEnableVertexAttribArray(static_cast<GLuint>(prog.texcoord_attr));
+    draw_layer(prog, quad, texture,
+        glm::vec2 { static_cast<float>(w), static_cast<float>(h) },
+        1.f, renderable.shaped(), -1);
+    glDisableVertexAttribArray(static_cast<GLuint>(prog.texcoord_attr));
+    glDisableVertexAttribArray(static_cast<GLuint>(prog.position_attr));
+
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(saved_fbo));
+    glViewport(saved_vp[0], saved_vp[1], saved_vp[2], saved_vp[3]);
+    glClearColor(saved_clear[0], saved_clear[1], saved_clear[2], saved_clear[3]);
+    if (blend_was_enabled)
+        glEnable(GL_BLEND);
+    else
+        glDisable(GL_BLEND);
+
+    ghost.screen_position = screen_position;
+    ghost.source = data.group_natural;
+    ghost.captured_buffer_size = size;
+    ghost.shaped = renderable.shaped();
+    ghost.owner = data.data.id;
+    ghost.captured = true;
 }
 
 auto Renderer::learn_inset(
@@ -1216,7 +1408,7 @@ auto Renderer::learn_inset(
 
 void Renderer::prune_retained_state() const
 {
-    if (insets.empty())
+    if (insets.empty() && ghosts.empty())
         return;
 
     // One pass over the tracked windows. Ids are handed out monotonically and never reused,
@@ -1229,6 +1421,22 @@ void Renderer::prune_retained_state() const
 
     std::erase_if(insets, [&](auto const& entry)
     { return !live.contains(entry.first); });
+
+    if (ghosts.empty())
+        return;
+
+    // A ghost is only ever wanted while its window is animating, so anything else - a window
+    // that has gone away, or one whose animation ended on a frame it was culled and so never
+    // reached the erase in draw() - is dropped along with the texture it is holding.
+    std::unordered_set<RenderDataManagerId> animating;
+    for (auto const& data : render_data_cache)
+    {
+        if (data.stretch)
+            animating.insert(data.id);
+    }
+
+    std::erase_if(ghosts, [&](auto const& entry)
+    { return !animating.contains(entry.second.owner); });
 }
 
 void Renderer::draw_layer(
@@ -1238,7 +1446,8 @@ void Renderer::draw_layer(
     glm::vec2 const& surface_size,
     float const alpha,
     bool const shaped,
-    int const offscreen_result_target) const
+    int const offscreen_result_target,
+    GLuint const texture_override) const
 {
     glUniform1f(prog.alpha_uniform, alpha);
     glUniform2f(prog.surface_size_uniform,
@@ -1276,7 +1485,11 @@ void Renderer::draw_layer(
 
         auto const blend = client_blend;
 
-        if (offscreen_result_target >= 0)
+        if (texture_override)
+        {
+            glBindTexture(GL_TEXTURE_2D, texture_override);
+        }
+        else if (offscreen_result_target >= 0)
         {
             // Bind the result of the off-screen pass chain.
             // Unit 1 (tex_source) = original window content.
@@ -1310,8 +1523,10 @@ void Renderer::draw_layer(
 
         glDrawArrays(primitive.type, 0, primitive.nvertices);
 
-        // We're done with the texture for now
-        texture.add_syncpoint();
+        // We're done with the texture for now. Nothing to sync when the layer drew from an
+        // offscreen copy we own outright.
+        if (!texture_override)
+            texture.add_syncpoint();
     }
     catch (std::exception const& ex)
     {
