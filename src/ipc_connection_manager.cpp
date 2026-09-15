@@ -343,10 +343,14 @@ void IpcConnectionManager::on_workspace_focused(
         { "current", command_controller->workspace_to_json(current_id) }
     };
 
-    if (previous_id)
-        j["old"] = command_controller->workspace_to_json(previous_id.value());
-    else
+    // Serialising a workspace walks its whole tree, so avoid doing it twice
+    // when the focus event is a no-op refocus of the same workspace.
+    if (!previous_id)
         j["old"] = nullptr;
+    else if (previous_id.value() == current_id)
+        j["old"] = j["current"];
+    else
+        j["old"] = command_controller->workspace_to_json(previous_id.value());
 
     broadcast(IpcType::IPC_EVENT_WORKSPACE, to_string(j));
 }

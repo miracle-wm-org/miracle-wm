@@ -274,6 +274,10 @@ TEST_F(WorkspaceManagerTest, RequestFocusAnimatesTheSwitchByDefault)
     create_output();
     auto const id = workspaces.front()->id();
 
+    // Move away so that focusing the first workspace is a real switch.
+    workspace_manager.request_workspace(output.get(), 2);
+    ASSERT_NE(active_workspace->id(), id);
+
     EXPECT_CALL(*output, advise_workspace_active(_, id, true));
     workspace_manager.request_focus(id);
 }
@@ -282,6 +286,10 @@ TEST_F(WorkspaceManagerTest, RequestFocusPassesTheAnimateFlagThrough)
 {
     create_output();
     auto const id = workspaces.front()->id();
+
+    // Move away so that focusing the first workspace is a real switch.
+    workspace_manager.request_workspace(output.get(), 2);
+    ASSERT_NE(active_workspace->id(), id);
 
     // An effect that has already brought the workspace on screen itself asks for
     // a silent switch, so that the slide does not play over the top of it.
@@ -298,9 +306,38 @@ TEST_F(WorkspaceManagerTest, RequestFocusSelectsAWindowOnTheAlreadyActiveWorkspa
     // re-shown. It must still be given focus.
     auto const active = std::dynamic_pointer_cast<NiceMock<test::MockWorkspace>>(active_workspace);
     ASSERT_NE(active, nullptr);
+    EXPECT_CALL(*output, advise_workspace_active).Times(0);
     EXPECT_CALL(*active, select_window()).Times(1);
 
     workspace_manager.request_focus(active->id());
+}
+
+TEST_F(WorkspaceManagerTest, RequestFocusOnTheAlreadyActiveWorkspaceStillNotifiesObservers)
+{
+    create_output();
+    ASSERT_EQ(workspaces.size(), 1);
+    auto const id = active_workspace->id();
+
+    // IPC clients (e.g. a bar) rely on the focus event to highlight the
+    // workspace under the cursor when it crosses onto another output.
+    class Observer : public NullWorkspaceObserver
+    {
+    public:
+        void on_workspace_focused(std::optional<uint32_t> old, uint32_t next) override
+        {
+            focused.emplace_back(old, next);
+        }
+
+        std::vector<std::pair<std::optional<uint32_t>, uint32_t>> focused;
+    };
+    auto const observer = std::make_shared<Observer>();
+    workspace_registry->register_interest(observer);
+
+    workspace_manager.request_focus(id);
+
+    ASSERT_EQ(observer->focused.size(), 1);
+    EXPECT_EQ(observer->focused[0].first, std::optional<uint32_t>(id));
+    EXPECT_EQ(observer->focused[0].second, id);
 }
 
 TEST_F(WorkspaceManagerTest, RequestFocusOnAnotherOutputMovesOutputFocusAndSelectsAWindow)

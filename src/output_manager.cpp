@@ -102,7 +102,7 @@ bool OutputManager::remove(int id, WorkspaceManager& workspace_manager)
     return false;
 }
 
-std::vector<std::shared_ptr<AbstractOutput>> OutputManager::outputs() const
+std::vector<std::shared_ptr<AbstractOutput>> const& OutputManager::outputs() const
 {
     return outputs_;
 }

@@ -162,7 +162,6 @@ private:
     geom::Rectangle create_space(std::optional<size_t> index);
     std::shared_ptr<LeafContainer> create_space_for_window(std::optional<size_t> index);
     void relayout();
-    void raise_children();
     void update_background_client_area();
     void try_remove_background_client();
 };

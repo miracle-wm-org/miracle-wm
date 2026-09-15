@@ -50,7 +50,7 @@ public:
         WorkspaceManager& workspace_manager);
     void update(int id, mir::geometry::Rectangle area);
     bool remove(int id, WorkspaceManager& workspace_manager);
-    [[nodiscard]] std::vector<std::shared_ptr<AbstractOutput>> outputs() const;
+    [[nodiscard]] std::vector<std::shared_ptr<AbstractOutput>> const& outputs() const;
     bool focus(int id);
     bool unfocus(int id);
     std::shared_ptr<AbstractOutput> focused();
