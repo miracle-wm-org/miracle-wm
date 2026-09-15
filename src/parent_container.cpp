@@ -652,18 +652,6 @@ void ParentContainer::toggle_layout(bool cycle_thru_all)
     relayout();
 }
 
-void ParentContainer::raise_children()
-{
-    auto const nodes = container_list_;
-    for (auto const& container : nodes)
-    {
-        if (auto const window = container->window())
-            window_controller->raise(*window);
-        else if (auto const parent_node = as_parent(container))
-            parent_node->raise_children();
-    }
-}
-
 void ParentContainer::on_focus_gained()
 {
     if (scheme_ == LayoutScheme::tabbing || scheme_ == LayoutScheme::stacking)
@@ -675,12 +663,8 @@ void ParentContainer::on_focus_gained()
         }
     }
 
-    auto const sh_parent = parent_.lock();
-
-    if (sh_parent)
+    if (auto const sh_parent = parent_.lock())
         sh_parent->on_focus_gained();
-    else
-        raise_children();
 }
 
 void ParentContainer::show()

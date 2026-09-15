@@ -282,7 +282,11 @@ bool WorkspaceManager::request_focus(uint32_t id, bool animate, bool focus_outpu
         output_manager->focus(output->id());
     }
 
-    if (output->advise_workspace_active(*this, id, animate))
+    // Fast path: the workspace is already displayed on its output (e.g. the
+    // cursor crossed onto that output), so there is nothing to activate. We
+    // still restore keyboard focus and notify observers below.
+    bool const already_active = output->active().get() == existing;
+    if (already_active || output->advise_workspace_active(*this, id, animate))
     {
         existing->select_window();
     }

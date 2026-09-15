@@ -124,7 +124,7 @@ public:
     void on_workspace_empty(uint32_t) override { }
     void on_workspace_focused(std::optional<uint32_t> old, uint32_t next) override
     {
-        if (old)
+        if (old && *old != next)
         {
             auto const& last_workspace = policy.workspace_manager->workspace(old.value());
             auto const& next_workspace = policy.workspace_manager->workspace(next);
@@ -561,7 +561,6 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
                 output_manager->focus(output->id());
                 if (auto const active = output->active())
                 {
-                    mir::log_info("Policy::handle_pointer_event: focusing active workspace: %d", active->id());
                     workspace_manager->request_focus(active->id());
                 }
             }
@@ -605,7 +604,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
         }
     }
 
-    return plugin_manager->handle_pointer_event(*event);
+    return false;
 }
 
 auto Policy::place_new_window(

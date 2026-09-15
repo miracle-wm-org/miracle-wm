@@ -74,37 +74,6 @@ public:
     std::shared_ptr<test::MockWorkspace> workspace = std::make_shared<test::MockWorkspace>();
 };
 
-TEST_F(ParentContainerTest, WhenParentReceivesFocusThenChildrenAreRaised)
-{
-    // Arrange
-    ParentContainerData const parent_data = make_parent(geom::Rectangle({ 0, 0 }, { 800, 800 }));
-    std::shared_ptr<test::MockContainer> const child1 = std::make_shared<NiceMock<test::MockContainer>>();
-    std::shared_ptr<test::MockContainer> const child2 = std::make_shared<NiceMock<test::MockContainer>>();
-    parent_data.parent->add_child(child1, 0);
-    parent_data.parent->add_child(child2, 1);
-
-    auto const session = std::make_shared<testing::NiceMock<test::MockSession>>();
-    auto const surface = std::make_shared<testing::NiceMock<test::MockSurface>>();
-    miral::Application const app = session;
-    miral::Window window(app, surface);
-
-    ON_CALL(*child1, window())
-        .WillByDefault(Return(window));
-    ON_CALL(*child2, window())
-        .WillByDefault(Return(window));
-
-    // We're allowing the leak because GMock is mad for a reason that
-    // we don't currently care much about
-    Mock::AllowLeak(child1.get());
-    Mock::AllowLeak(child2.get());
-
-    // Expect
-    EXPECT_CALL(*window_controller, raise).Times(2);
-
-    // Act
-    parent_data.parent->on_focus_gained();
-}
-
 class ParentContainerSwapTest : public ParentContainerTest
 {
 public:
