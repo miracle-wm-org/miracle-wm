@@ -410,6 +410,86 @@ TEST_F(FreestyleWindowContainerTest, SetSizeWithNulloptPreservesCurrentDimension
     container_with_border->set_size(std::nullopt, 500);
 }
 
+// ---- animation area ----
+
+namespace
+{
+auto rect_is(int x, int y, int w, int h)
+{
+    return Truly([=](geom::Rectangle const& rect)
+    {
+        return rect.top_left.x.as_int() == x
+            && rect.top_left.y.as_int() == y
+            && rect.size.width.as_int() == w
+            && rect.size.height.as_int() == h;
+    });
+}
+}
+
+TEST_F(FreestyleWindowContainerTest, ResizeUsesAnimationAreaWhileAnimating)
+{
+    // A slide animation is mid-flight drawing the window at 375x300. Resizing
+    // left by 50 should build on that on-screen size (→ 325), and the new
+    // animation should start from the current frame rect rather than the
+    // committed 400x300.
+    container_with_border->set_animation_area(geom::Rectangle {
+        { 100, 200 },
+        { 375, 300 }
+    });
+
+    EXPECT_CALL(*window_controller, set_rectangle(window, rect_is(100, 200, 375, 300), rect_is(100, 200, 325, 300), true))
+        .Times(1);
+
+    container_with_border->resize(Direction::left, 50);
+}
+
+TEST_F(FreestyleWindowContainerTest, ResizeUsesLogicalAreaAfterAnimationCompletes)
+{
+    container_with_border->set_animation_area(geom::Rectangle {
+        { 100, 200 },
+        { 375, 300 }
+    });
+    container_with_border->set_animation_area(std::nullopt);
+
+    EXPECT_CALL(*window_controller, set_rectangle(window, _, rect_is(100, 200, 350, 300), true))
+        .Times(1);
+
+    container_with_border->resize(Direction::left, 50);
+}
+
+TEST_F(FreestyleWindowContainerTest, SetSizeUsesAnimationAreaWhileAnimating)
+{
+    container_with_border->set_animation_area(geom::Rectangle {
+        { 100, 200 },
+        { 375, 280 }
+    });
+
+    EXPECT_CALL(*window_controller, set_rectangle(window, rect_is(100, 200, 375, 280), rect_is(100, 200, 375, 500), true))
+        .Times(1);
+
+    container_with_border->set_size(std::nullopt, 500);
+}
+
+TEST_F(FreestyleWindowContainerTest, GetLogicalAreaIgnoresAnimationArea)
+{
+    container_with_border->set_animation_area(geom::Rectangle {
+        { 100, 200 },
+        { 375, 280 }
+    });
+
+    auto const logical = container_with_border->get_logical_area();
+    EXPECT_EQ(logical.top_left.x.as_int(), 100);
+    EXPECT_EQ(logical.top_left.y.as_int(), 200);
+    EXPECT_EQ(logical.size.width.as_int(), 400);
+    EXPECT_EQ(logical.size.height.as_int(), 300);
+
+    auto const visible = container_with_border->get_visible_area();
+    EXPECT_EQ(visible.top_left.x.as_int(), 100);
+    EXPECT_EQ(visible.top_left.y.as_int(), 200);
+    EXPECT_EQ(visible.size.width.as_int(), 400);
+    EXPECT_EQ(visible.size.height.as_int(), 300);
+}
+
 // ---- drag ----
 
 TEST_F(FreestyleWindowContainerTest, DragStartReturnsTrueFirstTime)

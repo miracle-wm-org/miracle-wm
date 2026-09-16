@@ -199,6 +199,16 @@ glm::mat4 miracle::WindowContainer::get_animation_transform() const
     return animation_effect.transform;
 }
 
+void miracle::WindowContainer::set_animation_area(std::optional<geom::Rectangle> const& area)
+{
+    animation_area_ = area;
+}
+
+std::optional<geom::Rectangle> miracle::WindowContainer::animation_area() const
+{
+    return animation_area_;
+}
+
 float miracle::WindowContainer::get_alpha() const
 {
     return workspace_effect.alpha * window_effect.alpha * animation_effect.alpha;

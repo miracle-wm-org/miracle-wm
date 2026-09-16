@@ -79,6 +79,15 @@ public:
     void set_animation_transform(glm::mat4 transform) override;
     void set_animation_alpha(float a) override;
     glm::mat4 get_animation_transform() const override;
+
+    /// Set the area the animation system is currently drawing for this window.
+    ///
+    /// Set each frame while a rectangle animation is in flight and cleared
+    /// (nullopt) when it completes. Lets operations issued mid-animation (e.g.
+    /// repeated resizes) build on the on-screen size rather than the committed
+    /// window size.
+    void set_animation_area(std::optional<geom::Rectangle> const& area);
+    [[nodiscard]] std::optional<geom::Rectangle> animation_area() const;
     float get_alpha() const;
     void on_focus_gained() override;
     virtual void on_focus_lost();
@@ -170,6 +179,7 @@ protected:
     ContainerEffect workspace_effect;
     ContainerEffect window_effect;
     ContainerEffect animation_effect;
+    std::optional<geom::Rectangle> animation_area_;
 
 private:
     bool enable_render_data_ = true;
