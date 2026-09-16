@@ -86,7 +86,7 @@ geom::Rectangle PluginManagedContainer::get_logical_area() const
 void PluginManagedContainer::set_logical_area(
     geom::Rectangle const& area, bool with_animations)
 {
-    window_controller->set_rectangle(window_, get_visible_area(), area, with_animations);
+    window_controller->set_rectangle(window_, animation_area().value_or(get_visible_area()), area, with_animations);
 }
 
 geom::Rectangle PluginManagedContainer::get_visible_area() const
@@ -245,7 +245,7 @@ bool PluginManagedContainer::resize(Direction direction, int pixels)
         return true;
     }
 
-    auto const area = get_logical_area();
+    auto const area = animation_area().value_or(get_logical_area());
     int new_x = area.top_left.x.as_int();
     int new_y = area.top_left.y.as_int();
     int new_w = area.size.width.as_int();
@@ -284,7 +284,7 @@ bool PluginManagedContainer::set_size(std::optional<int> const& width, std::opti
         return true;
     }
 
-    auto area = get_logical_area();
+    auto area = animation_area().value_or(get_logical_area());
     area.size = {
         width.value_or(area.size.width.as_int()),
         height.value_or(area.size.height.as_int())
