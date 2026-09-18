@@ -878,7 +878,6 @@ bool CommandController::select_workspace(int number, bool allow_back_and_forth)
         return false;
     }
 
-    mir::log_info("select_workspace: %d", number);
     workspace_manager->request_workspace(focused.get(), number, allow_back_and_forth);
     return true;
 }

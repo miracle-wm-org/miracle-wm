@@ -99,19 +99,37 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
         handle,
         config->get_animation_definition(AnimateableEvent::window_close),
         std::move(anim_data),
-        [compositor_state = compositor_state, surface_stack = surface_stack, window_controller = window_controller, animating_surface, id = id, alpha = alpha, transform = transform](AnimationFrameResult const& result)
+        [compositor_state = compositor_state,
+            surface_stack = surface_stack,
+            window_controller = window_controller,
+            animating_surface,
+            id = id,
+            alpha = alpha,
+            transform = transform,
+            // Pushing to the surface fans out to every observer of it, so only
+            // do so when the value actually changed since the last tick.
+            last_transform = std::optional<glm::mat4> {},
+            last_alpha = std::optional<float> {}](AnimationFrameResult const& result) mutable
     {
         if (result.transform)
         {
             auto const combined = transform * result.transform.value();
-            compositor_state->render_data_manager()->transform_change(id, combined);
-            animating_surface->set_transformation(combined);
+            if (last_transform != combined)
+            {
+                compositor_state->render_data_manager()->transform_change(id, combined);
+                animating_surface->set_transformation(combined);
+                last_transform = combined;
+            }
         }
 
         if (result.opacity)
         {
             auto const combined = alpha * result.opacity.value();
-            animating_surface->set_alpha(combined);
+            if (last_alpha != combined)
+            {
+                animating_surface->set_alpha(combined);
+                last_alpha = combined;
+            }
         }
 
         if (result.rectangle)
@@ -134,5 +152,6 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
                 surface_stack->remove_surface(animating_surface);
             });
         }
-    }, plugin_manager));
+    },
+        plugin_manager));
 }

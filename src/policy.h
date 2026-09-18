@@ -43,6 +43,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/magnifier.h>
 #include <miral/window_management_policy.h>
 #include <miral/window_manager_tools.h>
+#include <unordered_map>
 #include <vector>
 
 namespace miral
@@ -159,7 +160,13 @@ private:
     std::shared_ptr<IpcCommandExecutor> ipc_command_executor;
     std::shared_ptr<IpcConnectionManager> ipc_connection_manager;
     BindingEventListener* binding_event_listener_;
+    /// Push the fastest connected output's refresh rate to the animator loop.
+    void update_animator_frame_rate();
+
     std::unique_ptr<AnimatorLoop> animator_loop;
+    /// Refresh rate of each connected output keyed by output id, so the
+    /// animator can be paced to the fastest one.
+    std::unordered_map<int, double> output_refresh_rates_;
     std::shared_ptr<mir::MainLoop> main_loop_;
     std::unique_ptr<DyingSurfaceManager> dying_surface_manager;
     std::unique_ptr<MagnifierWrapper> magnifier;

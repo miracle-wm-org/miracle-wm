@@ -59,6 +59,8 @@ miracle::WindowContainer::~WindowContainer()
 void miracle::WindowContainer::associate_to_window(miral::Window const& window)
 {
     window_ = window;
+    last_applied_transform_.reset();
+    last_applied_alpha_.reset();
     auto const workspace = get_workspace();
     auto const output = get_output();
     glm::mat4 workspace_transform(1.f);
@@ -161,7 +163,9 @@ void miracle::WindowContainer::set_window_shader_id(std::optional<uint8_t> shade
             rdm_locked->shader_id_change(render_id_.value(), shader_id);
         }
     }
-    rerender();
+    // Nothing on the surface changed, but the compositor needs to redraw it
+    // with the new shader.
+    rerender(true);
 }
 
 bool miracle::WindowContainer::can_animate()
@@ -171,16 +175,7 @@ bool miracle::WindowContainer::can_animate()
 
 void miracle::WindowContainer::set_animation_transform(glm::mat4 transform)
 {
-    animation_effect.transform = transform;
-    if (render_id_.has_value())
-    {
-        if (auto const rdm_locked = rdm.lock())
-        {
-            auto const combined = window_effect.blend(animation_effect);
-            rdm_locked->transform_change(render_id_.value(), combined.transform);
-        }
-    }
-    rerender();
+    set_animation_effect(transform, std::nullopt, false);
 }
 
 glm::mat4 miracle::WindowContainer::get_workspace_transform() const
@@ -190,8 +185,31 @@ glm::mat4 miracle::WindowContainer::get_workspace_transform() const
 
 void miracle::WindowContainer::set_animation_alpha(float a)
 {
-    animation_effect.alpha = a;
-    rerender();
+    set_animation_effect(std::nullopt, a, false);
+}
+
+void miracle::WindowContainer::set_animation_effect(
+    std::optional<glm::mat4> const& transform,
+    std::optional<float> alpha,
+    bool force_redraw)
+{
+    if (transform)
+    {
+        animation_effect.transform = transform.value();
+        if (render_id_.has_value())
+        {
+            if (auto const rdm_locked = rdm.lock())
+            {
+                auto const combined = window_effect.blend(animation_effect);
+                rdm_locked->transform_change(render_id_.value(), combined.transform);
+            }
+        }
+    }
+
+    if (alpha)
+        animation_effect.alpha = alpha.value();
+
+    rerender(force_redraw);
 }
 
 glm::mat4 miracle::WindowContainer::get_animation_transform() const
@@ -244,18 +262,35 @@ glm::mat4 miracle::WindowContainer::occlusion_bypass_transform()
     return OCCLUSION_BYPASS;
 }
 
-void miracle::WindowContainer::rerender()
+void miracle::WindowContainer::rerender(bool force)
 {
-    // A hack to trigger a rerender on the surface by re-applying its transformation.
+    if (force)
+    {
+        last_applied_transform_.reset();
+        last_applied_alpha_.reset();
+    }
+
     auto const w = window().value();
     if (auto const surface = w.operator std::shared_ptr<mir::scene::Surface>())
     {
         // Composed on the right so that it only changes how the input z - which
         // is always zero - contributes, whatever the composed transform is.
         auto const combined = workspace_effect.blend(window_effect.blend(animation_effect));
-        surface->set_transformation(
-            occlusion_bypass_ ? combined.transform * OCCLUSION_BYPASS : combined.transform);
-        surface->set_alpha(combined.alpha);
+        auto const transform = occlusion_bypass_ ? combined.transform * OCCLUSION_BYPASS : combined.transform;
+
+        // Exact comparison on purpose: a value that moved by a single ulp is
+        // still a change the compositor should see.
+        if (last_applied_transform_ != transform)
+        {
+            surface->set_transformation(transform);
+            last_applied_transform_ = transform;
+        }
+
+        if (last_applied_alpha_ != combined.alpha)
+        {
+            surface->set_alpha(combined.alpha);
+            last_applied_alpha_ = combined.alpha;
+        }
     }
 }
 

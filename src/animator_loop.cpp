@@ -50,6 +50,14 @@ void ThreadedAnimatorLoop::stop()
     run_thread.join();
 }
 
+void ThreadedAnimatorLoop::set_target_frame_rate(double hz)
+{
+    if (hz <= 0)
+        return;
+
+    target_frame_rate = hz;
+}
+
 void ThreadedAnimatorLoop::run()
 {
     using clock = std::chrono::steady_clock;
@@ -80,6 +88,19 @@ void ThreadedAnimatorLoop::run()
         float const dt = std::chrono::duration<float>(now - frame_start).count();
         frame_start = now;
         animator->tick(dt);
+
+        // Every tick pushes new transforms into Mir, which fans out to its
+        // observers and wakes the wayland and compositor threads. Anything
+        // faster than the display can present is pure overhead, so pace to the
+        // refresh rate. sleep_until keeps the period from drifting with tick
+        // cost. The first frame after idling skips this so animations start
+        // right away.
+        if (!was_idle)
+        {
+            std::chrono::duration<double> const frame_duration(1.0 / target_frame_rate.load());
+            std::this_thread::sleep_until(
+                now + std::chrono::duration_cast<clock::duration>(frame_duration));
+        }
     }
 }
 
@@ -110,6 +131,10 @@ void ServerActionQueueAnimatorLoop::stop()
         return;
 
     running = false;
+}
+
+void ServerActionQueueAnimatorLoop::set_target_frame_rate(double)
+{
 }
 
 void ServerActionQueueAnimatorLoop::run()

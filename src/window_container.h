@@ -164,10 +164,23 @@ public:
     /// \returns the window's urgency
     bool urgent() const;
 
+    void set_animation_effect(
+        std::optional<glm::mat4> const& transform,
+        std::optional<float> alpha,
+        bool force_redraw) override;
+
 protected:
     void update_window_margins(int border_size, bool entering_fullscreen);
 
-    void rerender();
+    /// Push the combined workspace, window and animation effects to the surface.
+    ///
+    /// Each push fans out to every observer of the surface and wakes Mir's
+    /// wayland and compositor threads, so values that have not changed since
+    /// the last push are skipped.
+    ///
+    /// \param force push even if nothing changed, e.g. to make the compositor
+    ///              redraw the surface for reasons the surface can't see
+    void rerender(bool force = false);
     std::weak_ptr<RenderDataManager> rdm;
     std::shared_ptr<WindowController> window_controller_;
 
@@ -185,6 +198,8 @@ private:
     bool enable_render_data_ = true;
     bool urgent_ = false;
     bool occlusion_bypass_ = false;
+    std::optional<glm::mat4> last_applied_transform_;
+    std::optional<float> last_applied_alpha_;
 };
 
 } // namespace miracle

@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_ANIMATOR_LOOP_H
 #define MIRACLEWM_ANIMATOR_LOOP_H
 
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <memory>
@@ -38,6 +39,14 @@ public:
     virtual ~AnimatorLoop() = default;
     virtual void start() = 0;
     virtual void stop() = 0;
+
+    /// Set the rate at which the loop ticks while animations are active.
+    ///
+    /// Ticking faster than the display can present is wasted work, so this
+    /// should track the fastest connected output.
+    ///
+    /// \param hz frames per second; values <= 0 are ignored
+    virtual void set_target_frame_rate(double hz) = 0;
 };
 
 class ThreadedAnimatorLoop : public AnimatorLoop
@@ -47,6 +56,7 @@ public:
     ~ThreadedAnimatorLoop() override;
     void start() override;
     void stop() override;
+    void set_target_frame_rate(double hz) override;
 
 private:
     void run();
@@ -54,6 +64,7 @@ private:
     std::shared_ptr<Animator> animator;
     std::thread run_thread;
     bool running = false;
+    std::atomic<double> target_frame_rate = 60.0;
 };
 
 class ServerActionQueueAnimatorLoop : public AnimatorLoop
@@ -65,6 +76,7 @@ public:
     ~ServerActionQueueAnimatorLoop();
     void start() override;
     void stop() override;
+    void set_target_frame_rate(double hz) override;
 
 private:
     void run();
