@@ -48,6 +48,18 @@ glm::mat4 Container::get_output_transform() const
     return output->get_transform();
 }
 
+void Container::set_animation_effect(
+    std::optional<glm::mat4> const& transform,
+    std::optional<float> alpha,
+    bool)
+{
+    if (transform)
+        set_animation_transform(transform.value());
+
+    if (alpha)
+        set_animation_alpha(alpha.value());
+}
+
 std::shared_ptr<LeafContainer> Container::as_leaf(std::shared_ptr<Container> const& container)
 {
     return std::dynamic_pointer_cast<LeafContainer>(container);

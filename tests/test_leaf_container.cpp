@@ -997,3 +997,81 @@ TEST_F(LeafContainerTest, TheOcclusionBypassTransformIsVisuallyInert)
             EXPECT_EQ(matrix * bypass * corner, matrix * corner);
     }
 }
+
+// ---- rerender change detection ----
+
+TEST_F(LeafContainerTest, RerenderOnlyPushesEffectsThatChanged)
+{
+    // Every push to the surface fans out to all of Mir's observers, so the
+    // animator must not repeat values the surface already has.
+    auto const transform = glm::translate(glm::mat4(1.f), glm::vec3(10.f, 0.f, 0.f));
+    EXPECT_CALL(*surface, set_transformation(transform)).Times(1);
+    EXPECT_CALL(*surface, set_alpha(1.f)).Times(1);
+
+    leaf_container->set_animation_transform(transform);
+    leaf_container->set_animation_transform(transform);
+    leaf_container->set_animation_alpha(1.f);
+}
+
+TEST_F(LeafContainerTest, RerenderPushesAnEffectThatChangedBack)
+{
+    auto const transform = glm::translate(glm::mat4(1.f), glm::vec3(10.f, 0.f, 0.f));
+    testing::InSequence seq;
+    EXPECT_CALL(*surface, set_transformation(transform));
+    EXPECT_CALL(*surface, set_transformation(glm::mat4(1.f)));
+    EXPECT_CALL(*surface, set_transformation(transform));
+
+    leaf_container->set_animation_transform(transform);
+    leaf_container->set_animation_transform(glm::mat4(1.f));
+    leaf_container->set_animation_transform(transform);
+}
+
+TEST_F(LeafContainerTest, SetAnimationEffectPushesTransformAndAlphaOnce)
+{
+    auto const transform = glm::translate(glm::mat4(1.f), glm::vec3(10.f, 0.f, 0.f));
+    EXPECT_CALL(*surface, set_transformation(transform)).Times(1);
+    EXPECT_CALL(*surface, set_alpha(0.5f)).Times(1);
+
+    leaf_container->set_animation_effect(transform, 0.5f, false);
+    leaf_container->set_animation_effect(transform, 0.5f, false);
+
+    EXPECT_EQ(leaf_container->get_animation_transform(), transform);
+    EXPECT_EQ(leaf_container->get_alpha(), 0.5f);
+}
+
+TEST_F(LeafContainerTest, SetAnimationEffectLeavesOmittedValuesAlone)
+{
+    auto const transform = glm::translate(glm::mat4(1.f), glm::vec3(10.f, 0.f, 0.f));
+    leaf_container->set_animation_effect(transform, 0.5f, false);
+
+    leaf_container->set_animation_effect(std::nullopt, 0.25f, false);
+    EXPECT_EQ(leaf_container->get_animation_transform(), transform);
+    EXPECT_EQ(leaf_container->get_alpha(), 0.25f);
+
+    leaf_container->set_animation_effect(glm::mat4(1.f), std::nullopt, false);
+    EXPECT_EQ(leaf_container->get_animation_transform(), glm::mat4(1.f));
+    EXPECT_EQ(leaf_container->get_alpha(), 0.25f);
+}
+
+TEST_F(LeafContainerTest, SetAnimationEffectCanForceARedraw)
+{
+    // A clip change is invisible to Mir's observers, so the animator has to be
+    // able to re-push an unchanged effect to get the surface composited.
+    leaf_container->set_animation_effect(std::nullopt, 0.5f, false);
+
+    EXPECT_CALL(*surface, set_transformation(glm::mat4(1.f))).Times(1);
+    EXPECT_CALL(*surface, set_alpha(0.5f)).Times(1);
+    leaf_container->set_animation_effect(std::nullopt, 0.5f, true);
+}
+
+TEST_F(LeafContainerTest, ShaderIdChangeRepushesUnchangedEffects)
+{
+    // The compositor only redraws a surface when something about it changes,
+    // and a shader change is invisible to the surface, so this has to bypass
+    // the change detection.
+    leaf_container->set_animation_alpha(0.5f);
+
+    EXPECT_CALL(*surface, set_transformation(glm::mat4(1.f))).Times(1);
+    EXPECT_CALL(*surface, set_alpha(0.5f)).Times(1);
+    leaf_container->set_window_shader_id(1);
+}

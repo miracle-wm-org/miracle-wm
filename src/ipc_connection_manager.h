@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_listener.h"
 #include "window_observer.h"
 #include "workspace_observer.h"
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <mir/fd.h>
@@ -110,6 +111,11 @@ private:
     sockaddr_un* ipc_sockaddr = nullptr;
     std::vector<std::shared_ptr<IpcClient>> clients;
 
+    /// Union of every client's [IpcClient::subscribed_events]. Updated wherever a
+    /// client subscribes or is removed, and readable from any thread, so that observers
+    /// on the input thread can skip serializing payloads that no client wants.
+    std::atomic<int> subscribed_events_union { 0 };
+
     /// Reset in the destructor so that actions still sitting on the main loop queue
     /// can detect that this manager is gone.
     std::shared_ptr<bool> alive = std::make_shared<bool>(true);
@@ -122,6 +128,10 @@ private:
     /// Returns a copy of [clients] so that callers may iterate without holding
     /// [clients_mutex] and without risking elements being erased mid-iteration.
     std::vector<std::shared_ptr<IpcClient>> snapshot_clients();
+
+    /// True if at least one client is subscribed to \p type. Cheap and lock-free, so
+    /// observers may call it on the input thread to skip serializing payloads nobody wants.
+    [[nodiscard]] bool has_subscribers(IpcType type) const;
 
     /// Sends \p payload to every client subscribed to \p type, on the main loop thread.
     void broadcast(IpcType type, std::string payload);

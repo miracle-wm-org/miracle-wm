@@ -39,7 +39,6 @@ WorkspaceManager::WorkspaceManager(
 
 bool WorkspaceManager::focus_existing(AbstractWorkspace const* existing, bool back_and_forth)
 {
-    mir::log_info("focus_existing: %s focused", existing->display_name().c_str());
     auto const& active_workspace = output_manager->focused()->active();
     if (active_workspace.get() == existing)
     {

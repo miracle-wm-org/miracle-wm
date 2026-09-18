@@ -29,6 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
 #include <nlohmann/json.hpp>
+#include <optional>
 
 namespace geom = mir::geometry;
 
@@ -123,6 +124,21 @@ public:
     ///
     /// \param alpha
     virtual void set_animation_alpha(float const alpha) = 0;
+
+    /// Set the animation transform and/or alpha on the container in one go.
+    ///
+    /// Equivalent to calling [set_animation_transform] and [set_animation_alpha]
+    /// for whichever values are provided, but implementations may push the
+    /// result to the surface only once, and only if it changed.
+    ///
+    /// \param transform new animation transform, if any
+    /// \param alpha new animation alpha, if any
+    /// \param force_redraw push to the surface even if nothing changed, so
+    ///                     that the compositor redraws it
+    virtual void set_animation_effect(
+        std::optional<glm::mat4> const& transform,
+        std::optional<float> alpha,
+        bool force_redraw);
     virtual uint32_t animation_handle() const = 0;
     virtual void animation_handle(uint32_t) = 0;
     virtual bool is_focused() const = 0;

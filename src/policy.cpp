@@ -953,6 +953,9 @@ void Policy::advise_output_create(miral::Output const& output)
     mir::log_info("Policy::advise_output_create: %s", output.name().c_str());
     output_manager->create(output.name(), output.id(), output.extents(), *workspace_manager);
     output_listener->output_created(output);
+
+    output_refresh_rates_[output.id()] = output.refresh_rate();
+    update_animator_frame_rate();
 }
 
 void Policy::advise_output_update(miral::Output const& updated, miral::Output const& original)
@@ -962,6 +965,9 @@ void Policy::advise_output_update(miral::Output const& updated, miral::Output co
 
     output_manager->update(updated.id(), updated.extents());
     output_listener->output_updated(updated, original);
+
+    output_refresh_rates_[updated.id()] = updated.refresh_rate();
+    update_animator_frame_rate();
 }
 
 void Policy::advise_output_delete(miral::Output const& output)
@@ -971,6 +977,23 @@ void Policy::advise_output_delete(miral::Output const& output)
 
     output_manager->remove(output.id(), *workspace_manager);
     output_listener->output_deleted(output);
+
+    output_refresh_rates_.erase(output.id());
+    update_animator_frame_rate();
+}
+
+void Policy::update_animator_frame_rate()
+{
+    // Pace to the fastest output so animations stay smooth everywhere. Virtual
+    // and nested outputs can report a refresh rate of 0, in which case fall
+    // back to a sane default.
+    double rate = 0;
+    for (auto const& [_, output_rate] : output_refresh_rates_)
+        rate = std::max(rate, output_rate);
+    if (rate <= 0)
+        rate = 60;
+
+    animator_loop->set_target_frame_rate(rate);
 }
 
 void Policy::handle_modify_window(

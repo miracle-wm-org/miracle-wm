@@ -254,12 +254,7 @@ void WindowManagerToolsWindowController::process_animation(
             tools.modify_window(info, spec);
         }
 
-        if (result.transform)
-            container->set_animation_transform(result.transform.value());
-
-        if (result.opacity != std::nullopt)
-            container->set_animation_alpha(result.opacity.value());
-
+        auto const previous_clip = tools.info_for(window).clip_area();
         auto const window_container = Container::as_window_container(container);
         if (result.is_complete)
         {
@@ -280,6 +275,12 @@ void WindowManagerToolsWindowController::process_animation(
             if (window_container)
                 window_container->set_animation_area(rectangle);
         }
+
+        // Mir does not tell its observers about a clip change, so a frame that
+        // only moves the clip would never be composited unless something else
+        // on the surface is touched too.
+        bool const clip_changed = tools.info_for(window).clip_area() != previous_clip;
+        container->set_animation_effect(result.transform, result.opacity, clip_changed);
     }
     catch (std::out_of_range const&)
     {

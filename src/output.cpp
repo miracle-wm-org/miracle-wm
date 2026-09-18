@@ -241,8 +241,6 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
 {
     // When the workspace becomes active, we try to move this output to the new
     // workspace transform, which may involve an animation.
-    mir::log_debug("advise_workspace_active: %d", id);
-
     // First, we find where we're coming from and where we're going to.
     std::shared_ptr<AbstractWorkspace> from = nullptr;
     std::shared_ptr<AbstractWorkspace> to = nullptr;

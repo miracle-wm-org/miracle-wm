@@ -286,6 +286,11 @@ std::vector<std::shared_ptr<IpcConnectionManager::IpcClient>> IpcConnectionManag
     return clients;
 }
 
+bool IpcConnectionManager::has_subscribers(IpcType type) const
+{
+    return (subscribed_events_union.load(std::memory_order_relaxed) & ipc_event_mask(type)) != 0;
+}
+
 void IpcConnectionManager::broadcast(IpcType type, std::string payload)
 {
     run_on_main_loop([this, type, payload = std::move(payload)]
@@ -304,6 +309,9 @@ void IpcConnectionManager::broadcast(IpcType type, std::string payload)
 
 void IpcConnectionManager::on_workspace_created(uint32_t id)
 {
+    if (!has_subscribers(IpcType::IPC_EVENT_WORKSPACE))
+        return;
+
     json const j = {
         { "change",  "init"                                    },
         { "old",     nullptr                                   },
@@ -315,6 +323,9 @@ void IpcConnectionManager::on_workspace_created(uint32_t id)
 
 void IpcConnectionManager::on_workspace_empty(uint32_t id)
 {
+    if (!has_subscribers(IpcType::IPC_EVENT_WORKSPACE))
+        return;
+
     json const j = {
         { "change",  "empty"                                   },
         { "old",     nullptr                                   },
@@ -326,6 +337,9 @@ void IpcConnectionManager::on_workspace_empty(uint32_t id)
 
 void IpcConnectionManager::on_workspace_removed(uint32_t id)
 {
+    if (!has_subscribers(IpcType::IPC_EVENT_WORKSPACE))
+        return;
+
     json const j = {
         { "change",  "empty"                                   },
         { "current", command_controller->workspace_to_json(id) }
@@ -338,6 +352,11 @@ void IpcConnectionManager::on_workspace_focused(
     std::optional<uint32_t> previous_id,
     uint32_t current_id)
 {
+    // Serializing a workspace walks its whole tree on the input thread, so only
+    // pay for it when a client is actually listening.
+    if (!has_subscribers(IpcType::IPC_EVENT_WORKSPACE))
+        return;
+
     json j = {
         { "change",  "focus"                                           },
         { "current", command_controller->workspace_to_json(current_id) }
@@ -357,6 +376,9 @@ void IpcConnectionManager::on_workspace_focused(
 
 void IpcConnectionManager::on_workspace_renamed(uint32_t id)
 {
+    if (!has_subscribers(IpcType::IPC_EVENT_WORKSPACE))
+        return;
+
     json const j = {
         { "change",  "rename"                                  },
         { "current", command_controller->workspace_to_json(id) }
@@ -378,6 +400,9 @@ void IpcConnectionManager::on_config_changed(Config const& changed_config)
 
 void IpcConnectionManager::on_mode_changed(WindowManagerMode mode)
 {
+    if (!has_subscribers(IpcType::IPC_EVENT_MODE))
+        return;
+
     broadcast(IpcType::IPC_EVENT_MODE, to_string(mode_event_to_json(mode)));
 }
 
@@ -402,6 +427,7 @@ void IpcConnectionManager::on_shutdown()
     {
         std::lock_guard lock(clients_mutex);
         remaining.swap(clients);
+        subscribed_events_union.store(0);
     }
 
     for (auto const& client : remaining)
@@ -410,6 +436,9 @@ void IpcConnectionManager::on_shutdown()
 
 void IpcConnectionManager::send_window_event(const char* event, Container const& container)
 {
+    if (!has_subscribers(IpcType::IPC_EVENT_WINDOW))
+        return;
+
     auto const j = json({
         { "change",    event                    },
         { "container", container.to_json(false) }  // TODO: Handle workspace visibility
@@ -436,6 +465,9 @@ void IpcConnectionManager::output_updated(miral::Output const&, miral::Output co
 
 void IpcConnectionManager::send_output_event()
 {
+    if (!has_subscribers(IpcType::IPC_EVENT_OUTPUT))
+        return;
+
     auto const j = json({
         { "change", "unspecified" }
     });
@@ -444,11 +476,18 @@ void IpcConnectionManager::send_output_event()
 
 void IpcConnectionManager::on_binding_event(BindingEvent const& binding_event)
 {
+    // Fired on every handled keypress, so bail before serializing when nobody listens.
+    if (!has_subscribers(IpcType::IPC_EVENT_BINDING))
+        return;
+
     broadcast(IpcType::IPC_EVENT_BINDING, to_string(binding_event.to_json()));
 }
 
 void IpcConnectionManager::on_plugin_event(std::string const& ns, std::string const& payload_json)
 {
+    if (!has_subscribers(IpcType::IPC_EVENT_PLUGIN))
+        return;
+
     json j;
     j["plugin"] = ns;
     try
@@ -518,7 +557,7 @@ void IpcConnectionManager::on_urgency_changed(Container const& container)
     // The workspace inherits the urgency of its windows, so bars that watch
     // workspaces rather than windows need to be told that it changed too.
     auto const workspace = container.get_workspace();
-    if (!workspace)
+    if (!workspace || !has_subscribers(IpcType::IPC_EVENT_WORKSPACE))
         return;
 
     json const j = {
@@ -550,6 +589,11 @@ void IpcConnectionManager::disconnect(IpcClient& client)
         // call returns: our callers still refer to it after we have erased it.
         removed = *it;
         clients.erase(it);
+
+        int remaining_events = 0;
+        for (auto const& other : clients)
+            remaining_events |= other->subscribed_events;
+        subscribed_events_union.store(remaining_events);
     }
 
     // Called with the lock released: it blocks until the client's fd handler is idle.
@@ -598,6 +642,7 @@ void IpcConnectionManager::handle_command(IpcClient& client, uint32_t payload_le
     send_reply(client, result.type, result.payload);
 
     client.subscribed_events |= result.subscribed_events;
+    subscribed_events_union.fetch_or(result.subscribed_events);
     client.subscribed_plugin_namespaces.insert(
         client.subscribed_plugin_namespaces.end(),
         result.subscribed_plugin_namespaces.begin(),
