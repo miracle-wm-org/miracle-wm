@@ -48,3 +48,7 @@ cmake-build-debug
 
 # Generated files
 src/version.h
+
+# Profiling output (tools/miracle-profile.sh)
+profiles/
+cmake-build-profile
