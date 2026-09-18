@@ -80,10 +80,17 @@ bool OutputManager::remove(int id, WorkspaceManager& workspace_manager)
             return true;
         }
 
-        // Find the workspace ids
+        // Find the workspace ids. The active workspace goes last so that the
+        // output doesn't reselect a replacement for it on every intermediate move.
         std::vector<uint32_t> workspaces;
+        auto const active = output->active();
         for (auto const& workspace : output->get_workspaces())
-            workspaces.push_back(workspace->id());
+        {
+            if (workspace != active)
+                workspaces.push_back(workspace->id());
+        }
+        if (active)
+            workspaces.push_back(active->id());
 
         // Find the next available output
         auto next_it = it + 1;

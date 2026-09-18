@@ -189,6 +189,11 @@ void Output::advise_workspace_deleted(WorkspaceManager& workspace_manager, uint3
     {
         if (it->get()->id() == id)
         {
+            // The workspace may live on somewhere else (e.g. it is being moved
+            // to another output), so make sure we don't keep reporting it as
+            // our active workspace.
+            if (active_workspace_.lock() == *it)
+                active_workspace_.reset();
             workspaces_.erase(it);
             return;
         }
@@ -210,11 +215,17 @@ void Output::move_workspace_to(WorkspaceManager& workspace_manager, AbstractWork
         return;
     }
 
-    for (auto const& w : old_output->get_workspaces())
+    bool was_active = false;
+    size_t old_index = 0;
+    auto const& old_workspaces = old_output->get_workspaces();
+    for (size_t i = 0; i < old_workspaces.size(); i++)
     {
+        auto const& w = old_workspaces[i];
         if (w->id() == workspace->id())
         {
             to_add = w;
+            was_active = old_output->active().get() == workspace;
+            old_index = i;
             old_output->advise_workspace_deleted(workspace_manager, workspace->id());
             break;
         }
@@ -226,15 +237,30 @@ void Output::move_workspace_to(WorkspaceManager& workspace_manager, AbstractWork
         return;
     }
 
-    // Next, move the workspace to this output and remove it focus it
+    // Next, move the workspace to this output
     mir::log_info("Moving workspace %d to output %d", workspace->id(), id_);
     insert_workspace_sorted(to_add);
     to_add->set_output(shared_from_this());
-    workspace_manager.request_focus(to_add->id());
 
-    // Finally, if [old_output] has no workspaces left, we need to request a workspace on it
-    if (old_output->get_workspaces().empty())
-        workspace_manager.request_first_available_workspace(old_output.get());
+    // If [old_output] was showing the moved workspace, it needs something else to show
+    // before we focus the moved workspace. Otherwise, the old output keeps pointing at
+    // a workspace that now lives here, and the focus below would see it as the
+    // "previous" workspace and skip moving focus to this output.
+    if (was_active)
+    {
+        auto const& remaining = old_output->get_workspaces();
+        if (!remaining.empty())
+        {
+            // Select the "next" workspace, wrapping around to the first, as in [request_next_on_output].
+            auto const& replacement = remaining[old_index < remaining.size() ? old_index : 0];
+            old_output->advise_workspace_active(workspace_manager, replacement->id(), false);
+        }
+        else
+            workspace_manager.request_first_available_workspace(old_output.get());
+    }
+
+    // Finally, focus the moved workspace on this output
+    workspace_manager.request_focus(to_add->id());
 }
 
 bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32_t id, bool animate)
