@@ -89,12 +89,6 @@ void ThreadedAnimatorLoop::run()
         frame_start = now;
         animator->tick(dt);
 
-        // Every tick pushes new transforms into Mir, which fans out to its
-        // observers and wakes the wayland and compositor threads. Anything
-        // faster than the display can present is pure overhead, so pace to the
-        // refresh rate. sleep_until keeps the period from drifting with tick
-        // cost. The first frame after idling skips this so animations start
-        // right away.
         if (!was_idle)
         {
             std::chrono::duration<double> const frame_duration(1.0 / target_frame_rate.load());
