@@ -43,6 +43,7 @@ set(SOURCES
     test_sampler_registry.cpp
     test_output_manager.cpp
     test_output.cpp
+    test_output_move_workspace.cpp
     test_freestyle_window_container.cpp
     test_plugin_managed_container.cpp
     test_leaf_container.cpp
