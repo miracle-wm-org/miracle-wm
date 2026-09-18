@@ -204,8 +204,6 @@ private:
         right_270
     };
     OutputRotation output_rotation = OutputRotation::normal;
-    double x_scale = 1.f;
-    double y_scale = 1.f;
     std::vector<mir::gl::Primitive> mutable primitives;
     std::shared_ptr<mir::graphics::GLRenderingProvider> const gl_interface;
     mutable Mesh border_model;

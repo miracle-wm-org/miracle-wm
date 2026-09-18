@@ -1204,13 +1204,7 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
 
     // Next, we use the clip area as our rendering size
     auto const border_config = config->get_border_config();
-    auto const border_rect = geom::Rectangle(
-        geom::Point(
-            clip_area_opt.value().top_left.x.as_value() * x_scale,
-            clip_area_opt.value().top_left.y.as_value() * y_scale),
-        geom::Size(
-            clip_area_opt.value().size.width.as_value() * x_scale,
-            clip_area_opt.value().size.height.as_value() * y_scale));
+    auto const& border_rect = clip_area_opt.value();
 
     // Next, we update the uniforms for the context, including global transforms
     glUniformMatrix4fv(prog->display_transform_uniform, 1, GL_FALSE,
@@ -1323,9 +1317,6 @@ void Renderer::update_gl_viewport()
     auto const output_size = output_surface->size();
     int const output_width = output_size.width.as_value();
     int const output_height = output_size.height.as_value();
-
-    x_scale = static_cast<double>(output_width) / viewport_width;
-    y_scale = static_cast<double>(output_height) / viewport_height;
 
     if (viewport_width > 0.0f && viewport_height > 0.0f && output_width > 0 && output_height > 0)
     {
