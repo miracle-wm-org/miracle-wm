@@ -47,30 +47,6 @@ class BadConversion;
 
 namespace
 {
-// Notes for anyone retuning these:
-//
-// * Parts composite with *later* parts winning on conflicting fields, because
-//   Animation::tick accumulates as `tick_built_in(part).merge(result)` and
-//   merge() prefers its own value over the argument's. `slide` in particular
-//   returns a hard opacity of 1, so a `fade` combined with a `slide` must be
-//   listed after it to have any effect.
-// * Scales must stay <= 1. A window is clipped to its own area while it
-//   animates, so an overshoot past full size (e.g. an `ease_out_back` on a
-//   grow) gets cropped by the scissor rather than drawn.
-// * Durations are tuned against key repeat rather than set uniformly. A
-//   re-triggered animation cancels the in-flight one and restarts its ease at
-//   t=0, so on events the user can hold down, the slow tail of the curve never
-//   plays and a longer duration buys nothing. window_move is the most repeated
-//   operation and so is the shortest; workspace_switch travels a full screen
-//   width and needs enough frames for the direction of travel to stay legible;
-//   window_open is one-shot and introduces new content, so it can afford the
-//   most time.
-// * Keep durations at or above ~0.12s. The animator is frame-rate driven, and
-//   below roughly 6-8 frames (0.10s at 60Hz) a scale or fade stops reading as
-//   motion and becomes a pop.
-// * A strong ease-out front-loads the motion: ease_out_quart is 94% complete at
-//   the halfway point, so the perceived duration is roughly half the nominal
-//   one. Cutting these further would read as a jump cut, not as snappiness.
 const std::array<miracle::AnimationDefinition, static_cast<int>(miracle::AnimateableEvent::max)> default_animation_definitions({
     // window_open: scale up subtly while fading in, so the window reads as
     // arriving rather than blinking into place.
