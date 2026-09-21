@@ -820,6 +820,18 @@ extern "C"
         ///
         /// See https://easings.net/.
         float d1;
+
+        /// The scale at the collapsed end of a grow or shrink animation.
+        ///
+        /// `grow` interpolates from this value up to 1, while `shrink`
+        /// interpolates from 1 down to this value. The default of 0 means
+        /// that the window scales all the way to nothing. A value close to 1
+        /// (e.g. 0.9) produces a subtle "pop" instead of a full zoom.
+        ///
+        /// Values above 1 are not recommended, as the window is clipped to
+        /// its own area while animating and so any overshoot is cropped
+        /// rather than drawn.
+        float scale;
     } miracle_built_in_animation_t;
 
     /// Retrieve the number of animateable events.

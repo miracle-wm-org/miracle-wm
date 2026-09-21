@@ -37,18 +37,18 @@ float ease_out_bounce(BuiltInAnimationDefinition const& defintion, float x)
     }
     else if (x < 2 / defintion.d1)
     {
-        x = x - 1.5f;
-        return defintion.n1 * (x / defintion.d1) * x + 0.75f;
+        x = x - 1.5f / defintion.d1;
+        return defintion.n1 * x * x + 0.75f;
     }
     else if (x < 2.5 / defintion.d1)
     {
-        x = x - 2.25f;
-        return defintion.n1 * (x / defintion.d1) * x + 0.9375f;
+        x = x - 2.25f / defintion.d1;
+        return defintion.n1 * x * x + 0.9375f;
     }
     else
     {
-        x = x - 2.625f;
-        return defintion.n1 * (x / defintion.d1) * x + 0.984375f;
+        x = x - 2.625f / defintion.d1;
+        return defintion.n1 * x * x + 0.984375f;
     }
 }
 
@@ -155,6 +155,14 @@ float miracle::ease(BuiltInAnimationDefinition const& defintion, float t)
 
 namespace
 {
+/// Maps eased progress \p p in [0, 1] onto the scale range that
+/// \p definition describes, where 0 is the definition's collapsed
+/// scale and 1 is full size.
+float interpolate_to_unit_scale(BuiltInAnimationDefinition const& definition, float const p)
+{
+    return definition.scale + (1.f - definition.scale) * p;
+}
+
 float interpolate_scale(float const p, float const start, float const end)
 {
     float const diff = end - start;
@@ -359,7 +367,7 @@ AnimationFrameResult Animation::tick_built_in(BuiltInAnimationDefinition const& 
     }
     case BultInAnimationType::grow:
     {
-        auto const p = ease(builtin_def, t);
+        auto const p = interpolate_to_unit_scale(builtin_def, ease(builtin_def, t));
         glm::mat4 const transform = glm::scale(
             glm::mat4(1.f),
             glm::vec3(p, p, 1.f));
@@ -367,7 +375,7 @@ AnimationFrameResult Animation::tick_built_in(BuiltInAnimationDefinition const& 
     }
     case BultInAnimationType::shrink:
     {
-        auto const p = 1.f - ease(builtin_def, t);
+        auto const p = interpolate_to_unit_scale(builtin_def, 1.f - ease(builtin_def, t));
         glm::mat4 const transform = glm::scale(
             glm::mat4(1.f),
             glm::vec3(p, p, 1.f));

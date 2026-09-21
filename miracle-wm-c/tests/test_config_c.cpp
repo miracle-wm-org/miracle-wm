@@ -523,6 +523,7 @@ TEST_F(CAPIWrapperTest, CanSetAnimationDefinitions)
     auto animateable_event = miracle_config_get_animateable_event(
         &wrapper->config,
         0);
+    auto const original_num_parts = animateable_event.num_parts;
     animateable_event.duration_seconds = 0.5f;
     miracle_config_set_animateable_event(&wrapper->config, 0, &animateable_event);
     auto result = miracle_config_get_animateable_event(
@@ -530,7 +531,9 @@ TEST_F(CAPIWrapperTest, CanSetAnimationDefinitions)
         0);
 
     EXPECT_FLOAT_EQ(result.duration_seconds, 0.5f);
-    EXPECT_EQ(result.num_parts, 1);
+    // Setting the duration must leave the animation parts alone, whatever the
+    // defaults happen to be.
+    EXPECT_EQ(result.num_parts, original_num_parts);
     EXPECT_FALSE(result.is_default);
 }
 
