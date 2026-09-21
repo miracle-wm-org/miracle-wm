@@ -108,8 +108,9 @@ public:
     ///
     /// If the workspace is already on the output, then nothing happens.
     ///
-    /// If the workspace is the final workspace on its previous output,
-    /// then that output will have a new workspace assigned to it.
+    /// If the workspace was the active workspace of its previous output,
+    /// then that output selects the next workspace that it has (or is given
+    /// a new one if none remain), and focus lands on the moved workspace.
     void move_workspace_to_output(uint32_t id, AbstractOutput* hint);
 
     bool set_workspace_num(uint32_t id, std::optional<int> const& num);
