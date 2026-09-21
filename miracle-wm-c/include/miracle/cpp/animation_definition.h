@@ -129,6 +129,19 @@ struct MIRACLE_WM_CONFIG_API BuiltInAnimationDefinition
     float c5 = 1.3962634015954636f;
     float n1 = 7.5625f;
     float d1 = 2.75f;
+
+    /// The scale at the collapsed end of a #BultInAnimationType::grow or
+    /// #BultInAnimationType::shrink animation.
+    ///
+    /// `grow` interpolates from this value up to 1, while `shrink`
+    /// interpolates from 1 down to this value. The default of 0 means that
+    /// the window scales all the way to nothing. A value close to 1 (e.g.
+    /// 0.9) produces a subtle "pop" instead of a full zoom.
+    ///
+    /// Values above 1 are not recommended, as the window is clipped to its
+    /// own area while animating and so any overshoot is cropped rather than
+    /// drawn.
+    float scale = 0.f;
 };
 
 typedef std::vector<BuiltInAnimationDefinition> BuiltInAnimationList;

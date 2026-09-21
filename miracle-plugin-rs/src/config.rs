@@ -430,9 +430,19 @@ pub struct BuiltInAnimationPart {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub c4: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub c5: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub n1: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub d1: Option<f32>,
+    /// The scale at the collapsed end of a `grow` or `shrink` animation.
+    ///
+    /// `grow` interpolates from this value up to 1, while `shrink`
+    /// interpolates from 1 down to this value. Omitting it means the window
+    /// scales all the way to nothing. A value close to 1 (e.g. 0.9) produces
+    /// a subtle "pop" instead of a full zoom.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scale: Option<f32>,
 }
 
 /// An animation definition for one animatable event.

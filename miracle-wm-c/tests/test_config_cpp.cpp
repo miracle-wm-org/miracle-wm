@@ -321,3 +321,177 @@ TEST_F(ReadCursorThemeFromFileTest, ReturnsNulloptForInvalidYaml)
     auto result = miracle::read_cursor_theme_from_file(tmp_path.string());
     EXPECT_FALSE(result.has_value());
 }
+
+class AnimationConfigurationTest : public Test
+{
+protected:
+    std::filesystem::path tmp_path;
+
+    void SetUp() override
+    {
+        tmp_path = std::filesystem::temp_directory_path() / "miracle_test_animations.yaml";
+    }
+
+    void TearDown() override
+    {
+        std::filesystem::remove(tmp_path);
+    }
+
+    void write_yaml(std::string const& content)
+    {
+        std::ofstream f(tmp_path);
+        f << content;
+    }
+
+    static miracle::AnimationDefinition default_for(miracle::AnimateableEvent event)
+    {
+        return miracle::ConfigData::get_default_animation_definition(event);
+    }
+};
+
+TEST_F(AnimationConfigurationTest, WindowOpenDefaultGrowsAndFadesIn)
+{
+    auto const def = default_for(miracle::AnimateableEvent::window_open);
+    EXPECT_TRUE(def.is_default);
+    EXPECT_THAT(def.duration_seconds, FloatEq(0.2f));
+    ASSERT_THAT(def.data.size(), Eq(2u));
+
+    EXPECT_THAT(def.data[0].type, Eq(miracle::BultInAnimationType::grow));
+    EXPECT_THAT(def.data[0].function, Eq(miracle::EaseFunction::ease_out_quart));
+    EXPECT_THAT(def.data[0].scale, FloatEq(0.9f));
+
+    EXPECT_THAT(def.data[1].type, Eq(miracle::BultInAnimationType::fade));
+    EXPECT_THAT(def.data[1].function, Eq(miracle::EaseFunction::ease_out_quad));
+}
+
+TEST_F(AnimationConfigurationTest, WindowMoveDefaultSlidesWithAStrongDecelerate)
+{
+    auto const def = default_for(miracle::AnimateableEvent::window_move);
+    EXPECT_THAT(def.duration_seconds, FloatEq(0.15f));
+    ASSERT_THAT(def.data.size(), Eq(1u));
+    EXPECT_THAT(def.data[0].type, Eq(miracle::BultInAnimationType::slide));
+    EXPECT_THAT(def.data[0].function, Eq(miracle::EaseFunction::ease_out_quart));
+}
+
+TEST_F(AnimationConfigurationTest, WindowCloseDefaultShrinksAndFadesOut)
+{
+    auto const def = default_for(miracle::AnimateableEvent::window_close);
+    EXPECT_THAT(def.duration_seconds, FloatEq(0.15f));
+    ASSERT_THAT(def.data.size(), Eq(2u));
+
+    EXPECT_THAT(def.data[0].type, Eq(miracle::BultInAnimationType::shrink));
+    EXPECT_THAT(def.data[0].function, Eq(miracle::EaseFunction::ease_in_quad));
+    EXPECT_THAT(def.data[0].scale, FloatEq(0.92f));
+
+    EXPECT_THAT(def.data[1].type, Eq(miracle::BultInAnimationType::fade));
+    EXPECT_THAT(def.data[1].function, Eq(miracle::EaseFunction::ease_in_quad));
+}
+
+TEST_F(AnimationConfigurationTest, WorkspaceSwitchDefaultSlides)
+{
+    auto const def = default_for(miracle::AnimateableEvent::workspace_switch);
+    EXPECT_THAT(def.duration_seconds, FloatEq(0.22f));
+    ASSERT_THAT(def.data.size(), Eq(1u));
+    EXPECT_THAT(def.data[0].type, Eq(miracle::BultInAnimationType::slide));
+    EXPECT_THAT(def.data[0].function, Eq(miracle::EaseFunction::ease_out_quart));
+}
+
+TEST_F(AnimationConfigurationTest, DefaultScalesNeverOvershoot)
+{
+    // A window is clipped to its own area while animating, so a scale above 1
+    // would be cropped by the scissor rather than drawn as an overshoot.
+    for (size_t i = 0; i < static_cast<size_t>(miracle::AnimateableEvent::max); i++)
+    {
+        auto const def = default_for(static_cast<miracle::AnimateableEvent>(i));
+        for (auto const& part : def.data)
+        {
+            EXPECT_LE(part.scale, 1.f)
+                << "event " << miracle::animateable_event_strings[i];
+        }
+    }
+}
+
+TEST_F(AnimationConfigurationTest, DefaultDurationsStayAboveTheFrameCountFloor)
+{
+    // The animator is frame-rate driven; below roughly 6-8 frames (0.10s at
+    // 60Hz) a scale or fade reads as a pop rather than as motion.
+    for (size_t i = 0; i < static_cast<size_t>(miracle::AnimateableEvent::max); i++)
+    {
+        auto const def = default_for(static_cast<miracle::AnimateableEvent>(i));
+        EXPECT_GE(def.duration_seconds, 0.12f)
+            << "event " << miracle::animateable_event_strings[i];
+    }
+}
+
+TEST_F(AnimationConfigurationTest, ParsesScaleForGrowAndShrink)
+{
+    write_yaml(
+        "animations:\n"
+        "  - event: window_open\n"
+        "    duration: 0.3\n"
+        "    parts:\n"
+        "      - type: grow\n"
+        "        function: ease_out_quart\n"
+        "        scale: 0.75\n");
+    auto const result = miracle::load_config(tmp_path.string());
+    auto const& def = result.config.animation_definitions.value[static_cast<size_t>(miracle::AnimateableEvent::window_open)];
+    ASSERT_THAT(def.data.size(), Eq(1u));
+    EXPECT_THAT(def.data[0].scale, FloatEq(0.75f));
+}
+
+TEST_F(AnimationConfigurationTest, ScaleDefaultsToZeroWhenAbsent)
+{
+    write_yaml(
+        "animations:\n"
+        "  - event: window_open\n"
+        "    duration: 0.3\n"
+        "    parts:\n"
+        "      - type: grow\n"
+        "        function: linear\n");
+    auto const result = miracle::load_config(tmp_path.string());
+    auto const& def = result.config.animation_definitions.value[static_cast<size_t>(miracle::AnimateableEvent::window_open)];
+    ASSERT_THAT(def.data.size(), Eq(1u));
+    EXPECT_THAT(def.data[0].scale, FloatEq(0.f));
+}
+
+TEST_F(AnimationConfigurationTest, ParsesC5)
+{
+    write_yaml(
+        "animations:\n"
+        "  - event: window_open\n"
+        "    duration: 0.3\n"
+        "    parts:\n"
+        "      - type: grow\n"
+        "        function: ease_in_out_elastic\n"
+        "        c5: 2.5\n");
+    auto const result = miracle::load_config(tmp_path.string());
+    auto const& def = result.config.animation_definitions.value[static_cast<size_t>(miracle::AnimateableEvent::window_open)];
+    ASSERT_THAT(def.data.size(), Eq(1u));
+    EXPECT_THAT(def.data[0].c5, FloatEq(2.5f));
+}
+
+TEST_F(AnimationConfigurationTest, RoundTripsScaleAndC5ThroughSave)
+{
+    miracle::ConfigData config;
+    miracle::AnimationDefinition definition;
+    definition.is_default = false;
+    definition.duration_seconds = 0.3f;
+    miracle::BuiltInAnimationDefinition part {
+        .type = miracle::BultInAnimationType::grow,
+        .function = miracle::EaseFunction::ease_out_quart,
+    };
+    part.c5 = 2.5f;
+    part.scale = 0.75f;
+    definition.data.push_back(part);
+    config.animation_definitions.value[static_cast<size_t>(miracle::AnimateableEvent::window_open)]
+        = definition;
+
+    auto const save_result = miracle::save_config(tmp_path.string(), config);
+    ASSERT_TRUE(save_result.success);
+
+    auto const load_result = miracle::load_config(tmp_path.string());
+    auto const& reloaded = load_result.config.animation_definitions.value[static_cast<size_t>(miracle::AnimateableEvent::window_open)];
+    ASSERT_THAT(reloaded.data.size(), Eq(1u));
+    EXPECT_THAT(reloaded.data[0].scale, FloatEq(0.75f));
+    EXPECT_THAT(reloaded.data[0].c5, FloatEq(2.5f));
+}

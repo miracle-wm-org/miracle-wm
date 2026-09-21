@@ -48,30 +48,44 @@ class BadConversion;
 namespace
 {
 const std::array<miracle::AnimationDefinition, static_cast<int>(miracle::AnimateableEvent::max)> default_animation_definitions({
+    // window_open: scale up subtly while fading in, so the window reads as
+    // arriving rather than blinking into place.
     { true,
      0.2f,
-     miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
-            miracle::BultInAnimationType::fade,
-            miracle::EaseFunction::linear,
-        } } },
+     miracle::BuiltInAnimationList {
+            miracle::BuiltInAnimationDefinition {
+                .type = miracle::BultInAnimationType::grow,
+                .function = miracle::EaseFunction::ease_out_quart,
+                .scale = 0.9f },
+            miracle::BuiltInAnimationDefinition {
+                .type = miracle::BultInAnimationType::fade,
+                .function = miracle::EaseFunction::ease_out_quad } } },
+    // window_move: the most repeated event, so the shortest. A strong
+    // decelerate gives an immediate response to the keypress and a soft settle.
     { true,
-     0.25f,
+     0.15f,
      miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
-            miracle::BultInAnimationType::slide,
-            miracle::EaseFunction::ease_out_sine,
-        } } },
+            .type = miracle::BultInAnimationType::slide,
+            .function = miracle::EaseFunction::ease_out_quart } }    },
+    // window_close: accelerating and shorter than the open, so dismissal feels
+    // immediate.
     { true,
-     0.3f,
-     miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
-            miracle::BultInAnimationType::fade,
-            miracle::EaseFunction::linear,
-        } } },
+     0.15f,
+     miracle::BuiltInAnimationList {
+            miracle::BuiltInAnimationDefinition {
+                .type = miracle::BultInAnimationType::shrink,
+                .function = miracle::EaseFunction::ease_in_quad,
+                .scale = 0.92f },
+            miracle::BuiltInAnimationDefinition {
+                .type = miracle::BultInAnimationType::fade,
+                .function = miracle::EaseFunction::ease_in_quad } }  },
+    // workspace_switch: travels a full screen width, so it gets the longest
+    // motion duration to keep the direction of travel legible.
     { true,
-     0.25f,
+     0.22f,
      miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
-            miracle::BultInAnimationType::slide,
-            miracle::EaseFunction::ease_out_sine,
-        } } }
+            .type = miracle::BultInAnimationType::slide,
+            .function = miracle::EaseFunction::ease_out_quart } }    }
 });
 
 struct ParsingContext
@@ -975,8 +989,10 @@ namespace
         try_parse_value(node, "c2", animation_def.c2, context, true);
         try_parse_value(node, "c3", animation_def.c3, context, true);
         try_parse_value(node, "c4", animation_def.c4, context, true);
+        try_parse_value(node, "c5", animation_def.c5, context, true);
         try_parse_value(node, "n1", animation_def.n1, context, true);
         try_parse_value(node, "d1", animation_def.d1, context, true);
+        try_parse_value(node, "scale", animation_def.scale, context, true);
         return true;
     }
 }
@@ -1758,10 +1774,14 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
                     out << YAML::Key << "c3" << YAML::Value << animation.c3;
                 if (animation.c4 != 0.f)
                     out << YAML::Key << "c4" << YAML::Value << animation.c4;
+                if (animation.c5 != 0.f)
+                    out << YAML::Key << "c5" << YAML::Value << animation.c5;
                 if (animation.n1 != 0.f)
                     out << YAML::Key << "n1" << YAML::Value << animation.n1;
                 if (animation.d1 != 0.f)
                     out << YAML::Key << "d1" << YAML::Value << animation.d1;
+                if (animation.scale != 0.f)
+                    out << YAML::Key << "scale" << YAML::Value << animation.scale;
                 out << YAML::EndMap;
             }
             out << YAML::EndSeq;

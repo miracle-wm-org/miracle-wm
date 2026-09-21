@@ -860,7 +860,8 @@ extern "C"
             animation.c4,
             animation.c5,
             animation.n1,
-            animation.d1
+            animation.d1,
+            animation.scale
         };
     }
 
@@ -879,7 +880,8 @@ extern "C"
             animation.c4,
             animation.c5,
             animation.n1,
-            animation.d1 });
+            animation.d1,
+            animation.scale });
     }
 
     void miracle_animateable_event_set_animation(
@@ -899,6 +901,7 @@ extern "C"
         animation_def.c5 = animation.c5;
         animation_def.n1 = animation.n1;
         animation_def.d1 = animation.d1;
+        animation_def.scale = animation.scale;
     }
 
     void miracle_animateable_event_remove_animation(

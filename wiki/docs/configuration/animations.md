@@ -30,6 +30,20 @@ animations:
         d1: 2.5
 ```
 
+```yaml
+# A more pronounced zoom on window open, growing from half size
+animations:
+  - event: window_open
+    duration: 0.25
+    type: built_in
+    parts:
+      - type: grow
+        function: ease_out_quart
+        scale: 0.5
+      - type: fade
+        function: ease_out_quad
+```
+
 
 ## Schema
 
@@ -50,6 +64,7 @@ animations:
         c5?: <float=1.3962634015954636>
         n1?: <float=7.5625>
         d1?: <float=2.75>
+        scale?: <float=0>
 ```
 
 ## Properties
@@ -64,7 +79,12 @@ animations:
 
 :   <small>required</small> **type:** Float (seconds)
 
-    Total time the animation takes to complete. All parts run sequentially within this duration.
+    Total time the animation takes to complete. All parts run concurrently over
+    this duration.
+
+    Values below roughly `0.12` are not recommended. Animations are driven at
+    the compositor's frame rate, so below about 6–8 frames (`0.10` seconds at
+    60Hz) a scale or fade stops reading as motion and becomes an abrupt pop.
 
 ### `type`
 
@@ -84,7 +104,16 @@ For animations with `type: built_in`:
 
 :   <small>required</small> **type:** List of animation parts
 
-    Each part runs in sequence within the total `duration`. Properties per part:
+    Every part runs **concurrently** over the whole `duration`, each
+    contributing its own effect — for example a `grow` contributes a scale
+    while a `fade` contributes an opacity.
+
+    Where two parts set the same property, **the later part wins**. This
+    matters most when combining `fade` with `slide`: `slide` always sets
+    opacity to fully opaque, so a `fade` must be listed *after* a `slide` to
+    have any effect.
+
+    Properties per part:
 
 #### `type`
 
@@ -148,6 +177,14 @@ For animations with `type: built_in`:
 
     Easing constant for bounce functions.
 
+#### `scale`
+
+:   **type:** Float  
+    **Default:** `0`
+
+    The scale at the collapsed end of a `grow` or `shrink` animation. Ignored
+    by every other part type.
+
 ---
 
 
@@ -155,27 +192,33 @@ For animations with `type: built_in`:
 ```yaml
 animations:
   - event: window_open
-    duration: 0.25
+    duration: 0.2
     type: built_in
     parts:
       - type: grow
-        function: ease_in_out_back
+        function: ease_out_quart
+        scale: 0.9
+      - type: fade
+        function: ease_out_quad
   - event: window_move
-    duration: 0.25
+    duration: 0.15
     type: built_in
     parts:
       - type: slide
-        function: ease_in_out_back
+        function: ease_out_quart
   - event: window_close
-    duration: 0.25
+    duration: 0.15
     type: built_in
     parts:
       - type: shrink
-        function: ease_out_back
+        function: ease_in_quad
+        scale: 0.92
+      - type: fade
+        function: ease_in_quad
   - event: workspace_switch
-    duration: 0.175
+    duration: 0.22
     type: built_in
     parts:
       - type: slide
-        function: ease_out_sine
+        function: ease_out_quart
 ```
