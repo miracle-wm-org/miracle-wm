@@ -529,12 +529,15 @@ bool try_parse_solid_color(YAML::Node const& node, glm::vec3& color, ParsingCont
     return true;
 }
 
-bool try_parse_color(YAML::Node const& root, const char* key, glm::vec4& color, ParsingContext& context)
+bool try_parse_color(YAML::Node const& root, const char* key, glm::vec4& color, ParsingContext& context, bool optional = false)
 {
     if (!root[key])
     {
-        context.builder << "Node is missing key: " << key;
-        create_error(root, context);
+        if (!optional)
+        {
+            context.builder << "Node is missing key: " << key;
+            create_error(root, context);
+        }
         return false;
     }
 
@@ -920,16 +923,18 @@ void read_environment_variables(YAML::Node const& env, ParsingContext& context)
 
 void read_border(YAML::Node const& border, ParsingContext& context)
 {
-    int size = 0;
+    miracle::BorderConfig const defaults;
+
+    int size = defaults.size;
     try_parse_value(border, "size", size, context, true);
 
-    float radius = 8.f;
+    float radius = defaults.radius;
     try_parse_value(border, "radius", radius, context, true);
 
-    glm::vec4 color = glm::vec4(0);
-    try_parse_color(border, "color", color, context);
-    glm::vec4 focus_color = glm::vec4(0);
-    try_parse_color(border, "focus_color", focus_color, context);
+    glm::vec4 color = defaults.color;
+    try_parse_color(border, "color", color, context, true);
+    glm::vec4 focus_color = defaults.focus_color;
+    try_parse_color(border, "focus_color", focus_color, context, true);
     context.result.config.border_config = { size, radius, focus_color, color };
 }
 
