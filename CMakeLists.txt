@@ -209,10 +209,15 @@ add_library(miracle-wm-implementation STATIC
         src/occlusion_bypass.cpp src/occlusion_bypass.h
 )
 
+# The plugin module is a dlopen()'d helper rather than a public
+# library, so it lives in its own subdirectory of libdir.
+set(MIRACLE_PLUGIN_MODULE_DIR ${CMAKE_INSTALL_LIBDIR}/miracle-wm)
+set(MIRACLE_PLUGIN_MODULE_PATH ${CMAKE_INSTALL_FULL_LIBDIR}/miracle-wm/libmiracle-wm-plugins.so)
+
 target_compile_definitions(miracle-wm-implementation PRIVATE
         COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV}
         FEATURE_PLUGIN_SYSTEM=${FEATURE_PLUGIN_SYSTEM}
-        MIRACLE_PLUGIN_MODULE_PATH="${CMAKE_INSTALL_FULL_LIBDIR}/libmiracle-wm-plugins.so")
+        MIRACLE_PLUGIN_MODULE_PATH="${MIRACLE_PLUGIN_MODULE_PATH}")
 
 # ----------------------------------------
 # Precompiled headers for speed
@@ -313,7 +318,7 @@ if (FEATURE_PLUGIN_SYSTEM)
           miracle-wm-c
           ${WASMEDGE_LIB})
 
-  install(TARGETS miracle-wm-plugins DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  install(TARGETS miracle-wm-plugins DESTINATION ${MIRACLE_PLUGIN_MODULE_DIR})
 endif()
 
 # ----------------------------------------
