@@ -36,8 +36,9 @@ namespace
     constexpr char const* soname = "libmiracle-wm-plugins.so";
 
     /// dlopen the plugin module from the first location that works:
-    ///   1. the $MIRACLE_WM_PLUGIN_MODULE override (handy for the build tree / tests),
-    ///   2. the configured install path, then
+    ///   1. the $MIRACLE_WM_PLUGIN_MODULE override (handy for the build tree,
+    ///      tests, and relocated installs such as the snap),
+    ///   2. the configured install path (${libdir}/miracle-wm/), then
     ///   3. the bare soname (resolved via the normal loader search path).
     ///
     /// RTLD_LOCAL is essential: it keeps the module and its dependencies

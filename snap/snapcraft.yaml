@@ -26,6 +26,7 @@ apps:
       GBM_BACKENDS_PATH: ${SNAP}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/gbm
       LIBGL_DRIVERS_PATH: ${SNAP}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/dri
       LIBINPUT_QUIRKS_DIR: ${SNAP}/usr/share/libinput
+      MIRACLE_WM_PLUGIN_MODULE: ${SNAP}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/miracle-wm/libmiracle-wm-plugins.so
       PATH: ${SNAP}/bin/:${SNAP}/usr/bin/:${SNAP}/usr/local/bin/:${PATH}
       DRIRC_CONFIGDIR: ${SNAP}/usr/share/drirc.d
 
