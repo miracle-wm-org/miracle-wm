@@ -1092,6 +1092,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#scale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scale
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3328,6 +3339,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#scale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scale
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3396,6 +3418,18 @@ by default, please see <a href="../enable_animations/">Enable Animations</a>.</p
 <span class="w">        </span><span class="nt">n1</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7.0</span>
 <span class="w">        </span><span class="nt">d1</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.5</span>
 </code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># A more pronounced zoom on window open, growing from half size</span>
+<span class="nt">animations</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">event</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">window_open</span>
+<span class="w">    </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.25</span>
+<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">built_in</span>
+<span class="w">    </span><span class="nt">parts</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">grow</span>
+<span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ease_out_quart</span>
+<span class="w">        </span><span class="nt">scale</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fade</span>
+<span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ease_out_quad</span>
+</code></pre></div>
 <h2 id="schema">Schema<a class="headerlink" href="#schema" title="Permanent link">&para;</a></h2>
 <p>A list of animation rules. Each rule defines how a specific event should be animated.</p>
 <div class="highlight"><pre><span></span><code><span class="nt">animations</span><span class="p">:</span>
@@ -3412,6 +3446,7 @@ by default, please see <a href="../enable_animations/">Enable Animations</a>.</p
 <span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">c5?</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;float=1.3962634015954636&gt;</span>
 <span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">n1?</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;float=7.5625&gt;</span>
 <span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">d1?</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;float=2.75&gt;</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">scale?</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;float=0&gt;</span>
 </code></pre></div>
 <h2 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">&para;</a></h2>
 <h3 id="event"><code>event</code><a class="headerlink" href="#event" title="Permanent link">&para;</a></h3>
@@ -3425,7 +3460,11 @@ by default, please see <a href="../enable_animations/">Enable Animations</a>.</p
 <dl>
 <dd>
 <p><small>required</small> <strong>type:</strong> Float (seconds)</p>
-<p>Total time the animation takes to complete. All parts run sequentially within this duration.</p>
+<p>Total time the animation takes to complete. All parts run concurrently over
+this duration.</p>
+<p>Values below roughly <code>0.12</code> are not recommended. Animations are driven at
+the compositor's frame rate, so below about 6–8 frames (<code>0.10</code> seconds at
+60Hz) a scale or fade stops reading as motion and becomes an abrupt pop.</p>
 </dd>
 </dl>
 <h3 id="type"><code>type</code><a class="headerlink" href="#type" title="Permanent link">&para;</a></h3>
@@ -3445,7 +3484,14 @@ by default, please see <a href="../enable_animations/">Enable Animations</a>.</p
 <dl>
 <dd>
 <p><small>required</small> <strong>type:</strong> List of animation parts</p>
-<p>Each part runs in sequence within the total <code>duration</code>. Properties per part:</p>
+<p>Every part runs <strong>concurrently</strong> over the whole <code>duration</code>, each
+contributing its own effect — for example a <code>grow</code> contributes a scale
+while a <code>fade</code> contributes an opacity.</p>
+<p>Where two parts set the same property, <strong>the later part wins</strong>. This
+matters most when combining <code>fade</code> with <code>slide</code>: <code>slide</code> always sets
+opacity to fully opaque, so a <code>fade</code> must be listed <em>after</em> a <code>slide</code> to
+have any effect.</p>
+<p>Properties per part:</p>
 </dd>
 </dl>
 <h4 id="type_1"><code>type</code><a class="headerlink" href="#type_1" title="Permanent link">&para;</a></h4>
@@ -3519,33 +3565,48 @@ Options: <code>linear</code>, <code>ease_in_sine</code>, <code>ease_out_sine</co
 <p>Easing constant for bounce functions.</p>
 </dd>
 </dl>
+<h4 id="scale"><code>scale</code><a class="headerlink" href="#scale" title="Permanent link">&para;</a></h4>
+<dl>
+<dd>
+<p><strong>type:</strong> Float<br />
+<strong>Default:</strong> <code>0</code></p>
+<p>The scale at the collapsed end of a <code>grow</code> or <code>shrink</code> animation. Ignored
+by every other part type.</p>
+</dd>
+</dl>
 <hr />
 <h2 id="default">Default<a class="headerlink" href="#default" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="nt">animations</span><span class="p">:</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">event</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">window_open</span>
-<span class="w">    </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.25</span>
+<span class="w">    </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.2</span>
 <span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">built_in</span>
 <span class="w">    </span><span class="nt">parts</span><span class="p">:</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">grow</span>
-<span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ease_in_out_back</span>
+<span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ease_out_quart</span>
+<span class="w">        </span><span class="nt">scale</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.9</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fade</span>
+<span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ease_out_quad</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">event</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">window_move</span>
-<span class="w">    </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.25</span>
+<span class="w">    </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.15</span>
 <span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">built_in</span>
 <span class="w">    </span><span class="nt">parts</span><span class="p">:</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">slide</span>
-<span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ease_in_out_back</span>
+<span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ease_out_quart</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">event</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">window_close</span>
-<span class="w">    </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.25</span>
+<span class="w">    </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.15</span>
 <span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">built_in</span>
 <span class="w">    </span><span class="nt">parts</span><span class="p">:</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">shrink</span>
-<span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ease_out_back</span>
+<span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ease_in_quad</span>
+<span class="w">        </span><span class="nt">scale</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.92</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fade</span>
+<span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ease_in_quad</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">event</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">workspace_switch</span>
-<span class="w">    </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.175</span>
+<span class="w">    </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.22</span>
 <span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">built_in</span>
 <span class="w">    </span><span class="nt">parts</span><span class="p">:</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">slide</span>
-<span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ease_out_sine</span>
+<span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ease_out_quart</span>
 </code></pre></div>
 
 
