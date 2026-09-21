@@ -185,17 +185,6 @@ For animations with `type: built_in`:
     The scale at the collapsed end of a `grow` or `shrink` animation. Ignored
     by every other part type.
 
-    `grow` interpolates from this value up to full size, and `shrink`
-    interpolates from full size down to it. The default of `0` means the window
-    scales all the way to nothing. A value near 1 — such as `0.9` — gives a
-    subtle "pop" instead of a full zoom.
-
-    Values above `1` are not useful: a window is clipped to its own area while
-    it animates, so anything past full size is cropped by the clip region
-    rather than drawn. For the same reason, overshooting easing functions
-    (`ease_out_back`, `ease_out_elastic`) applied to a `grow` will have their
-    overshoot clipped.
-
 ---
 
 
@@ -233,24 +222,3 @@ animations:
       - type: slide
         function: ease_out_quart
 ```
-
-### Why these defaults
-
-Windows enter on a decelerating curve and leave on an accelerating one, and
-exits are shorter than entrances, so dismissing something feels immediate while
-new content still has time to announce itself.
-
-The durations are deliberately uneven. A re-triggered animation cancels the one
-in flight and restarts its curve, so on events you can hold a key down for, the
-slow tail never plays and a longer duration buys nothing. `window_move` is the
-most repeated operation in a tiling window manager and so is the shortest.
-`workspace_switch` travels a full screen width and needs enough frames for the
-direction of travel to stay legible, so it runs longest. `window_open` happens
-once per window and introduces genuinely new content, so it can afford more
-time than a move.
-
-`ease_out_quart` is used wherever something travels. It front-loads the motion
-— 94% of the distance is covered by the halfway point — so the window responds
-immediately to the keypress and then settles softly. This also means the
-*perceived* duration is roughly half the configured one, which is worth keeping
-in mind before shortening these further.
