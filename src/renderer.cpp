@@ -39,6 +39,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/graphics/platform.h>
 #include <mir/graphics/program_factory.h>
 #include <mir/graphics/renderable.h>
+#if __has_include(<mir/graphics/rendering_providers.h>)
+#include <mir/graphics/rendering_providers.h>
+#endif
 #include <mir/graphics/texture.h>
 #include <mir/log.h>
 #include <mir/renderer/gl/gl_surface.h>
