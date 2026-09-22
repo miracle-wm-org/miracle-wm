@@ -43,3 +43,21 @@ Plugin API documentation is at:
 Questions, ideas, and contributions are welcome. Find us on Matrix or Discord:
 
 **[#miracle-wm:matrix.org](https://matrix.to/#/#miracle-wm:matrix.org)** · **[Discord](https://discord.gg/4fCadnUGMs)**
+
+## Contributing
+
+Changes land on `develop` through a pull request and GitHub's merge queue. Once a pull
+request is approved, press **Merge when ready** and it is added to the
+[queue](https://github.com/miracle-wm-org/miracle-wm/queue/develop). The queue merges the
+pull request automatically once CI is green for the following required checks:
+
+- `Ubuntu Build & Test Summary` (build + unit tests for the `release`/`rc` PPAs with gcc and clang)
+- `Fedora Build & Test`
+- `Visual Integration Tests`
+- `Build and install miracle-wm .deb on Ubuntu 26.04`
+- `snap-candidate`
+- `clang-tidy`
+
+Every required check also runs against the queued merge commit, so a change is only merged
+if it is green when combined with whatever is already queued ahead of it. If a check fails
+in the queue, the pull request is removed from the queue and can be re-queued after a fix.
