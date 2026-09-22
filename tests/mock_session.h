@@ -62,9 +62,13 @@ namespace test
         MOCK_METHOD(std::shared_ptr<mir::scene::Surface>, surface_after,
             (std::shared_ptr<mir::scene::Surface> const& surface),
             (const, override));
+#ifdef MIR_VERSION_2_30_OR_GREATER
+        MOCK_METHOD(std::shared_ptr<mir::compositor::BufferStream>, create_buffer_stream, (), (override));
+#else
         MOCK_METHOD(std::shared_ptr<mir::compositor::BufferStream>, create_buffer_stream,
             (mir::graphics::BufferProperties const& props),
             (override));
+#endif
         MOCK_METHOD(void, destroy_buffer_stream, (std::shared_ptr<mir::frontend::BufferStream> const& stream), (override));
         MOCK_METHOD(void, configure_streams,
             (mir::scene::Surface & surface, std::vector<mir::shell::StreamSpecification> const& config),
