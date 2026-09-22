@@ -713,16 +713,16 @@ extern "C"
     // The configuration for window borders.
     typedef struct
     {
-        /// The size of the border in pixels.
+        /// The size of the border in pixels. Defaults to 2.
         int size;
 
-        /// The radius of the border in pixels.
+        /// The radius of the border in pixels. Defaults to 8.
         float radius;
 
-        /// The RGBA color of the border when focused.
+        /// The RGBA color of the border when focused. Defaults to 0xFBDA25FF.
         float focus_color[4];
 
-        /// The RGBA color of the border when not focused.
+        /// The RGBA color of the border when not focused. Defaults to 0x55595CFF.
         float color[4];
     } miracle_border_config_t;
 

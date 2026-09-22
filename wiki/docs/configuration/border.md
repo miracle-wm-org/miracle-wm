@@ -30,39 +30,43 @@ border:
 
 ### `size`
 
-:   <small>required</small> **type:** Integer
+:   <small>optional</small> **type:** Integer
 
-    Border width in pixels.
+    Border width in pixels. Defaults to `2`.
 
 ### `color`
 
-:   <small>required</small> **type:** Color
+:   <small>optional</small> **type:** Color
 
-    Border color for non-focused tiles. Can be specified as:
+    Border color for non-focused tiles. Defaults to `0x55595cff`. Can be specified as:
     
     - Hex color (rgba): `0xffff0000`
     - YAML object with r, g, b, a properties (0-255 each)
 
 ### `focus_color`
 
-:   <small>required</small> **type:** Color
+:   <small>optional</small> **type:** Color
 
-    Border color for focused tiles. Can be specified as:
+    Border color for focused tiles. Defaults to `0xfbda25ff`. Can be specified as:
     
     - Hex color (rgba): `0xff00ff00`
     - YAML object with r, g, b, a properties (0-255 each)
 
 ### `radius`
 
-:   <small>required</small> **type:** Integer
+:   <small>optional</small> **type:** Integer
 
-    Border corner radius in pixels.
+    Border corner radius in pixels. Defaults to `8`.
 
 ## Default
+
+Borders are enabled by default. Omit the `border` section entirely to keep these values,
+or set `size: 0` to disable borders.
+
 ```yaml
 border:
-  size: 0
-  color: 0x00000000
-  focus_color: 0x00000000
-  radius: 0
+  size: 2
+  color: 0x55595cff
+  focus_color: 0xfbda25ff
+  radius: 8
 ```

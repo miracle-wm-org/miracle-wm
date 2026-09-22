@@ -376,6 +376,10 @@ pub struct EnvironmentVariable {
 }
 
 /// Window border appearance.
+///
+/// Borders are enabled by default (`size` 2, `radius` 8, focused `"FBDA25FF"`,
+/// unfocused `"55595CFF"`). Every field is serialized when `border` is set, so
+/// a plugin that overrides one value must supply the others as well.
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct BorderConfig {
     pub size: i32,
