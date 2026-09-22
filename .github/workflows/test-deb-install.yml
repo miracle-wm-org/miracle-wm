@@ -5,6 +5,8 @@ on:
     branches: ["develop"]
   pull_request:
     branches: ["develop"]
+  merge_group:
+    types: [checks_requested]
 
 # This workflow replicates what an end user does when they install
 # miracle-wm from the PPA, but against the latest Ubuntu (26.04) so
