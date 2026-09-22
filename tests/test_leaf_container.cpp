@@ -620,10 +620,10 @@ TEST_F(LeafContainerTest, VisibleAreaCacheInvalidatedOnSetLogicalArea)
     // Get visible area after commit - should reflect new logical area
     auto area_after_commit = leaf_container->get_visible_area();
 
-    // Size should have changed to reflect the new logical area (minus borders)
-    int border_size = config->get_border_config().size;
-    int expected_width = new_logical_area.size.width.as_int() - (2 * border_size);
-    int expected_height = new_logical_area.size.height.as_int() - (2 * border_size);
+    // Size should have changed to reflect the new logical area. Borders are
+    // applied via window margins, so they do not shrink the visible area.
+    int expected_width = new_logical_area.size.width.as_int();
+    int expected_height = new_logical_area.size.height.as_int();
 
     EXPECT_EQ(area_after_commit.size.width.as_int(), expected_width);
     EXPECT_EQ(area_after_commit.size.height.as_int(), expected_height);
@@ -661,10 +661,10 @@ TEST_F(LeafContainerTest, VisibleAreaCacheInvalidatedOnCommitChanges)
     EXPECT_NE(area_before_commit.size.width.as_int(), area_after_commit.size.width.as_int());
     EXPECT_NE(area_before_commit.size.height.as_int(), area_after_commit.size.height.as_int());
 
-    // Verify the new visible area matches the expected size (logical area minus borders)
-    int border_size = config->get_border_config().size;
-    int expected_width = new_logical_area.size.width.as_int() - (2 * border_size);
-    int expected_height = new_logical_area.size.height.as_int() - (2 * border_size);
+    // Verify the new visible area matches the logical area. Borders are applied
+    // via window margins, so they do not shrink the visible area.
+    int expected_width = new_logical_area.size.width.as_int();
+    int expected_height = new_logical_area.size.height.as_int();
     EXPECT_EQ(area_after_commit.size.width.as_int(), expected_width);
     EXPECT_EQ(area_after_commit.size.height.as_int(), expected_height);
 
@@ -696,23 +696,20 @@ TEST_F(LeafContainerTest, VisibleAreaCacheReusedWhenLogicalAreaUnchanged)
     EXPECT_EQ(area2.size.height.as_int(), area3.size.height.as_int());
 }
 
-TEST_F(LeafContainerTest, VisibleAreaCacheAccountsForBorders)
+TEST_F(LeafContainerTest, VisibleAreaIgnoresBorders)
 {
-    // Test that visible area calculation includes border considerations
-    // and that this is consistently cached
+    // Borders are applied via window margins rather than by shrinking the
+    // visible area, so the visible area should match the logical area exactly
+    // (there are no neighbors, so no gaps apply either) and be consistently cached.
 
     auto visible_area = leaf_container->get_visible_area();
     auto logical_area = leaf_container->get_logical_area();
 
-    // Visible area should be smaller than logical area due to borders
-    int border_size = config->get_border_config().size;
-    int expected_width = logical_area.size.width.as_int() - (2 * border_size);
-    int expected_height = logical_area.size.height.as_int() - (2 * border_size);
-
-    EXPECT_EQ(visible_area.size.width.as_int(), expected_width);
-    EXPECT_EQ(visible_area.size.height.as_int(), expected_height);
-    EXPECT_EQ(visible_area.top_left.x.as_int(), logical_area.top_left.x.as_int() + border_size);
-    EXPECT_EQ(visible_area.top_left.y.as_int(), logical_area.top_left.y.as_int() + border_size);
+    EXPECT_NE(config->get_border_config().size, 0);
+    EXPECT_EQ(visible_area.size.width.as_int(), logical_area.size.width.as_int());
+    EXPECT_EQ(visible_area.size.height.as_int(), logical_area.size.height.as_int());
+    EXPECT_EQ(visible_area.top_left.x.as_int(), logical_area.top_left.x.as_int());
+    EXPECT_EQ(visible_area.top_left.y.as_int(), logical_area.top_left.y.as_int());
 
     // Verify cache is working by getting visible area again
     auto cached_visible_area = leaf_container->get_visible_area();
@@ -750,11 +747,10 @@ TEST_F(LeafContainerTest, VisibleAreaCacheHandlesMultipleLogicalAreaChanges)
     auto area3 = leaf_container->get_visible_area();
 
     // Verify sizes changed (which is more reliable than positions in test env)
-    int border_size = config->get_border_config().size;
-    int expected_width2 = change1.size.width.as_int() - (2 * border_size);
-    int expected_height2 = change1.size.height.as_int() - (2 * border_size);
-    int expected_width3 = change2.size.width.as_int() - (2 * border_size);
-    int expected_height3 = change2.size.height.as_int() - (2 * border_size);
+    int expected_width2 = change1.size.width.as_int();
+    int expected_height2 = change1.size.height.as_int();
+    int expected_width3 = change2.size.width.as_int();
+    int expected_height3 = change2.size.height.as_int();
 
     EXPECT_EQ(area2.size.width.as_int(), expected_width2);
     EXPECT_EQ(area2.size.height.as_int(), expected_height2);
