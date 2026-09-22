@@ -3151,15 +3151,15 @@
 <h3 id="size"><code>size</code><a class="headerlink" href="#size" title="Permanent link">&para;</a></h3>
 <dl>
 <dd>
-<p><small>required</small> <strong>type:</strong> Integer</p>
-<p>Border width in pixels.</p>
+<p><small>optional</small> <strong>type:</strong> Integer</p>
+<p>Border width in pixels. Defaults to <code>2</code>.</p>
 </dd>
 </dl>
 <h3 id="color"><code>color</code><a class="headerlink" href="#color" title="Permanent link">&para;</a></h3>
 <dl>
 <dd>
-<p><small>required</small> <strong>type:</strong> Color</p>
-<p>Border color for non-focused tiles. Can be specified as:</p>
+<p><small>optional</small> <strong>type:</strong> Color</p>
+<p>Border color for non-focused tiles. Defaults to <code>0x55595cff</code>. Can be specified as:</p>
 <ul>
 <li>Hex color (rgba): <code>0xffff0000</code></li>
 <li>YAML object with r, g, b, a properties (0-255 each)</li>
@@ -3169,8 +3169,8 @@
 <h3 id="focus_color"><code>focus_color</code><a class="headerlink" href="#focus_color" title="Permanent link">&para;</a></h3>
 <dl>
 <dd>
-<p><small>required</small> <strong>type:</strong> Color</p>
-<p>Border color for focused tiles. Can be specified as:</p>
+<p><small>optional</small> <strong>type:</strong> Color</p>
+<p>Border color for focused tiles. Defaults to <code>0xfbda25ff</code>. Can be specified as:</p>
 <ul>
 <li>Hex color (rgba): <code>0xff00ff00</code></li>
 <li>YAML object with r, g, b, a properties (0-255 each)</li>
@@ -3180,16 +3180,18 @@
 <h3 id="radius"><code>radius</code><a class="headerlink" href="#radius" title="Permanent link">&para;</a></h3>
 <dl>
 <dd>
-<p><small>required</small> <strong>type:</strong> Integer</p>
-<p>Border corner radius in pixels.</p>
+<p><small>optional</small> <strong>type:</strong> Integer</p>
+<p>Border corner radius in pixels. Defaults to <code>8</code>.</p>
 </dd>
 </dl>
 <h2 id="default">Default<a class="headerlink" href="#default" title="Permanent link">&para;</a></h2>
+<p>Borders are enabled by default. Omit the <code>border</code> section entirely to keep these values,
+or set <code>size: 0</code> to disable borders.</p>
 <div class="highlight"><pre><span></span><code><span class="nt">border</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
-<span class="w">  </span><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0x00000000</span>
-<span class="w">  </span><span class="nt">focus_color</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0x00000000</span>
-<span class="w">  </span><span class="nt">radius</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+<span class="w">  </span><span class="nt">size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">  </span><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0x55595cff</span>
+<span class="w">  </span><span class="nt">focus_color</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0xfbda25ff</span>
+<span class="w">  </span><span class="nt">radius</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
 </code></pre></div>
 
 
