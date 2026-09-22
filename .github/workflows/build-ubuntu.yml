@@ -5,6 +5,8 @@ on:
     branches: [ "develop" ]
   pull_request:
     branches: [ "develop" ]
+  merge_group:
+    types: [ checks_requested ]
 
 env:
   BUILD_TYPE: Debug
@@ -118,3 +120,19 @@ jobs:
       run: |
         podman stop ${{ env.CONTAINER }} || true
         podman rm ${{ env.CONTAINER }} || true
+
+  # Aggregates the build & test matrix into a single check so that branch
+  # rules and the merge queue can require one stable name regardless of how
+  # the matrix dimensions change.
+  build-and-test-summary:
+    name: Ubuntu Build & Test Summary
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: always()
+
+    steps:
+    - name: Check matrix result
+      run: |
+        result="${{ needs.build-and-test.result }}"
+        echo "Ubuntu Build & Test matrix result: $result"
+        [ "$result" = "success" ] || exit 1
