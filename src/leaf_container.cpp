@@ -405,6 +405,17 @@ bool LeafContainer::set_size(std::optional<int> const& width, std::optional<int>
     return true;
 }
 
+void LeafContainer::on_focus_gained()
+{
+    WindowContainer::on_focus_gained();
+
+    // Raise the newly focused window so that it is never left underneath a
+    // sibling that happens to sit on top of it. Without this, an overlapping
+    // surface (X11 surfaces in particular, since they cannot restack
+    // themselves) keeps receiving the pointer input meant for this window.
+    window_controller->raise(window_);
+}
+
 void LeafContainer::show()
 {
     auto const w = window_;
