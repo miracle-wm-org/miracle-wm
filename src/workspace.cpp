@@ -680,10 +680,20 @@ void Workspace::on_animation_start(bool is_hiding)
 
 void Workspace::select_window()
 {
+    // Raising before selecting guarantees that the window we are restoring
+    // focus to is on top of the stack. Otherwise it can stay buried underneath
+    // an overlapping window that was raised while this workspace was hidden,
+    // which sends pointer input to the wrong surface.
+    auto const select = [this](miral::Window const& window)
+    {
+        window_controller->raise(window);
+        window_controller->select_active_window(window);
+    };
+
     if (auto const sh_last_selected = sync.lock()->last_selected_container.lock())
     {
         if (sh_last_selected->window().has_value())
-            window_controller->select_active_window(sh_last_selected->window().value());
+            select(sh_last_selected->window().value());
         return;
     }
 
@@ -691,7 +701,7 @@ void Workspace::select_window()
     {
         if (container->window().has_value())
         {
-            window_controller->select_active_window(container->window().value());
+            select(container->window().value());
             return true;
         }
 
