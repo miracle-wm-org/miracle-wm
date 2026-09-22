@@ -96,6 +96,47 @@ if(CMAKE_BUILD_TYPE MATCHES Release)
 endif()
 
 # ----------------------------------------
+# Profiling
+# ----------------------------------------
+# Intended to be combined with -DCMAKE_BUILD_TYPE=RelWithDebInfo: optimised like a
+# real build, but with the debug info and frame pointers a sampling profiler needs.
+option(ENABLE_PROFILING "Build for sampling profilers (perf/samply): full debug info, frame pointers, no LTO" OFF)
+if(ENABLE_PROFILING)
+  if(ENABLE_LTO)
+    message(FATAL_ERROR
+      "ENABLE_PROFILING and ENABLE_LTO are mutually exclusive: LTO inlines across "
+      "translation units and rewrites the call graph the profiler is trying to show you.")
+  endif()
+  if(CMAKE_BUILD_TYPE MATCHES Debug)
+    message(WARNING
+      "ENABLE_PROFILING with a Debug build profiles unoptimised code, which is dominated "
+      "by inlining candidates and is not representative. Prefer -DCMAKE_BUILD_TYPE=RelWithDebInfo.")
+  endif()
+
+  # -g3 keeps macro definitions so `perf annotate` can show them. Frame pointers
+  # let perf unwind with the cheap `--call-graph fp` instead of copying the stack
+  # for every sample.
+  add_compile_options(-g3 -fno-omit-frame-pointer)
+
+  # Leaf frames matter here because the hot ones are small geometry/maths helpers
+  # that would otherwise be invisible. Both GCC and Clang spell this as an -m
+  # (machine) option, and it only exists on some architectures, so probe for it.
+  include(CheckCXXCompilerFlag)
+  check_cxx_compiler_flag(-mno-omit-leaf-frame-pointer HAVE_NO_OMIT_LEAF_FRAME_POINTER)
+  if(HAVE_NO_OMIT_LEAF_FRAME_POINTER)
+    add_compile_options(-mno-omit-leaf-frame-pointer)
+  endif()
+
+  # -rdynamic puts static-function names in .dynsym so perf can resolve frames from
+  # the whole-archived implementation lib and the dlopen'd plugin module. A build-id
+  # is what lets perf and samply find the matching Mir *-dbgsym files.
+  add_link_options(-rdynamic -Wl,--build-id=sha1)
+
+  add_compile_definitions(MIRACLE_PROFILING=1)
+  message(STATUS "Profiling build enabled (frame pointers + -g3, LTO forced off)")
+endif()
+
+# ----------------------------------------
 # Dependencies
 # ----------------------------------------
 find_package(PkgConfig)
