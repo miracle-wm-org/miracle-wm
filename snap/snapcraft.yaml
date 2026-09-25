@@ -102,7 +102,7 @@ parts:
       - libgtk4-layer-shell-dev
       - gettext
     stage-packages:
-      - libmiral7
+      - libmiral8
       - mir-graphics-drivers-desktop
       - mir-platform-graphics-virtual
       - mir-graphics-drivers-nvidia
@@ -150,3 +150,10 @@ parts:
       - no-patchelf # Otherwise snapcraft may strip the build ID and cause the driver to crash
     stage:
       - usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/libgallium*
+
+  verify-elf-deps:
+    plugin: nil
+    after: [mesa-no-patchelf, miracle-wm, session]
+    override-prime: |
+      craftctl default
+      "${CRAFT_PROJECT_DIR}/snap/verify-elf-deps.sh" "${CRAFT_PRIME}"
