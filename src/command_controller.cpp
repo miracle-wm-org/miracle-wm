@@ -1238,7 +1238,7 @@ bool CommandController::try_move_to_scratchpad(std::vector<ContainerScope> const
             return false;
     }
 
-    return true;
+    return result;
 }
 
 bool CommandController::show_scratchpad()
