@@ -78,6 +78,7 @@ void Scratchpad::toggle(ScratchpadItem& other)
         };
         window_controller->modify(window, spec);
         window_controller->noclip(window);
+        window_controller->select_active_window(window);
     }
     else
         other.container->hide();

@@ -1201,13 +1201,44 @@ bool CommandController::try_move_to_scratchpad(std::vector<ContainerScope> const
     if (containers.empty())
         return false;
 
+    bool result = true;
     for (auto const& container : containers)
     {
-        if (!scratchpad_->move_to(container))
+        auto window_container = Container::as_window_container(container);
+        if (!window_container)
+        {
+            mir::log_error("try_move_to_scratchpad: only windows can be moved to the scratchpad");
+            result = false;
+            continue;
+        }
+
+        // Scratchpad windows are floating, so tiled windows must be floated first
+        if (Container::as_leaf(window_container))
+        {
+            if (!toggle_floating_internal(window_container))
+            {
+                result = false;
+                continue;
+            }
+
+            window_container->for_each_observer([&](ContainerListener* listener)
+            {
+                listener->on_container_float(*window_container);
+            });
+
+            window_container = window_controller->get_window_container(window_container->window().value());
+            if (!window_container)
+            {
+                result = false;
+                continue;
+            }
+        }
+
+        if (!scratchpad_->move_to(window_container))
             return false;
     }
 
-    return true;
+    return result;
 }
 
 bool CommandController::show_scratchpad()
@@ -1238,9 +1269,16 @@ bool CommandController::toggle_floating_internal(std::shared_ptr<Container> cons
 
         animator->remove_by_animation_handle(wc->animation_handle());
 
-        // Remove the container from whatever workspace it is on.
-        auto const workspace = wc->get_workspace();
-        workspace->delete_container(container);
+        // Remove the container from whatever workspace it is on. Pinned windows have no
+        // workspace, so they land on the active workspace of the focused output instead.
+        auto workspace = wc->get_workspace();
+        if (workspace)
+            workspace->delete_container(container);
+        else
+            workspace = focused_output->active();
+
+        if (!workspace)
+            return false;
 
         // Remove the container from the relevant state because we are making it anew.
         // This is somewhat similar to Policy::advise_delete_window, but we skip a lot

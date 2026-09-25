@@ -95,5 +95,6 @@ TEST_F(ScratchpadTest, CanShowContainer)
         .WillOnce(::testing::Return(miral::Window()));
     EXPECT_CALL(*window_controller, modify(testing::_, testing::_));
     EXPECT_CALL(*window_controller, noclip(testing::_));
+    EXPECT_CALL(*window_controller, select_active_window(testing::_));
     EXPECT_TRUE(scratchpad.toggle_show(container));
 }

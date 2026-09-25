@@ -22,12 +22,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_container.h"
 #include "mock_output.h"
 #include "mock_output_factory.h"
+#include "mock_parent_container.h"
 #include "mock_session.h"
 #include "mock_surface.h"
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
 #include "mode_observer.h"
 #include "output_manager.h"
+#include "parent_container.h"
+#include "plugin_manager.h"
 #include "scratchpad.h"
 #include "window_observer.h"
 #include "workspace_manager.h"
@@ -535,7 +538,7 @@ public:
             nullptr,
             window_observer_registrar,
             nullptr,
-            nullptr);
+            make_null_plugin_manager());
 
         output_manager->create("output1", 1, geom::Rectangle({ 0, 0 }, { 1280, 720 }), *workspace_manager);
         output_manager->create("output2", 2, geom::Rectangle({ 1280, 0 }, { 1280, 720 }), *workspace_manager);
@@ -640,6 +643,58 @@ TEST_F(TwoOutputCommandControllerTest, FreestyleWindowWithoutRequestedOutputUses
     EXPECT_CALL(*workspace2, add_other_container(_, _)).Times(0);
 
     ASSERT_NE(command_controller->create_container(info, hint), nullptr);
+}
+
+// ---- toggle_floating ----
+
+TEST_F(TwoOutputCommandControllerTest, ToggleFloatingPinnedWindowTilesOntoFocusedWorkspace)
+{
+    // A pinned window has been detached from its workspace, so it has none.
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    Mock::AllowLeak(container.get());
+    ON_CALL(*container, window()).WillByDefault(Return(window));
+    ON_CALL(*container, pinned()).WillByDefault(Return(true));
+    ON_CALL(*container, get_workspace()).WillByDefault(Return(nullptr));
+    state->add(container);
+    state->focus_container(container);
+
+    auto const root = std::make_shared<ParentContainer>(
+        nullptr, state, window_controller, config, output1_area, workspace1, nullptr);
+    ON_CALL(*workspace1, get_root()).WillByDefault(Return(root));
+
+    // Unfloating must land the window in the focused output's active workspace.
+    EXPECT_CALL(*workspace1, get_root()).Times(AtLeast(1));
+    EXPECT_CALL(*workspace2, get_root()).Times(0);
+
+    EXPECT_TRUE(command_controller->toggle_floating({}));
+    EXPECT_EQ(root->num_children(), 1u);
+
+    // The real tiled leaf and its root hold these through reference cycles.
+    Mock::AllowLeak(config.get());
+    Mock::AllowLeak(window_controller.get());
+}
+
+// ---- try_move_to_scratchpad ----
+
+TEST_F(CommandControllerTest, MoveToScratchpad_DetachesFloatingWindow)
+{
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    state->add(container);
+    state->focus_container(container);
+
+    EXPECT_CALL(*container, set_workspace(std::shared_ptr<AbstractWorkspace>(nullptr)));
+    EXPECT_TRUE(command_controller->try_move_to_scratchpad({}));
+    EXPECT_TRUE(scratchpad->contains(container));
+}
+
+TEST_F(CommandControllerTest, MoveToScratchpad_RejectsNonWindowContainers)
+{
+    auto const parent = std::make_shared<NiceMock<test::MockParentContainer>>();
+    state->focus_container(parent);
+
+    EXPECT_CALL(*parent, set_workspace(_)).Times(0);
+    EXPECT_FALSE(command_controller->try_move_to_scratchpad({}));
+    EXPECT_FALSE(scratchpad->contains(parent));
 }
 
 // ---- try_toggle_fullscreen ----
