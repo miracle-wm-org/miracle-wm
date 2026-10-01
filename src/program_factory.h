@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/graphics/program.h>
 #include <mir/graphics/program_factory.h>
 #include <mutex>
+#include <string>
 #include <variant>
 #include <vector>
 
@@ -91,17 +92,30 @@ struct ProgramData
     GLint border_color_uniform = -1;
     GLint border_width_uniform = -1;
     GLint border_radius_uniform = -1;
+    /// Uniforms that only programs with a geometry stage have.
+    GLint world_to_clip_uniform = -1;
+    GLint window_rect_uniform = -1;
+    GLint window_size_uniform = -1;
+    GLint params_uniform = -1;
     mutable long long last_used_frameno = 0;
 
-    ProgramData(GLuint program_id);
+    /// \param has_geometry_stage whether the program has a geometry stage, in
+    ///        which case the screen transforms are folded into `u_world_to_clip`.
+    ProgramData(GLuint program_id, bool has_geometry_stage = false);
 };
 
 class Program : public mir::graphics::gl::Program
 {
 public:
-    explicit Program(ProgramHandle&& program);
+    explicit Program(ProgramHandle&& program, bool has_geometry_stage = false);
     ProgramHandle program_handle;
     ProgramData data;
+
+    /// The sampler sources the program was built from, kept so that a variant
+    /// with a geometry stage can be built from the same sampler later. Empty
+    /// for programs that are not window content programs (e.g. the border).
+    std::string extension_fragment;
+    std::string sample_fragment;
 };
 
 /// Lightweight program for intermediate (non-final) passes that don't need
@@ -152,9 +166,22 @@ public:
     /// Retrieves the border shader
     Program const& border() const { return border_program; }
 
+    /// Whether the GL context supports geometry shaders (OpenGL ES 3.2+).
+    bool geometry_shaders_supported() const { return geometry_shaders_supported_; }
+
+    /// Returns a variant of \p base (a window content program, or [border])
+    /// with the registered geometry shader \p geometry_shader_id inserted
+    /// between its vertex and fragment stages.
+    ///
+    /// \returns the program, or nullptr if geometry shaders are unsupported,
+    ///          the shader is not registered, or it failed to build. Callers
+    ///          should draw with \p base instead.
+    Program const* geometry_variant(Program const& base, uint8_t geometry_shader_id);
+
     /// Register the sampler method and return its unique identifier.
     /// This returned id may be used later in "resolve" to get the shader
 private:
+    static bool detect_geometry_support();
     static GLuint compile_shader(GLenum type, GLchar const* src);
     static ProgramHandle link_shader(
         ShaderHandle const& vertex_shader,
@@ -163,6 +190,7 @@ private:
     PassProgram& compile_intermediate_pass(void const* key, char const* sampler_glsl);
 
     std::shared_ptr<SamplerRegistry> sampler_registry_;
+    bool const geometry_shaders_supported_;
     ShaderHandle const vertex_shader;
     ShaderHandle const pass_vertex_shader;
     ShaderHandle const border_vertex_shader;
@@ -171,6 +199,14 @@ private:
     Program const border_program;
     std::vector<std::pair<void const*, std::unique_ptr<Program>>> programs;
     std::vector<std::pair<void const*, std::unique_ptr<PassProgram>>> pass_programs;
+    struct GeometryProgram
+    {
+        GLuint base;
+        uint8_t geometry_shader_id;
+        /// Null when the program failed to build, so it is not retried every frame.
+        std::unique_ptr<Program> program;
+    };
+    std::vector<GeometryProgram> geometry_programs;
     // GL requires us to synchronise multi-threaded access to the shader APIs.
     std::mutex compilation_mutex;
 };

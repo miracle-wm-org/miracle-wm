@@ -318,6 +318,28 @@ pub struct miracle_workspace_t {
     pub size: miracle_size_t,
 }
 #[repr(C)]
+#[derive(Debug, Default, Copy, Clone)]
+pub struct miracle_plugin_animation_frame_result_t {
+    #[doc = " If set to `TRUE`, the animation is considered completed.\n\n At this point, the animated object will be moved to its destination\n with the appropriate opacity. The animation will be removed from the\n system."]
+    pub completed: i32,
+    #[doc = " If `TRUE`, #area is set."]
+    pub has_area: i32,
+    #[doc = " The area as a packed rectangle of x, y, width, and height.\n\n Be careful when using this value, as Mir will set this as the _actual_\n rectangle of the object. For example, if setting a window's rectangle,\n Mir will issue a position and resize request to the window. This is\n NOT something that you would want to do every frame. It is better to use\n the #transform if you want to animate the scale."]
+    pub area: [f32; 4usize],
+    #[doc = " If `TRUE`, #transform is set."]
+    pub has_transform: i32,
+    #[doc = " The transform to apply to the animated object.\n\n This transform is backed by a glm::mat4, which is a column-major transform."]
+    pub transform: [f32; 16usize],
+    #[doc = " If `TRUE`, #opacity is set."]
+    pub has_opacity: i32,
+    #[doc = " The opacity of the object.\n\n This must be [0, 1]."]
+    pub opacity: f32,
+    #[doc = " If `TRUE`, #clip_area is set.\n\n When set, #clip_area is used as the scissor rectangle to reveal the\n window's surface gradually, while #area carries the window's actual\n target geometry sent to the client via configure. This separation\n avoids blank space during resize animations: the client renders at\n the final size immediately, and the clip progressively reveals it."]
+    pub has_clip_area: i32,
+    #[doc = " The scissor-clip rectangle as a packed x, y, width, height."]
+    pub clip_area: [f32; 4usize],
+}
+#[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct miracle_plugin_animation_frame_data_t {
     #[doc = " Animation type.\n\n This one of #miracle_animation_type."]
@@ -344,6 +366,10 @@ pub struct miracle_plugin_animation_frame_data_t {
     pub workspace: miracle_workspace_t,
     #[doc = " Null-terminated workspace name (up to 255 characters).\n\n Only valid when #has_workspace is `TRUE` and the workspace has a name."]
     pub workspace_name: [::std::os::raw::c_char; 256usize],
+    #[doc = " If `TRUE`, #builtin is set."]
+    pub has_builtin: i32,
+    #[doc = " The frame that the configured built-in animation (e.g. `slide`) produces\n at #runtime_seconds.\n\n Returning this unchanged from `animate` delegates the frame to the\n built-in animation explicitly. It may also be modified first, e.g. to\n compose an extra transform on top of the built-in movement."]
+    pub builtin: miracle_plugin_animation_frame_result_t,
 }
 impl Default for miracle_plugin_animation_frame_data_t {
     fn default() -> Self {
@@ -353,28 +379,6 @@ impl Default for miracle_plugin_animation_frame_data_t {
             s.assume_init()
         }
     }
-}
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone)]
-pub struct miracle_plugin_animation_frame_result_t {
-    #[doc = " If set to `TRUE`, the animation is considered completed.\n\n At this point, the animated object will be moved to its destination\n with the appropriate opacity. The animation will be removed from the\n system."]
-    pub completed: i32,
-    #[doc = " If `TRUE`, #area is set."]
-    pub has_area: i32,
-    #[doc = " The area as a packed rectangle of x, y, width, and height.\n\n Be careful when using this value, as Mir will set this as the _actual_\n rectangle of the object. For example, if setting a window's rectangle,\n Mir will issue a position and resize request to the window. This is\n NOT something that you would want to do every frame. It is better to use\n the #transform if you want to animate the scale."]
-    pub area: [f32; 4usize],
-    #[doc = " If `TRUE`, #transform is set."]
-    pub has_transform: i32,
-    #[doc = " The transform to apply to the animated object.\n\n This transform is backed by a glm::mat4, which is a column-major transform."]
-    pub transform: [f32; 16usize],
-    #[doc = " If `TRUE`, #opacity is set."]
-    pub has_opacity: i32,
-    #[doc = " The opacity of the object.\n\n This must be [0, 1]."]
-    pub opacity: f32,
-    #[doc = " If `TRUE`, #clip_area is set.\n\n When set, #clip_area is used as the scissor rectangle to reveal the\n window's surface gradually, while #area carries the window's actual\n target geometry sent to the client via configure. This separation\n avoids blank space during resize animations: the client renders at\n the final size immediately, and the clip progressively reveals it."]
-    pub has_clip_area: i32,
-    #[doc = " The scissor-clip rectangle as a packed x, y, width, height."]
-    pub clip_area: [f32; 4usize],
 }
 #[doc = " Describes the properties of an application.\n\n Plugin authors may use #miracle_plugin_get_application to get the application\n given a window."]
 #[repr(C)]
@@ -559,18 +563,14 @@ impl Default for miracle_shader_pass_t {
         }
     }
 }
-pub const MirEventType_mir_event_type_key: MirEventType = 0;
-pub const MirEventType_mir_event_type_motion: MirEventType = 1;
-pub const MirEventType_mir_event_type_window: MirEventType = 2;
-pub const MirEventType_mir_event_type_resize: MirEventType = 3;
-pub const MirEventType_mir_event_type_prompt_session_state_change: MirEventType = 4;
-pub const MirEventType_mir_event_type_orientation: MirEventType = 5;
-pub const MirEventType_mir_event_type_close_window: MirEventType = 6;
-pub const MirEventType_mir_event_type_input: MirEventType = 7;
-pub const MirEventType_mir_event_type_input_configuration: MirEventType = 8;
-pub const MirEventType_mir_event_type_window_output: MirEventType = 9;
-pub const MirEventType_mir_event_type_input_device_state: MirEventType = 10;
-pub const MirEventType_mir_event_type_window_placement: MirEventType = 11;
+pub const MirEventType_mir_event_type_window: MirEventType = 0;
+pub const MirEventType_mir_event_type_resize: MirEventType = 1;
+pub const MirEventType_mir_event_type_orientation: MirEventType = 2;
+pub const MirEventType_mir_event_type_close_window: MirEventType = 3;
+pub const MirEventType_mir_event_type_input: MirEventType = 4;
+pub const MirEventType_mir_event_type_window_output: MirEventType = 5;
+pub const MirEventType_mir_event_type_input_device_state: MirEventType = 6;
+pub const MirEventType_mir_event_type_window_placement: MirEventType = 7;
 pub type MirEventType = ::std::os::raw::c_uint;
 pub const MirInputEventType_mir_input_event_type_key: MirInputEventType = 0;
 pub const MirInputEventType_mir_input_event_type_touch: MirInputEventType = 1;

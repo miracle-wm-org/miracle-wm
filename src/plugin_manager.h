@@ -131,9 +131,13 @@ public:
     ///
     /// \param data The animation data to animate.
     /// \param runtime_seconds The current runtime of the animation in seconds.
+    /// \param builtin The frame that the configured built-in animation produces
+    ///        at \p runtime_seconds, so that plugins can delegate to or build on it.
     /// \returns The result of the animation frame, or none if none is set.
     virtual std::optional<miracle_plugin_animation_frame_result_t> animate(
-        AnimationData const& data, float runtime_seconds)
+        AnimationData const& data,
+        float runtime_seconds,
+        miracle_plugin_animation_frame_result_t const& builtin)
         = 0;
 
     /// Tick a custom animation for the given plugin.

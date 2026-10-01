@@ -22,6 +22,14 @@ pub struct AnimationFrameData {
     pub opacity_start: f32,
     /// The target opacity of the window.
     pub opacity_end: f32,
+    /// The frame that the configured built-in animation (e.g. `slide`) produces at
+    /// [`Self::runtime_seconds`].
+    ///
+    /// Return this unchanged from an animation hook to delegate the frame to the
+    /// built-in animation explicitly, or modify it first to build on top of it. It
+    /// also tells a plugin where the built-in animation is placing the window this
+    /// frame. `None` when the compositor does not provide it.
+    pub builtin: Option<AnimationFrameResult>,
 }
 
 impl From<bindings::miracle_plugin_animation_frame_data_t> for AnimationFrameData {
@@ -32,11 +40,17 @@ impl From<bindings::miracle_plugin_animation_frame_data_t> for AnimationFrameDat
             destination: Rect::from_array(value.destination),
             opacity_start: value.opacity_start,
             opacity_end: value.opacity_end,
+            builtin: if value.has_builtin != 0 {
+                Some(value.builtin.into())
+            } else {
+                None
+            },
         }
     }
 }
 
 /// Returned from animation hooks to describe the frame's visual state.
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AnimationFrameResult {
     /// Set to `true` to signal that the animation is finished.
     pub completed: bool,
