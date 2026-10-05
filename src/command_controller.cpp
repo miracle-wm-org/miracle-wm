@@ -990,10 +990,11 @@ bool CommandController::move_container_to_workspace(
     std::shared_ptr<Container> const& container,
     std::function<std::shared_ptr<AbstractOutput>()> const& request)
 {
-    if (!container->get_output())
+    auto const origin = container->get_output();
+    if (!origin)
         return false;
 
-    container->get_output()->delete_container(container);
+    origin->delete_container(container);
     state->unfocus_container(container);
     if (auto const target = request())
     {
@@ -1002,6 +1003,10 @@ bool CommandController::move_container_to_workspace(
             window_controller->select_active_window(container->window().value());
         return true;
     }
+
+    // The target could not be resolved (e.g. back_and_forth without a previous
+    // workspace). Put the container back so that it is not left orphaned.
+    origin->graft(container);
     return false;
 }
 
