@@ -280,3 +280,34 @@ TEST_F(RenderDataManagerTest, RemoveTriggersCopy)
     render_data_manager.copy_if_changed(seen_generation, copied);
     ASSERT_TRUE(copied.empty());
 }
+
+TEST_F(RenderDataManagerTest, CanChangeGeometryShaderAndParams)
+{
+    auto id = render_data_manager.add(RenderData {});
+    get();
+
+    std::array<float, 16> params = {};
+    params[0] = 12.f;
+    params[1] = -3.f;
+    render_data_manager.geometry_shader_id_change(id, 7);
+    render_data_manager.shader_params_change(id, params);
+
+    auto result = get();
+    ASSERT_EQ(result.size(), 1);
+    ASSERT_EQ(result[0].geometry_shader_id, std::optional<uint8_t> { 7 });
+    ASSERT_EQ(result[0].shader_params, params);
+}
+
+TEST_F(RenderDataManagerTest, ResetShadersClearsGeometryShader)
+{
+    auto id = render_data_manager.add(RenderData {});
+    render_data_manager.geometry_shader_id_change(id, 7);
+    get();
+
+    render_data_manager.reset_shaders({ 7 });
+
+    copied.clear();
+    auto result = get();
+    ASSERT_EQ(result.size(), 1);
+    ASSERT_FALSE(result[0].geometry_shader_id.has_value());
+}

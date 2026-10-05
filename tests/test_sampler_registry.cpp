@@ -163,3 +163,31 @@ TEST_F(SamplerRegistryTest, RemoveShadersForPluginLeavesScreenShaderOwnedByOther
     ASSERT_EQ(state.passes->size(), 1u);
     ASSERT_EQ(state.generation, 1u);
 }
+
+TEST_F(SamplerRegistryTest, GeometryShaderSourceIsRetrievableById)
+{
+    auto const id = registry.register_window_geometry_shader("#version 320 es\nvoid main() {}\n");
+    auto const source = registry.geometry_shader_source(id);
+    ASSERT_TRUE(source.has_value());
+    ASSERT_EQ(*source, "#version 320 es\nvoid main() {}\n");
+    ASSERT_FALSE(registry.geometry_shader_source(id + 1).has_value());
+}
+
+TEST_F(SamplerRegistryTest, GeometryShadersShareIdsWithWindowShaders)
+{
+    auto const window_id = registry.register_window_shader({ "vec4 sample_to_rgba(vec2 tc) { return vec4(1); }" });
+    auto const geometry_id = registry.register_window_geometry_shader("void main() {}");
+    ASSERT_NE(window_id, geometry_id);
+}
+
+TEST_F(SamplerRegistryTest, RemoveShadersForPluginRemovesItsGeometryShaders)
+{
+    auto const owned = registry.register_window_geometry_shader("void main() {}", 1u);
+    auto const other = registry.register_window_geometry_shader("void main() {}", 2u);
+
+    auto const removed = registry.remove_shaders_for_plugin(1u);
+
+    ASSERT_EQ(removed, std::vector<uint8_t> { owned });
+    ASSERT_FALSE(registry.geometry_shader_source(owned).has_value());
+    ASSERT_TRUE(registry.geometry_shader_source(other).has_value());
+}

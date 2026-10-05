@@ -52,7 +52,25 @@ public:
     void TearDown() override
     {
         std::filesystem::remove(path.c_str());
+        if (!isolated_dir.empty())
+            std::filesystem::remove_all(isolated_dir);
     }
+
+    /// Copies the test config into a fresh temporary directory and returns the
+    /// copy's path, so that a test can populate the `plugins` directory beside it
+    /// without touching the one beside [path] (the source tree, when run from it).
+    std::filesystem::path isolated_config_path()
+    {
+        isolated_dir = std::filesystem::temp_directory_path()
+            / ("miracle-wm-test-" + std::string(testing::UnitTest::GetInstance()->current_test_info()->name()));
+        std::filesystem::remove_all(isolated_dir);
+        std::filesystem::create_directories(isolated_dir);
+        auto const config_path = isolated_dir / "test.yaml";
+        std::filesystem::copy_file(path, config_path);
+        return config_path;
+    }
+
+    std::filesystem::path isolated_dir;
 
     void write_kvp(std::string key, std::string value)
     {
@@ -930,7 +948,8 @@ TEST_F(FilesystemConfigurationTest, CanReadIncludes)
 
 TEST_F(FilesystemConfigurationTest, AutoLoadsWasmFilesFromPluginsDir)
 {
-    const auto plugins_dir = std::filesystem::path(path).parent_path() / "plugins";
+    auto const config_path = isolated_config_path();
+    auto const plugins_dir = config_path.parent_path() / "plugins";
     std::filesystem::create_directories(plugins_dir);
     std::ofstream(plugins_dir / "test.wasm").close();
 
@@ -948,20 +967,14 @@ TEST_F(FilesystemConfigurationTest, AutoLoadsWasmFilesFromPluginsDir)
         .WillOnce([&](std::vector<PluginConfiguration> const& plugins)
     { received = plugins; });
 
-    FilesystemConfiguration config(registrar, path, true);
+    FilesystemConfiguration config(registrar, config_path.string(), true);
 
     ASSERT_EQ(received.size(), 1u);
     EXPECT_EQ(std::filesystem::path(received[0].path).filename(), "test.wasm");
-
-    std::filesystem::remove_all(plugins_dir);
 }
 
 TEST_F(FilesystemConfigurationTest, AutoDiscoveredPluginsLoadedAfterConfigPlugins)
 {
-    const auto plugins_dir = std::filesystem::path(path).parent_path() / "plugins";
-    std::filesystem::create_directories(plugins_dir);
-    std::ofstream(plugins_dir / "auto.wasm").close();
-
     YAML::Node plugin_node;
     plugin_node["path"] = "/some/config.wasm";
     YAML::Node plugins_list;
@@ -969,6 +982,11 @@ TEST_F(FilesystemConfigurationTest, AutoDiscoveredPluginsLoadedAfterConfigPlugin
     YAML::Node root;
     root["plugins"] = plugins_list;
     write_yaml_node(root);
+
+    auto const config_path = isolated_config_path();
+    auto const plugins_dir = config_path.parent_path() / "plugins";
+    std::filesystem::create_directories(plugins_dir);
+    std::ofstream(plugins_dir / "auto.wasm").close();
 
     class Observer : public ConfigObserver
     {
@@ -984,18 +1002,17 @@ TEST_F(FilesystemConfigurationTest, AutoDiscoveredPluginsLoadedAfterConfigPlugin
         .WillOnce([&](std::vector<PluginConfiguration> const& plugins)
     { received = plugins; });
 
-    FilesystemConfiguration config(registrar, path, true);
+    FilesystemConfiguration config(registrar, config_path.string(), true);
 
     ASSERT_EQ(received.size(), 2u);
     EXPECT_EQ(received[0].path, "/some/config.wasm");
     EXPECT_EQ(std::filesystem::path(received[1].path).filename(), "auto.wasm");
-
-    std::filesystem::remove_all(plugins_dir);
 }
 
 TEST_F(FilesystemConfigurationTest, NonWasmFilesInPluginsDirAreIgnored)
 {
-    const auto plugins_dir = std::filesystem::path(path).parent_path() / "plugins";
+    auto const config_path = isolated_config_path();
+    auto const plugins_dir = config_path.parent_path() / "plugins";
     std::filesystem::create_directories(plugins_dir);
     std::ofstream(plugins_dir / "lib.so").close();
     std::ofstream(plugins_dir / "script.js").close();
@@ -1014,11 +1031,9 @@ TEST_F(FilesystemConfigurationTest, NonWasmFilesInPluginsDirAreIgnored)
         .WillOnce([&](std::vector<PluginConfiguration> const& plugins)
     { received = plugins; });
 
-    FilesystemConfiguration config(registrar, path, true);
+    FilesystemConfiguration config(registrar, config_path.string(), true);
 
     EXPECT_TRUE(received.empty());
-
-    std::filesystem::remove_all(plugins_dir);
 }
 
 TEST_F(FilesystemConfigurationTest, MissingPluginsDirDoesNotCrash)

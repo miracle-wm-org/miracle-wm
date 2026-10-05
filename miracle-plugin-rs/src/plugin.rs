@@ -435,6 +435,26 @@ where
     }
 }
 
+/// Stop a custom animation queued with [`queue_custom_animation`] before its
+/// duration elapses. Its callback is not called again.
+///
+/// Returns `Err` if the animation is not running.
+pub fn cancel_custom_animation(animation_id: u32) -> Result<(), ()> {
+    if custom_anim_callbacks().remove(&animation_id).is_none() {
+        // The callback may be the one running right now, in which case it is out of
+        // the registry until it returns. Make sure it is not put back.
+        let running = unsafe { &mut *std::ptr::addr_of_mut!(_RUNNING_CUSTOM_ANIM) };
+        if let Some((id, cancelled)) = running {
+            if *id == animation_id {
+                *cancelled = true;
+            }
+        }
+    }
+    let handle = unsafe { miracle_get_plugin_handle() };
+    let r = unsafe { crate::host::miracle_cancel_custom_animation(handle as i32, animation_id as i32) };
+    if r == 0 { Ok(()) } else { Err(()) }
+}
+
 /// Register a multi-pass GLSL shader with the compositor.
 ///
 /// Each element of `passes` is a complete `sample_to_rgba(vec2 texcoord)` function.
@@ -463,6 +483,53 @@ pub fn register_window_shader(passes: &[&str]) -> Option<u8> {
             handle as i32,
             descriptors.as_ptr() as i32,
             passes.len() as i32,
+        )
+    };
+    if result >= 0 {
+        Some(result as u8)
+    } else {
+        None
+    }
+}
+
+/// Register a geometry shader with the compositor.
+///
+/// `source` is a complete GLSL ES 3.20 geometry shader. It runs between the
+/// compositor's vertex and fragment stages, for both the window content and its
+/// border, and must follow this interface:
+///
+/// ```glsl
+/// #version 320 es
+/// layout(triangles) in;
+/// layout(triangle_strip, max_vertices = N) out;
+///
+/// in vec2 v_texcoord[];          // pass through, interpolated, to g_texcoord
+/// in vec2 v_local[];             // [0, 1] across the window, (0, 0) at the top left
+/// in vec4 v_world[];             // position in screen pixels
+/// out vec2 g_texcoord;
+///
+/// uniform mat4 u_world_to_clip;  // gl_Position = u_world_to_clip * world
+/// uniform vec2 u_window_size;    // window size in pixels
+/// uniform vec4 u_params[4];      // see Window::set_shader_params
+/// ```
+///
+/// The content and the border only line up if the displacement is a function of
+/// `v_local`, `v_world` and the uniforms alone. Displaced vertices may leave the
+/// window's bounds.
+///
+/// Geometry shaders require an OpenGL ES 3.2 context. Without one, or if the shader
+/// fails to compile, the compositor logs a warning and draws the window without it.
+///
+/// Returns the shader ID on success (pass to
+/// [`crate::window::Window::set_geometry_shader`]), or `None` if registration failed.
+pub fn register_window_geometry_shader(source: &str) -> Option<u8> {
+    let handle = unsafe { miracle_get_plugin_handle() };
+    // In wasm32 Rust pointers are linear-memory offsets, so casting to i32 is correct.
+    let result = unsafe {
+        crate::host::miracle_register_window_geometry_shader(
+            handle as i32,
+            source.as_ptr() as i32,
+            source.len() as i32,
         )
     };
     if result >= 0 {
@@ -509,6 +576,30 @@ pub fn set_screen_shader(passes: &[&str]) -> Result<(), ()> {
 static mut _CUSTOM_ANIM_CALLBACKS: Option<
     std::collections::HashMap<u32, (Box<dyn FnMut(u32, f32, f32)>, f32)>,
 > = None;
+
+/// The custom animation whose callback is running, and whether it has been cancelled
+/// from inside that callback.
+static mut _RUNNING_CUSTOM_ANIM: Option<(u32, bool)> = None;
+
+/// Runs one frame of the custom animation \p animation_id.
+///
+/// The callback is taken out of the registry while it runs, so that it may queue or
+/// cancel custom animations (including itself) without aliasing the registry.
+#[doc(hidden)]
+pub fn run_custom_animation(animation_id: u32, dt: f32, elapsed_seconds: f32) {
+    let Some((mut cb, duration)) = custom_anim_callbacks().remove(&animation_id) else {
+        return;
+    };
+
+    unsafe { _RUNNING_CUSTOM_ANIM = Some((animation_id, false)) };
+    cb(animation_id, dt, elapsed_seconds);
+    let cancelled = unsafe { (*std::ptr::addr_of_mut!(_RUNNING_CUSTOM_ANIM)).take() }
+        .is_some_and(|(_, cancelled)| cancelled);
+
+    if !cancelled && elapsed_seconds < duration {
+        custom_anim_callbacks().insert(animation_id, (cb, duration));
+    }
+}
 
 /// Returns the global custom-animation callback registry.
 ///
@@ -642,16 +733,7 @@ macro_rules! miracle_plugin {
                 &*(data_ptr as *const $crate::animation::RawCustomAnimationData)
             };
 
-            let callbacks = $crate::plugin::custom_anim_callbacks();
-            let done = if let Some((cb, dur)) = callbacks.get_mut(&raw.animation_id) {
-                cb(raw.animation_id, raw.dt, raw.elapsed_seconds);
-                raw.elapsed_seconds >= *dur
-            } else {
-                false
-            };
-            if done {
-                callbacks.remove(&raw.animation_id);
-            }
+            $crate::plugin::run_custom_animation(raw.animation_id, raw.dt, raw.elapsed_seconds);
 
             // Return value is ignored by the host; kept for WASM ABI compatibility.
             0

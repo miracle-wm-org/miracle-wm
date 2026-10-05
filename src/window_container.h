@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "container_effect.h"
+#include <array>
 #include <optional>
 
 namespace miracle
@@ -128,6 +129,18 @@ public:
     virtual void set_window_alpha(float alpha);
     virtual void set_window_shader_id(std::optional<uint8_t> shader_id);
 
+    /// Set (or, with std::nullopt, clear) the per-window geometry shader.
+    ///
+    /// Safe to call from any thread: only the render data is touched, and the
+    /// compositor is asked to redraw the surface.
+    void set_window_geometry_shader_id(std::optional<uint8_t> geometry_shader_id);
+
+    /// Set the plugin-owned values that the geometry shader reads as
+    /// `uniform vec4 u_params[4]`.
+    ///
+    /// Safe to call from any thread, like [set_window_geometry_shader_id].
+    void set_window_shader_params(std::array<float, 16> const& params);
+
     /// Retrieve the visible area of the container.
     ///
     /// This area may be different from the logical area and be used to clip it.
@@ -181,6 +194,10 @@ protected:
     /// \param force push even if nothing changed, e.g. to make the compositor
     ///              redraw the surface for reasons the surface can't see
     void rerender(bool force = false);
+
+    /// Marks the surface as damaged without touching any of the cached
+    /// transform/alpha state, so it is safe off the window-manager thread.
+    void request_redraw() const;
     std::weak_ptr<RenderDataManager> rdm;
     std::shared_ptr<WindowController> window_controller_;
 

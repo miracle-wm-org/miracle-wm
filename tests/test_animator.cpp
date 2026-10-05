@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "animator.h"
+#include "mock_plugin_manager.h"
 #include "plugin_manager.h"
 #include <cmath>
 #include <gmock/gmock.h>
@@ -169,6 +170,108 @@ float scale_at(BuiltInAnimationDefinition const& part, float at_seconds)
     animator.tick(at_seconds);
     return scale;
 }
+}
+
+namespace
+{
+AnimationDefinition linear_slide_definition()
+{
+    return AnimationDefinition {
+        false,
+        1.f,
+        BuiltInAnimationList { BuiltInAnimationDefinition {
+            .type = BultInAnimationType::slide,
+            .function = EaseFunction::linear,
+        } }
+    };
+}
+
+AnimationData slide_right_data()
+{
+    return AnimationData {
+        AnimateableEvent::window_move,
+        mir::geometry::Rectangle(
+            mir::geometry::Point(0, 0),
+            mir::geometry::Size(100, 100)),
+        mir::geometry::Rectangle(
+            mir::geometry::Point(600, 0),
+            mir::geometry::Size(100, 100)),
+        1, 1
+    };
+}
+}
+
+TEST_F(AnimatorTest, PluginIsGivenTheBuiltInFrame)
+{
+    auto const plugin_manager = std::make_shared<testing::NiceMock<test::MockPluginManager>>();
+    miracle_plugin_animation_frame_result_t builtin {};
+    EXPECT_CALL(*plugin_manager, animate(testing::_, testing::_, testing::_))
+        .WillOnce(testing::DoAll(testing::SaveArg<2>(&builtin), testing::Return(std::nullopt)));
+
+    Animator animator;
+    animator.append(Animation(
+        animator.register_animateable(),
+        linear_slide_definition(),
+        slide_right_data(),
+        [](AnimationFrameResult const&) { },
+        plugin_manager));
+    animator.tick(0.5f);
+
+    EXPECT_EQ(builtin.completed, 0);
+    ASSERT_EQ(builtin.has_area, 1);
+    EXPECT_FLOAT_EQ(builtin.area[0], 300.f);
+    EXPECT_FLOAT_EQ(builtin.area[1], 0.f);
+    EXPECT_EQ(builtin.has_clip_area, 1);
+}
+
+TEST_F(AnimatorTest, PluginIsGivenTheFinalFrameOnceTheDurationElapses)
+{
+    auto const plugin_manager = std::make_shared<testing::NiceMock<test::MockPluginManager>>();
+    miracle_plugin_animation_frame_result_t builtin {};
+    EXPECT_CALL(*plugin_manager, animate(testing::_, testing::_, testing::_))
+        .WillOnce(testing::DoAll(testing::SaveArg<2>(&builtin), testing::Return(std::nullopt)));
+
+    Animator animator;
+    animator.append(Animation(
+        animator.register_animateable(),
+        linear_slide_definition(),
+        slide_right_data(),
+        [](AnimationFrameResult const&) { },
+        plugin_manager));
+    animator.tick(1.5f);
+
+    EXPECT_EQ(builtin.completed, 1);
+    ASSERT_EQ(builtin.has_area, 1);
+    EXPECT_FLOAT_EQ(builtin.area[0], 600.f);
+}
+
+TEST_F(AnimatorTest, ReturningTheBuiltInFrameMatchesTheBuiltInAnimation)
+{
+    auto const run = [](std::shared_ptr<PluginManager> const& plugin_manager)
+    {
+        std::optional<mir::geometry::Rectangle> rectangle;
+        Animator animator;
+        animator.append(Animation(
+            animator.register_animateable(),
+            linear_slide_definition(),
+            slide_right_data(),
+            [&](AnimationFrameResult const& result)
+        { rectangle = result.rectangle; },
+            plugin_manager));
+        animator.tick(0.25f);
+        return rectangle;
+    };
+
+    auto const plugin_manager = std::make_shared<testing::NiceMock<test::MockPluginManager>>();
+    ON_CALL(*plugin_manager, animate(testing::_, testing::_, testing::_))
+        .WillByDefault([](AnimationData const&, float, miracle_plugin_animation_frame_result_t const& builtin)
+    {
+        return std::optional { builtin };
+    });
+
+    auto const delegated = run(plugin_manager);
+    ASSERT_TRUE(delegated.has_value());
+    EXPECT_EQ(delegated, run(nullptr));
 }
 
 TEST_F(AnimatorTest, GrowDefaultsToScalingFromNothing)
