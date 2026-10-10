@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config_observer.h"
 #include "miracle/cpp/file_helpers.h"
 
+#include <bitset>
 #include <filesystem>
 #include <fstream>
 #include <glib-2.0/glib.h>
@@ -204,6 +205,20 @@ constexpr DefaultKeyBinding default_key_bindings[static_cast<int>(DefaultKeyComm
 };
 
 static_assert(std::size(default_key_bindings) == static_cast<size_t>(DefaultKeyCommand::MAX));
+
+/// An override replaces the default binding for its command, so the default
+/// entry for any command that appears in \p overrides must be skipped.
+std::bitset<static_cast<size_t>(DefaultKeyCommand::MAX)> get_overridden_default_commands(
+    std::vector<BuiltInKeyCommandOverride> const& overrides)
+{
+    std::bitset<static_cast<size_t>(DefaultKeyCommand::MAX)> result;
+    for (auto const& override : overrides)
+    {
+        if (override.default_key_command < DefaultKeyCommand::MAX)
+            result.set(static_cast<size_t>(override.default_key_command));
+    }
+    return result;
+}
 
 }
 
@@ -628,8 +643,12 @@ bool FilesystemConfiguration::matches_key_command(
             return true;
     }
 
+    auto const overridden = get_overridden_default_commands(overrides);
     for (size_t i = 0; i < static_cast<int>(DefaultKeyCommand::MAX); i++)
     {
+        if (overridden.test(i))
+            continue;
+
         if (try_run_key_command(default_key_bindings[i].action, default_key_bindings[i].modifiers, default_key_bindings[i].key, static_cast<DefaultKeyCommand>(i)))
             return true;
     }
@@ -680,8 +699,12 @@ std::vector<KeyBindingInfo> FilesystemConfiguration::describe_key_bindings() con
             .default_key_command = override.default_key_command });
     }
 
+    auto const overridden = get_overridden_default_commands(overrides);
     for (size_t i = 0; i < static_cast<size_t>(DefaultKeyCommand::MAX); i++)
     {
+        if (overridden.test(i))
+            continue;
+
         auto const& binding = default_key_bindings[i];
         result.push_back({ .source = KeyBindingSource::built_in_default,
             .action = binding.action,

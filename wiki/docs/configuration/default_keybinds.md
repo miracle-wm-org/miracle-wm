@@ -55,6 +55,9 @@ default_action_overrides:
     key: Return
 ```
 
+An override replaces the default keybind for that action, so the default keybind no longer triggers it.
+To keep the default keybind as well, list it as an additional override for the same action.
+
 ## Schema
 
 A list of keybind override definitions:
