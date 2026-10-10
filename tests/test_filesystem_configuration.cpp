@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miracle/cpp/animation_definition.h>
 #include <miracle/cpp/modifiers.h>
 #include <miral/runner.h>
+#include <optional>
 #include <vector>
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include <yaml-cpp/node/node.h>
@@ -120,7 +121,7 @@ TEST_F(FilesystemConfigurationTest, CanOverrideDefaultAction)
     write_yaml_node(node);
 
     FilesystemConfiguration config(registrar, path, true);
-    config.matches_key_command(
+    bool matched = config.matches_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
         XKB_KEY_x,
         mir_input_event_modifier_meta,
@@ -129,6 +130,109 @@ TEST_F(FilesystemConfigurationTest, CanOverrideDefaultAction)
         EXPECT_EQ(DefaultKeyCommand::Terminal, command);
         return true;
     });
+    EXPECT_TRUE(matched);
+}
+
+TEST_F(FilesystemConfigurationTest, OverridingDefaultActionDisablesItsDefaultBinding)
+{
+    YAML::Node node;
+    YAML::Node action_override_node;
+    action_override_node["name"] = "quit_compositor";
+    action_override_node["action"] = "down";
+    action_override_node["modifiers"].push_back("shift");
+    action_override_node["modifiers"].push_back("ctrl");
+    action_override_node["modifiers"].push_back("primary");
+    action_override_node["key"] = "underscore";
+    node["default_action_overrides"].push_back(action_override_node);
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    std::vector<DefaultKeyCommand> commands;
+    auto const record = [&](DefaultKeyCommand command)
+    {
+        commands.push_back(command);
+        return true;
+    };
+
+    // The default binding (primary + shift + E) no longer quits.
+    EXPECT_FALSE(config.matches_key_command(
+        mir_keyboard_action_down,
+        XKB_KEY_E,
+        mir_input_event_modifier_meta | mir_input_event_modifier_shift,
+        record));
+    EXPECT_TRUE(commands.empty());
+
+    // The override does.
+    EXPECT_TRUE(config.matches_key_command(
+        mir_keyboard_action_down,
+        XKB_KEY_underscore,
+        mir_input_event_modifier_meta | mir_input_event_modifier_ctrl | mir_input_event_modifier_shift,
+        record));
+    ASSERT_EQ(commands.size(), 1u);
+    EXPECT_EQ(commands[0], DefaultKeyCommand::QuitCompositor);
+}
+
+TEST_F(FilesystemConfigurationTest, OverridingDefaultActionKeepsOtherDefaultBindings)
+{
+    YAML::Node node;
+    YAML::Node action_override_node;
+    action_override_node["name"] = "quit_compositor";
+    action_override_node["action"] = "down";
+    action_override_node["modifiers"].push_back("primary");
+    action_override_node["key"] = "x";
+    node["default_action_overrides"].push_back(action_override_node);
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    std::optional<DefaultKeyCommand> matched_command;
+    EXPECT_TRUE(config.matches_key_command(
+        mir_keyboard_action_down,
+        XKB_KEY_Return,
+        mir_input_event_modifier_meta,
+        [&](DefaultKeyCommand command)
+    {
+        matched_command = command;
+        return true;
+    }));
+    EXPECT_EQ(matched_command, DefaultKeyCommand::Terminal);
+}
+
+TEST_F(FilesystemConfigurationTest, MultipleOverridesForTheSameDefaultActionAllMatch)
+{
+    YAML::Node node;
+    for (auto const* key : { "x", "y" })
+    {
+        YAML::Node action_override_node;
+        action_override_node["name"] = "terminal";
+        action_override_node["action"] = "down";
+        action_override_node["modifiers"].push_back("primary");
+        action_override_node["key"] = key;
+        node["default_action_overrides"].push_back(action_override_node);
+    }
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    for (uint32_t const key : { uint32_t { XKB_KEY_x }, uint32_t { XKB_KEY_y } })
+    {
+        std::optional<DefaultKeyCommand> matched_command;
+        EXPECT_TRUE(config.matches_key_command(
+            mir_keyboard_action_down,
+            key,
+            mir_input_event_modifier_meta,
+            [&](DefaultKeyCommand command)
+        {
+            matched_command = command;
+            return true;
+        }));
+        EXPECT_EQ(matched_command, DefaultKeyCommand::Terminal);
+    }
+
+    EXPECT_FALSE(config.matches_key_command(
+        mir_keyboard_action_down,
+        XKB_KEY_Return,
+        mir_input_event_modifier_meta,
+        [](DefaultKeyCommand)
+    { return true; }));
 }
 
 TEST_F(FilesystemConfigurationTest, WhenEntryInDefaultActionOverridesHasInvalidNameThenItIsNotAdded)
@@ -240,7 +344,7 @@ TEST_F(FilesystemConfigurationTest, CustomKeyBindingsAreReported)
     EXPECT_EQ(bindings[0].modifiers, static_cast<uint>(mir_input_event_modifier_meta));
 }
 
-TEST_F(FilesystemConfigurationTest, BuiltInOverridesAreAdditiveInKeyBindings)
+TEST_F(FilesystemConfigurationTest, BuiltInOverridesReplaceDefaultInKeyBindings)
 {
     YAML::Node node;
     YAML::Node action_override_node;
@@ -253,21 +357,19 @@ TEST_F(FilesystemConfigurationTest, BuiltInOverridesAreAdditiveInKeyBindings)
 
     FilesystemConfiguration config(registrar, path, true);
     auto const bindings = config.describe_key_bindings();
-    ASSERT_EQ(bindings.size(), static_cast<size_t>(DefaultKeyCommand::MAX) + 1);
+    ASSERT_EQ(bindings.size(), static_cast<size_t>(DefaultKeyCommand::MAX));
 
-    // matches_key_command tries the overrides and then the *whole* default table,
-    // so the original default binding still fires. Both must be reported.
+    // An override replaces the default binding for its command, so only the
+    // override is reported.
     std::vector<KeyBindingInfo> terminals;
     for (auto const& info : bindings)
     {
         if (info.default_key_command == DefaultKeyCommand::Terminal)
             terminals.push_back(info);
     }
-    ASSERT_EQ(terminals.size(), 2u);
+    ASSERT_EQ(terminals.size(), 1u);
     EXPECT_EQ(terminals[0].source, KeyBindingSource::built_in_override);
     EXPECT_EQ(terminals[0].keysym, XKB_KEY_Escape);
-    EXPECT_EQ(terminals[1].source, KeyBindingSource::built_in_default);
-    EXPECT_EQ(terminals[1].keysym, XKB_KEY_Return);
 }
 
 TEST_F(FilesystemConfigurationTest, PrimaryModifierIsResolvedInKeyBindings)
