@@ -294,9 +294,10 @@ void miracle::WindowContainer::rerender(bool force)
     }
 }
 
-void miracle::WindowContainer::update_window_margins(int border_size, bool entering_fullscreen)
+void miracle::WindowContainer::update_decorations(int border_size, bool fullscreen)
 {
-    int const margin = entering_fullscreen ? 0 : border_size;
+    bool const outlined = !fullscreen && needs_outline();
+    int const margin = outlined ? border_size : 0;
     auto const w = window_;
     auto surface = w.operator std::shared_ptr<mir::scene::Surface>();
     surface->set_window_margins(
@@ -304,6 +305,10 @@ void miracle::WindowContainer::update_window_margins(int border_size, bool enter
         mir::geometry::DeltaX { margin },
         mir::geometry::DeltaY { margin },
         mir::geometry::DeltaX { margin });
+
+    if (render_id_.has_value())
+        if (auto const locked = rdm.lock())
+            locked->needs_outline_change(render_id_.value(), outlined);
 }
 
 bool miracle::WindowContainer::needs_outline() const
