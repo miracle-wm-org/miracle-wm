@@ -51,7 +51,10 @@ void FreestyleWindowContainer::show()
     auto restore = restore_result_;
     restore_result_.reset();
     if (restore)
+    {
         window_controller->show(w, restore.value());
+        update_decorations(config->get_border_config().size, is_fullscreen());
+    }
 }
 
 void FreestyleWindowContainer::hide()
@@ -90,7 +93,6 @@ std::weak_ptr<ParentContainer> FreestyleWindowContainer::get_parent() const
 void FreestyleWindowContainer::commit_changes()
 {
     auto const w = window_;
-    auto const render_id = render_id_;
 
     if (!next_state_)
         return;
@@ -109,11 +111,7 @@ void FreestyleWindowContainer::commit_changes()
     window_controller->change_state(w, next_state_.value());
 
     if (entering_fullscreen || leaving_fullscreen)
-        update_window_margins(has_border_ ? config->get_border_config().size : 0, entering_fullscreen);
-
-    if (render_id.has_value())
-        if (auto const r = rdm.lock())
-            r->needs_outline_change(render_id.value(), !entering_fullscreen);
+        update_decorations(config->get_border_config().size, entering_fullscreen);
 
     next_state_.reset();
 
@@ -159,17 +157,7 @@ size_t FreestyleWindowContainer::get_min_width() const
 
 void FreestyleWindowContainer::handle_ready()
 {
-    if (has_border_)
-    {
-        int const border_size = config->get_border_config().size;
-        auto const w = window_;
-        auto surface = w.operator std::shared_ptr<mir::scene::Surface>();
-        surface->set_window_margins(
-            mir::geometry::DeltaY { border_size },
-            mir::geometry::DeltaX { border_size },
-            mir::geometry::DeltaY { border_size },
-            mir::geometry::DeltaX { border_size });
-    }
+    update_decorations(config->get_border_config().size, is_fullscreen());
     window_controller->select_active_window(window_);
 }
 
@@ -177,6 +165,7 @@ void FreestyleWindowContainer::handle_modify(miral::WindowSpecification const& s
 {
     auto const w = window_;
     auto mods = specification;
+    bool const was_fullscreen = is_fullscreen();
     if (mods.state())
     {
         if (hidden)
@@ -196,6 +185,9 @@ void FreestyleWindowContainer::handle_modify(miral::WindowSpecification const& s
         }
     }
     window_controller->modify(w, mods);
+
+    if (bool const fullscreen = is_fullscreen(); fullscreen != was_fullscreen)
+        update_decorations(config->get_border_config().size, fullscreen);
 }
 
 void FreestyleWindowContainer::handle_request_move(MirInputEvent const*)

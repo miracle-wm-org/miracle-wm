@@ -253,13 +253,7 @@ void LeafContainer::handle_ready()
     auto const window_focused = std::dynamic_pointer_cast<WindowContainer>(focused);
     auto const w = window_;
 
-    int const border_size = config->get_border_config().size;
-    auto surface = w.operator std::shared_ptr<mir::scene::Surface>();
-    surface->set_window_margins(
-        mir::geometry::DeltaY { border_size },
-        mir::geometry::DeltaX { border_size },
-        mir::geometry::DeltaY { border_size },
-        mir::geometry::DeltaX { border_size });
+    update_decorations(config->get_border_config().size, is_fullscreen());
 
     if (!focused || !window_focused || !window_focused->is_fullscreen())
     {
@@ -278,6 +272,7 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
     auto mods = modifications;
     auto visible_area = get_visible_area();
     auto cur_state = window_controller->get_state(w);
+    bool const was_fullscreen = cur_state == mir_window_state_fullscreen;
     if (mods.state())
     {
         // We will not respect any request for a maximized window. Only fullscreen is valid.
@@ -343,6 +338,9 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
     }
 
     window_controller->modify(w, mods);
+
+    if (bool const fullscreen = is_fullscreen(); fullscreen != was_fullscreen)
+        update_decorations(config->get_border_config().size, fullscreen);
 }
 
 void LeafContainer::handle_raise()
@@ -422,7 +420,10 @@ void LeafContainer::show()
     auto restore = restore_result_;
     restore_result_.reset();
     if (restore)
+    {
         window_controller->show(w, restore.value());
+        update_decorations(config->get_border_config().size, is_fullscreen());
+    }
     window_controller->raise(w);
 }
 
@@ -471,7 +472,6 @@ bool LeafContainer::is_fullscreen() const
 void LeafContainer::commit_changes()
 {
     auto const w = window_;
-    auto const render_id = render_id_;
 
     {
         if (next_state_)
@@ -490,9 +490,8 @@ void LeafContainer::commit_changes()
             window_controller->change_state(w, next_state_.value());
 
             if (entering_fs || leaving_fs)
-                update_window_margins(config->get_border_config().size, entering_fs);
+                update_decorations(config->get_border_config().size, entering_fs);
 
-            state->render_data_manager()->needs_outline_change(render_id.value(), next_state_ != mir_window_state_fullscreen);
             next_state_.reset();
 
             if (next_depth_layer_)
