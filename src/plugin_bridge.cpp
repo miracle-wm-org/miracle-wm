@@ -235,6 +235,11 @@ uint8_t PluginBridge::register_window_shader(std::vector<std::string> passes, st
     return sampler_registry_->register_window_shader(std::move(passes), plugin_handle);
 }
 
+uint8_t PluginBridge::register_window_geometry_shader(std::string source, std::optional<uint32_t> plugin_handle)
+{
+    return sampler_registry_->register_window_geometry_shader(std::move(source), plugin_handle);
+}
+
 int32_t PluginBridge::set_screen_shader(uint32_t plugin_handle, std::optional<std::vector<std::string>> passes)
 {
     sampler_registry_->set_screen_shader(std::move(passes), plugin_handle);
@@ -246,6 +251,20 @@ void PluginBridge::on_plugin_unloaded(uint32_t plugin_handle)
     auto const removed = sampler_registry_->remove_shaders_for_plugin(plugin_handle);
     if (!removed.empty())
         compositor_state->render_data_manager()->reset_shaders(removed);
+
+    std::vector<AnimationHandle> to_cancel;
+    {
+        std::lock_guard lock { custom_animations->mutex };
+        std::erase_if(custom_animations->entries, [&](auto const& entry)
+        {
+            if (entry.second.plugin_handle != plugin_handle)
+                return false;
+            to_cancel.push_back(entry.second.animator_handle);
+            return true;
+        });
+    }
+    for (auto const handle : to_cancel)
+        animator->remove_by_animation_handle(handle);
 
     std::erase_if(namespace_to_handle_, [plugin_handle](auto const& entry)
     {
@@ -599,13 +618,17 @@ int32_t PluginBridge::queue_custom_animation(
     PluginManager* manager,
     float duration_seconds)
 {
-    uint32_t const animation_id = next_animation_id++;
+    auto const handle = animator->register_animateable();
+    uint32_t animation_id;
+    {
+        std::lock_guard lock { custom_animations->mutex };
+        animation_id = custom_animations->next_id++;
+        custom_animations->entries[animation_id] = { plugin_handle, handle };
+    }
     *out_animation_id = animation_id;
 
-    auto const handle = animator->register_animateable();
-
     auto saq = server_action_queue;
-    auto on_tick = [plugin_handle, animation_id, manager, duration_seconds, saq, compositor_state = compositor_state,
+    auto on_tick = [custom_animations = custom_animations, plugin_handle, animation_id, manager, duration_seconds, saq, compositor_state = compositor_state,
                        elapsed = 0.0f](float dt) mutable -> bool
     {
         elapsed += dt;
@@ -613,10 +636,34 @@ int32_t PluginBridge::queue_custom_animation(
         {
             manager->custom_animate(plugin_handle, animation_id, dt, elapsed);
         });
-        return elapsed >= duration_seconds;
+
+        bool const done = elapsed >= duration_seconds;
+        if (done)
+        {
+            std::lock_guard lock { custom_animations->mutex };
+            custom_animations->entries.erase(animation_id);
+        }
+        return done;
     };
 
     animator->append(CustomAnimation(handle, std::move(on_tick)));
+    return 0;
+}
+
+int32_t PluginBridge::cancel_custom_animation(uint32_t plugin_handle, uint32_t animation_id)
+{
+    AnimationHandle animator_handle;
+    {
+        std::lock_guard lock { custom_animations->mutex };
+        auto const it = custom_animations->entries.find(animation_id);
+        if (it == custom_animations->entries.end() || it->second.plugin_handle != plugin_handle)
+            return -1;
+
+        animator_handle = it->second.animator_handle;
+        custom_animations->entries.erase(it);
+    }
+
+    animator->remove_by_animation_handle(animator_handle);
     return 0;
 }
 
@@ -725,6 +772,42 @@ int32_t PluginBridge::window_set_shader_id(uint64_t window_internal, int32_t sha
         ? std::nullopt
         : std::optional<uint8_t>(static_cast<uint8_t>(shader_id_param));
     container->set_window_shader_id(shader_id);
+    return 0;
+}
+
+int32_t PluginBridge::window_set_geometry_shader_id(uint64_t window_internal, int32_t geometry_shader_id_param)
+{
+    auto it = window_id_map->find(window_internal);
+    if (it == window_id_map->end())
+        return -1;
+
+    auto const container = window_controller->get_window_container(it->second);
+    if (!container)
+        return -1;
+
+    std::optional<uint8_t> geometry_shader_id = (geometry_shader_id_param < 0)
+        ? std::nullopt
+        : std::optional<uint8_t>(static_cast<uint8_t>(geometry_shader_id_param));
+    container->set_window_geometry_shader_id(geometry_shader_id);
+    return 0;
+}
+
+int32_t PluginBridge::window_set_shader_params(uint64_t window_internal, float const* params, int32_t count)
+{
+    std::array<float, 16> values = {};
+    if (count < 0 || count > static_cast<int32_t>(values.size()))
+        return -1;
+
+    auto it = window_id_map->find(window_internal);
+    if (it == window_id_map->end())
+        return -1;
+
+    auto const container = window_controller->get_window_container(it->second);
+    if (!container)
+        return -1;
+
+    std::copy_n(params, count, values.begin());
+    container->set_window_shader_params(values);
     return 0;
 }
 

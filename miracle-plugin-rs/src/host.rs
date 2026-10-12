@@ -117,6 +117,17 @@ unsafe extern "C" {
     /// Returns 0 on success, -1 on error.
     pub fn miracle_window_set_shader_id(window_internal: i64, shader_id: i32) -> i32;
 
+    /// Set the geometry shader applied to a window.
+    /// Pass -1 as `geometry_shader_id` to clear it.
+    /// Returns 0 on success, -1 on error.
+    pub fn miracle_window_set_geometry_shader_id(window_internal: i64, geometry_shader_id: i32) -> i32;
+
+    /// Set the values a window's geometry shader reads as `uniform vec4 u_params[4]`.
+    /// `params_ptr` is a WASM linear memory offset pointing to `count` contiguous f32 values,
+    /// and `count` is at most 16.
+    /// Returns 0 on success, -1 on error.
+    pub fn miracle_window_set_shader_params(window_internal: i64, params_ptr: i32, count: i32) -> i32;
+
     /// Request a workspace by optional number and/or name.
     ///
     /// If a workspace with the given number or name already exists, it is returned.
@@ -155,6 +166,12 @@ unsafe extern "C" {
         duration_seconds_ptr: i32,
     ) -> i32;
 
+    /// Stop a custom animation queued with `miracle_queue_custom_animation` before
+    /// its duration elapses.
+    ///
+    /// Returns 0 on success, -1 if the animation is not running.
+    pub fn miracle_cancel_custom_animation(plugin_handle: i32, animation_id: i32) -> i32;
+
     /// Register a multi-pass GLSL shader for use in window rendering.
     ///
     /// `plugin_handle` is the registering plugin's handle (from
@@ -168,6 +185,18 @@ unsafe extern "C" {
     ///
     /// Returns the unique shader ID (a `u8` value ≥ 5) cast to `i32`, or -1 on error.
     pub fn miracle_register_window_sample_to_rgba(plugin_handle: i32, passes_ptr: i32, num_passes: i32) -> i32;
+
+    /// Register a geometry shader for use in window rendering.
+    ///
+    /// `plugin_handle` is the registering plugin's handle (from
+    /// `miracle_get_plugin_handle()`); the host uses it to remove the shader when
+    /// the plugin unloads.
+    ///
+    /// `source_ptr`/`source_len` point at the UTF-8 GLSL ES 3.20 geometry shader
+    /// source in WASM linear memory.
+    ///
+    /// Returns the unique shader ID (a `u8` value ≥ 5) cast to `i32`, or -1 on error.
+    pub fn miracle_register_window_geometry_shader(plugin_handle: i32, source_ptr: i32, source_len: i32) -> i32;
 
     /// Set or clear the full-screen (output) shader.
     ///

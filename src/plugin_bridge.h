@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_PLUGIN_BRIDGE_H
 
 #include "../miracle-plugin-rs/plugin.h"
+#include "animation.h"
 #include "compositor_state.h"
 #include "sampler_registry.h"
 #include "window_id_map.h"
@@ -27,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/window.h>
 #include <miral/window_info.h>
 #include <miral/window_specification.h>
+#include <mutex>
 #include <unordered_map>
 #include <variant>
 
@@ -149,7 +151,16 @@ public:
         PluginManager* manager,
         float duration_seconds);
 
+    /// Stop a custom animation queued by \p plugin_handle before its duration elapses.
+    ///
+    /// \returns 0 on success, -1 if no such animation is running for that plugin.
+    int32_t cancel_custom_animation(uint32_t plugin_handle, uint32_t animation_id);
+
     uint8_t register_window_shader(std::vector<std::string> passes, std::optional<uint32_t> plugin_handle);
+
+    /// Register a per-window geometry shader (a single GLSL ES 3.20 source) and
+    /// return its id.
+    uint8_t register_window_geometry_shader(std::string source, std::optional<uint32_t> plugin_handle);
 
     /// Set (or, with std::nullopt passes, clear) the global full-screen shader.
     int32_t set_screen_shader(uint32_t plugin_handle, std::optional<std::vector<std::string>> passes);
@@ -165,6 +176,8 @@ public:
     int32_t window_set_alpha(uint64_t window_internal, float alpha);
     int32_t window_request_focus(uint64_t window_internal);
     int32_t window_set_shader_id(uint64_t window_internal, int32_t shader_id_param);
+    int32_t window_set_geometry_shader_id(uint64_t window_internal, int32_t geometry_shader_id_param);
+    int32_t window_set_shader_params(uint64_t window_internal, float const* params, int32_t count);
 
     void set_plugin_userdata(uint32_t handle, std::string const& userdata_json);
     std::string const* get_plugin_userdata(uint32_t handle) const;
@@ -219,7 +232,22 @@ private:
     std::shared_ptr<Animator> animator;
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
     std::shared_ptr<SamplerRegistry> sampler_registry_;
-    uint32_t next_animation_id = 1;
+    struct CustomAnimationEntry
+    {
+        uint32_t plugin_handle;
+        AnimationHandle animator_handle;
+    };
+    /// Custom animations that are still running, keyed by the id handed to the plugin.
+    /// Entries are added on queue and removed on cancel or completion. Locked because
+    /// plugins queue and cancel from both the animator thread (inside `animate`) and
+    /// the window-manager thread, and shared with the animations themselves.
+    struct CustomAnimations
+    {
+        std::mutex mutex;
+        uint32_t next_id = 1;
+        std::unordered_map<uint32_t, CustomAnimationEntry> entries;
+    };
+    std::shared_ptr<CustomAnimations> const custom_animations = std::make_shared<CustomAnimations>();
     std::vector<std::shared_ptr<PluginWindowInfo>> plugin_window_infos;
     std::unordered_map<uint32_t, std::string> plugin_userdata_map;
     std::unordered_map<std::string, uint32_t> namespace_to_handle_;

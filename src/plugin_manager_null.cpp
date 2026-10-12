@@ -37,7 +37,7 @@ namespace
         bool unload_wasm_module(PluginHandle) override { return false; }
         void unload_all() override { }
         std::optional<miracle_plugin_animation_frame_result_t> animate(
-            AnimationData const&, float) override
+            AnimationData const&, float, miracle_plugin_animation_frame_result_t const&) override
         {
             return std::nullopt;
         }

@@ -138,6 +138,56 @@ extern "C"
 
     typedef struct
     {
+        /// If set to `TRUE`, the animation is considered completed.
+        ///
+        /// At this point, the animated object will be moved to its destination
+        /// with the appropriate opacity. The animation will be removed from the
+        /// system.
+        int32_t completed;
+
+        /// If `TRUE`, #area is set.
+        int32_t has_area;
+
+        /// The area as a packed rectangle of x, y, width, and height.
+        ///
+        /// Be careful when using this value, as Mir will set this as the _actual_
+        /// rectangle of the object. For example, if setting a window's rectangle,
+        /// Mir will issue a position and resize request to the window. This is
+        /// NOT something that you would want to do every frame. It is better to use
+        /// the #transform if you want to animate the scale.
+        float area[4];
+
+        /// If `TRUE`, #transform is set.
+        int32_t has_transform;
+
+        /// The transform to apply to the animated object.
+        ///
+        /// This transform is backed by a glm::mat4, which is a column-major transform.
+        float transform[16];
+
+        /// If `TRUE`, #opacity is set.
+        int32_t has_opacity;
+
+        /// The opacity of the object.
+        ///
+        /// This must be [0, 1].
+        float opacity;
+
+        /// If `TRUE`, #clip_area is set.
+        ///
+        /// When set, #clip_area is used as the scissor rectangle to reveal the
+        /// window's surface gradually, while #area carries the window's actual
+        /// target geometry sent to the client via configure. This separation
+        /// avoids blank space during resize animations: the client renders at
+        /// the final size immediately, and the clip progressively reveals it.
+        int32_t has_clip_area;
+
+        /// The scissor-clip rectangle as a packed x, y, width, height.
+        float clip_area[4];
+    } miracle_plugin_animation_frame_result_t;
+
+    typedef struct
+    {
         /// Animation type.
         ///
         /// This one of #miracle_animation_type.
@@ -188,57 +238,18 @@ extern "C"
         ///
         /// Only valid when #has_workspace is `TRUE` and the workspace has a name.
         char workspace_name[256];
+
+        /// If `TRUE`, #builtin is set.
+        int32_t has_builtin;
+
+        /// The frame that the configured built-in animation (e.g. `slide`) produces
+        /// at #runtime_seconds.
+        ///
+        /// Returning this unchanged from `animate` delegates the frame to the
+        /// built-in animation explicitly. It may also be modified first, e.g. to
+        /// compose an extra transform on top of the built-in movement.
+        miracle_plugin_animation_frame_result_t builtin;
     } miracle_plugin_animation_frame_data_t;
-
-    typedef struct
-    {
-        /// If set to `TRUE`, the animation is considered completed.
-        ///
-        /// At this point, the animated object will be moved to its destination
-        /// with the appropriate opacity. The animation will be removed from the
-        /// system.
-        int32_t completed;
-
-        /// If `TRUE`, #area is set.
-        int32_t has_area;
-
-        /// The area as a packed rectangle of x, y, width, and height.
-        ///
-        /// Be careful when using this value, as Mir will set this as the _actual_
-        /// rectangle of the object. For example, if setting a window's rectangle,
-        /// Mir will issue a position and resize request to the window. This is
-        /// NOT something that you would want to do every frame. It is better to use
-        /// the #transform if you want to animate the scale.
-        float area[4];
-
-        /// If `TRUE`, #transform is set.
-        int32_t has_transform;
-
-        /// The transform to apply to the animated object.
-        ///
-        /// This transform is backed by a glm::mat4, which is a column-major transform.
-        float transform[16];
-
-        /// If `TRUE`, #opacity is set.
-        int32_t has_opacity;
-
-        /// The opacity of the object.
-        ///
-        /// This must be [0, 1].
-        float opacity;
-
-        /// If `TRUE`, #clip_area is set.
-        ///
-        /// When set, #clip_area is used as the scissor rectangle to reveal the
-        /// window's surface gradually, while #area carries the window's actual
-        /// target geometry sent to the client via configure. This separation
-        /// avoids blank space during resize animations: the client renders at
-        /// the final size immediately, and the clip progressively reveals it.
-        int32_t has_clip_area;
-
-        /// The scissor-clip rectangle as a packed x, y, width, height.
-        float clip_area[4];
-    } miracle_plugin_animation_frame_result_t;
 
     /// Describes the properties of an application.
     ///
@@ -540,6 +551,27 @@ extern "C"
     /// \returns 0 on success, -1 on error
     int32_t miracle_window_set_shader_id(int64_t window_internal, int32_t shader_id);
 
+    /// Set the geometry shader applied to a window.
+    ///
+    /// Pass the ID returned by #miracle_register_window_geometry_shader to activate
+    /// the shader, or pass -1 to clear it and revert to the window's plain geometry.
+    ///
+    /// \param window_internal the internal pointer from #miracle_window_info_t::internal
+    /// \param geometry_shader_id the ID from #miracle_register_window_geometry_shader, or -1 to clear
+    /// \returns 0 on success, -1 on error
+    int32_t miracle_window_set_geometry_shader_id(int64_t window_internal, int32_t geometry_shader_id);
+
+    /// Set the values a window's geometry shader reads as `uniform vec4 u_params[4]`.
+    ///
+    /// The values are owned by the plugin; the compositor only forwards them.
+    /// Unset trailing values are zero. Setting them schedules a redraw of the window.
+    ///
+    /// \param window_internal the internal pointer from #miracle_window_info_t::internal
+    /// \param params pointer to \p count floats
+    /// \param count number of floats in \p params, at most 16
+    /// \returns 0 on success, -1 on error
+    int32_t miracle_window_set_shader_params(int64_t window_internal, const float* params, int32_t count);
+
     /// Queue a custom per-frame animation.
     ///
     /// The compositor will call the plugin's `custom_animate` WASM export each frame
@@ -552,6 +584,13 @@ extern "C"
     /// \param duration_seconds how long (in seconds) the animation should run before auto-removal
     /// \returns 0 on success, -1 on error
     int32_t miracle_queue_custom_animation(int32_t plugin_handle, int32_t* out_animation_id, float duration_seconds);
+
+    /// Stop a custom animation before its duration elapses.
+    ///
+    /// \param plugin_handle the handle returned to `init()` — use `miracle_get_plugin_handle()`
+    /// \param animation_id  the ID received from #miracle_queue_custom_animation
+    /// \returns 0 on success, -1 if the animation is not running
+    int32_t miracle_cancel_custom_animation(int32_t plugin_handle, int32_t animation_id);
 
     /// A single shader-pass descriptor used with #miracle_register_window_sample_to_rgba.
     typedef struct
@@ -576,6 +615,43 @@ extern "C"
     /// \returns unique uint8_t identifier (≥ 5) for the registered shader, cast to int32_t
     int32_t miracle_register_window_sample_to_rgba(
         int32_t plugin_handle, const miracle_shader_pass_t* passes, int32_t num_passes);
+
+    /// Register a geometry shader for use in window rendering.
+    ///
+    /// \p source is a single, complete GLSL ES 3.20 geometry shader that runs
+    /// between the compositor's vertex and fragment stages, for both the window
+    /// content and its border. It must follow this interface:
+    ///
+    /// ```glsl
+    /// #version 320 es
+    /// layout(triangles) in;
+    /// layout(triangle_strip, max_vertices = N) out;
+    ///
+    /// in vec2 v_texcoord[];          // pass through, interpolated, to g_texcoord
+    /// in vec2 v_local[];             // [0, 1] across the window, (0, 0) at the top left
+    /// in vec4 v_world[];             // position in screen pixels
+    /// out vec2 g_texcoord;
+    ///
+    /// uniform mat4 u_world_to_clip;  // gl_Position = u_world_to_clip * world
+    /// uniform vec2 u_window_size;    // window size in pixels
+    /// uniform vec4 u_params[4];      // see #miracle_window_set_shader_params
+    /// ```
+    ///
+    /// The content and the border only line up if the displacement is a function of
+    /// `v_local`, `v_world` and the uniforms alone.
+    ///
+    /// Geometry shaders require an OpenGL ES 3.2 context. Without one, or if the
+    /// shader fails to compile, the compositor logs a warning and draws the window
+    /// without it.
+    ///
+    /// \param plugin_handle the registering plugin's handle (from
+    ///                      `miracle_get_plugin_handle()`); the host uses it to remove
+    ///                      the shader when the plugin unloads
+    /// \param source     pointer to the GLSL source bytes
+    /// \param source_len byte length of the source
+    /// \returns unique uint8_t identifier (≥ 5) for the registered shader, cast to int32_t
+    int32_t miracle_register_window_geometry_shader(
+        int32_t plugin_handle, const char* source, int32_t source_len);
 
     /// Set or clear the full-screen (output) shader.
     ///
