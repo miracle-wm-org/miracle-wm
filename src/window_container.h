@@ -183,7 +183,15 @@ public:
         bool force_redraw) override;
 
 protected:
-    void update_window_margins(int border_size, bool entering_fullscreen);
+    /// Apply the border margins and outline for the window's fullscreen state.
+    ///
+    /// Fullscreen windows have neither margins nor an outline. This must be called
+    /// on every fullscreen transition, whether it was requested by miracle or by
+    /// the client (e.g. a browser fullscreening a video).
+    ///
+    /// \param border_size the configured border size
+    /// \param fullscreen whether the window is fullscreen
+    void update_decorations(int border_size, bool fullscreen);
 
     /// Push the combined workspace, window and animation effects to the surface.
     ///
