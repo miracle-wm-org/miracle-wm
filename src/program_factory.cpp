@@ -19,9 +19,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "program_factory"
 
 #include "program_factory.h"
+#include <cstdio>
 #include <format>
 #include <mir/graphics/egl_error.h>
 #include <mir/log.h>
+#include <string_view>
+
+// Geometry shaders are core in OpenGL ES 3.2, but the GLES2 headers used here
+// do not define the enum.
+#ifndef GL_GEOMETRY_SHADER
+#define GL_GEOMETRY_SHADER 0x8DD9
+#endif
 
 namespace
 {
@@ -75,18 +83,27 @@ void main() {
 }
 )";
 
-const GLchar* const fragment_border_src = R"(
-#ifdef GL_ES
-precision highp float;
-#endif
+/// Builds the border fragment shader. With \p with_geometry_stage it is written
+/// in GLSL ES 3.20 and reads the texcoord that the geometry stage emits.
+std::string build_border_fragment_src(bool with_geometry_stage)
+{
+    std::string src = with_geometry_stage
+        ? "#version 320 es\n"
+          "precision highp float;\n"
+          "in vec2 g_texcoord;\n"
+          "#define v_texcoord g_texcoord\n"
+          "out vec4 fragColor;\n"
+        : "#ifdef GL_ES\n"
+          "precision highp float;\n"
+          "#endif\n"
+          "varying vec2 v_texcoord;\n";
 
+    src += R"(
 uniform float alpha;
 uniform vec2 surfaceSize;
 uniform vec4 borderColor;
 uniform float borderRadius;
 uniform float borderWidth;
-
-varying vec2 v_texcoord;
 
 float roundedRectSDF(vec2 p, vec2 size, float r) {
     vec2 halfSize = size * 0.5;
@@ -114,14 +131,138 @@ void main() {
     if (color.a < 0.01)
         discard;
 
-    gl_FragColor = color;
+)";
+    src += with_geometry_stage ? "    fragColor = color;\n}\n" : "    gl_FragColor = color;\n}\n";
+    return src;
 }
 
+/// Builds the window content fragment shader around a `sample_to_rgba` sampler.
+/// With \p with_geometry_stage it is written in GLSL ES 3.20 and reads the
+/// texcoord that the geometry stage emits. Samplers are written for GLSL ES 1.00,
+/// so `texture2D` and the external image extension are mapped to their 3.20 forms.
+std::string build_window_fragment_src(
+    std::string_view extension_fragment,
+    std::string_view sample_fragment,
+    bool with_geometry_stage)
+{
+    std::string src;
+    if (with_geometry_stage)
+    {
+        src += "#version 320 es\n"
+               "#define texture2D texture\n";
+        std::string extension { extension_fragment };
+        std::string_view constexpr es2_extension = "GL_OES_EGL_image_external ";
+        if (auto const pos = extension.find(es2_extension); pos != std::string::npos)
+            extension.replace(pos, es2_extension.size(), "GL_OES_EGL_image_external_essl3 ");
+        src += extension;
+    }
+    else
+        src += extension_fragment;
+
+    src += R"(
+
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform vec2 surfaceSize;
+
+)";
+    src += sample_fragment;
+    src += R"(
+
+uniform float alpha;
+uniform float borderRadius;
+
+)";
+    src += with_geometry_stage
+        ? "in vec2 g_texcoord;\n"
+          "#define v_texcoord g_texcoord\n"
+          "out vec4 fragColor;\n"
+        : "varying vec2 v_texcoord;  // This is going to be [0, 1]\n";
+    src += R"(
+float roundedRectSDF(vec2 p, vec2 size, float r) {
+    vec2 halfSize = size * 0.5;
+    vec2 d = abs(p - halfSize) - (halfSize - vec2(r));
+    return length(max(d, 0.0)) - r;
+}
+
+void main() {
+    vec2 pixelPos = v_texcoord * surfaceSize;
+    float sdf = roundedRectSDF(pixelPos, surfaceSize, borderRadius);
+    float shapeMask = 1.0 - smoothstep(0.0, 1.0, sdf);
+
+    vec4 contentColor = alpha * sample_to_rgba(v_texcoord);
+    contentColor *= shapeMask;
+    if (contentColor.a < 0.01)
+        discard;
+
+)";
+    src += with_geometry_stage ? "   fragColor = contentColor;\n}\n" : "   gl_FragColor = contentColor;\n}\n";
+    return src;
+}
+
+/// Vertex stage for window content programs that have a geometry stage. Unlike
+/// [vertex_shader_src] it stops at screen pixels: the geometry stage projects.
+const GLchar* const geometry_vertex_shader_src = R"(#version 320 es
+precision highp float;
+
+in vec3 position;
+in vec2 texcoord;
+
+uniform mat4 workspace_transform;
+uniform mat4 transform;
+uniform vec2 center;
+uniform vec4 u_window_rect;
+
+out vec2 v_texcoord;
+out vec2 v_local;
+out vec4 v_world;
+
+void main() {
+   vec4 p = vec4(center, 0.0, 0.0);
+   vec4 transformed = (transform * (vec4(position, 1.0) - p)) + p;
+   v_world = workspace_transform * transformed;
+   v_local = (position.xy - u_window_rect.xy) / u_window_rect.zw;
+   v_texcoord = texcoord;
+   gl_Position = v_world;
+}
+)";
+
+/// Vertex stage for the border program when it has a geometry stage. See
+/// [border_vertex_shader_src] and [geometry_vertex_shader_src].
+const GLchar* const geometry_border_vertex_shader_src = R"(#version 320 es
+precision highp float;
+
+in vec3 position;
+in vec2 texcoord;
+
+uniform mat4 workspace_transform;
+uniform mat4 border_transform;
+uniform mat4 transform;
+uniform vec2 center;
+uniform vec4 u_window_rect;
+
+out vec2 v_texcoord;
+out vec2 v_local;
+out vec4 v_world;
+
+void main() {
+   vec4 p = vec4(-0.5, -0.5, 0.0, 0.0);
+   vec4 placed = border_transform * (vec4(position, 1.0) - p);
+   v_local = (placed.xy - u_window_rect.xy) / u_window_rect.zw;
+
+   p = vec4(center, 0.0, 0.0);
+   vec4 transformed = (transform * (placed - p)) + p;
+   v_world = workspace_transform * transformed;
+   v_texcoord = texcoord;
+   gl_Position = v_world;
+}
 )";
 
 }
 
-miracle::ProgramData::ProgramData(GLuint program_id)
+miracle::ProgramData::ProgramData(GLuint program_id, bool has_geometry_stage)
 {
     id = program_id;
     position_attr = glGetAttribLocation(id, "position");
@@ -143,7 +284,7 @@ miracle::ProgramData::ProgramData(GLuint program_id)
         mir::log_warning("Program is missing centre_uniform");
 
     display_transform_uniform = glGetUniformLocation(id, "display_transform");
-    if (display_transform_uniform < 0)
+    if (display_transform_uniform < 0 && !has_geometry_stage)
         mir::log_warning("Program is missing display_transform_uniform");
 
     workspace_transform_uniform = glGetUniformLocation(id, "workspace_transform");
@@ -155,7 +296,7 @@ miracle::ProgramData::ProgramData(GLuint program_id)
         mir::log_warning("Program is missing transform_uniform");
 
     screen_to_gl_coords_uniform = glGetUniformLocation(id, "screen_to_gl_coords");
-    if (screen_to_gl_coords_uniform < 0)
+    if (screen_to_gl_coords_uniform < 0 && !has_geometry_stage)
         mir::log_warning("Program is missing screen_to_gl_coords_uniform");
 
     alpha_uniform = glGetUniformLocation(id, "alpha");
@@ -181,11 +322,20 @@ miracle::ProgramData::ProgramData(GLuint program_id)
     border_width_uniform = glGetUniformLocation(id, "borderWidth");
     if (border_width_uniform < 0)
         mir::log_warning("Program is missing borderWidth");
+
+    if (has_geometry_stage)
+    {
+        // Any of these may be optimized out when the geometry shader ignores them.
+        world_to_clip_uniform = glGetUniformLocation(id, "u_world_to_clip");
+        window_rect_uniform = glGetUniformLocation(id, "u_window_rect");
+        window_size_uniform = glGetUniformLocation(id, "u_window_size");
+        params_uniform = glGetUniformLocation(id, "u_params");
+    }
 }
 
-miracle::Program::Program(ProgramHandle&& program) :
+miracle::Program::Program(ProgramHandle&& program, bool has_geometry_stage) :
     program_handle(std::move(program)),
-    data { program_handle }
+    data { program_handle, has_geometry_stage }
 {
 }
 
@@ -212,12 +362,28 @@ void main() {
 
 miracle::ProgramFactory::ProgramFactory(std::shared_ptr<SamplerRegistry> const& sampler_registry) :
     sampler_registry_ { sampler_registry },
+    geometry_shaders_supported_ { detect_geometry_support() },
     vertex_shader { compile_shader(GL_VERTEX_SHADER, vertex_shader_src) },
     pass_vertex_shader { compile_shader(GL_VERTEX_SHADER, pass_vertex_shader_src) },
     border_vertex_shader { compile_shader(GL_VERTEX_SHADER, border_vertex_shader_src) },
-    border_fragment_shader { ShaderHandle(compile_shader(GL_FRAGMENT_SHADER, fragment_border_src)) },
+    border_fragment_shader { ShaderHandle(compile_shader(GL_FRAGMENT_SHADER, build_border_fragment_src(false).c_str())) },
     border_program { Program(link_shader(border_vertex_shader, border_fragment_shader)) }
 {
+    mir::log_info("Window geometry shaders are %s",
+        geometry_shaders_supported_ ? "supported" : "unsupported (requires OpenGL ES 3.2)");
+}
+
+bool miracle::ProgramFactory::detect_geometry_support()
+{
+    auto const* const version = reinterpret_cast<char const*>(glGetString(GL_VERSION));
+    if (!version)
+        return false;
+
+    // e.g. "OpenGL ES 3.2 Mesa 25.2.8"
+    int major = 0, minor = 0;
+    if (std::sscanf(version, "OpenGL ES %d.%d", &major, &minor) != 2)
+        return false;
+    return major > 3 || (major == 3 && minor >= 2);
 }
 
 mir::graphics::gl::Program& miracle::ProgramFactory::compile_fragment_shader(
@@ -237,43 +403,7 @@ mir::graphics::gl::Program& miracle::ProgramFactory::compile_fragment_shader(
         }
     }
 
-    std::string const fragment_src = std::string(extension_fragment) +
-        R"(
-
-#ifdef GL_ES
-precision mediump float;
-#endif
-
-uniform vec2 surfaceSize;
-
-)" + std::string(fragment_fragment)
-        +
-        R"(
-
-uniform float alpha;
-uniform float borderRadius;
-
-varying vec2 v_texcoord;  // This is going to be [0, 1]
-
-float roundedRectSDF(vec2 p, vec2 size, float r) {
-    vec2 halfSize = size * 0.5;
-    vec2 d = abs(p - halfSize) - (halfSize - vec2(r));
-    return length(max(d, 0.0)) - r;
-}
-
-void main() {
-    vec2 pixelPos = v_texcoord * surfaceSize;
-    float sdf = roundedRectSDF(pixelPos, surfaceSize, borderRadius);
-    float shapeMask = 1.0 - smoothstep(0.0, 1.0, sdf);
-
-    vec4 contentColor = alpha * sample_to_rgba(v_texcoord);
-    contentColor *= shapeMask;
-    if (contentColor.a < 0.01)
-        discard;
-
-   gl_FragColor = contentColor;
-}
-)";
+    std::string const fragment_src = build_window_fragment_src(extension_fragment, fragment_fragment, false);
 
     // GL shader compilation is *not* threadsafe, and requires external synchronisation
     std::lock_guard lock { compilation_mutex };
@@ -282,12 +412,71 @@ void main() {
         compile_shader(GL_FRAGMENT_SHADER, fragment_src.c_str())
     };
 
-    programs.emplace_back(id, std::make_unique<Program>(link_shader(vertex_shader, alpha_shader)));
+    auto program = std::make_unique<Program>(link_shader(vertex_shader, alpha_shader));
+    program->extension_fragment = extension_fragment;
+    program->sample_fragment = fragment_fragment;
+    programs.emplace_back(id, std::move(program));
 
     return *programs.back().second;
 
     // We delete the shaders here. This is fine; it only marks them
     // for deletion. GL will only delete them once the GL Program they're linked in is destroyed.
+}
+
+miracle::Program const* miracle::ProgramFactory::geometry_variant(Program const& base, uint8_t geometry_shader_id)
+{
+    if (!geometry_shaders_supported_)
+        return nullptr;
+
+    for (auto const& entry : geometry_programs)
+    {
+        if (entry.base == base.data.id && entry.geometry_shader_id == geometry_shader_id)
+            return entry.program.get();
+    }
+
+    auto const geometry_src = sampler_registry_->geometry_shader_source(geometry_shader_id);
+    if (!geometry_src)
+        return nullptr;
+
+    bool const is_border = &base == &border_program;
+    std::string const fragment_src = is_border
+        ? build_border_fragment_src(true)
+        : build_window_fragment_src(base.extension_fragment, base.sample_fragment, true);
+
+    std::unique_ptr<Program> program;
+    try
+    {
+        std::lock_guard lock { compilation_mutex };
+        ShaderHandle const vertex { compile_shader(
+            GL_VERTEX_SHADER, is_border ? geometry_border_vertex_shader_src : geometry_vertex_shader_src) };
+        ShaderHandle const geometry { compile_shader(GL_GEOMETRY_SHADER, geometry_src->c_str()) };
+        ShaderHandle const fragment { compile_shader(GL_FRAGMENT_SHADER, fragment_src.c_str()) };
+
+        ProgramHandle handle { glCreateProgram() };
+        glAttachShader(handle, vertex);
+        glAttachShader(handle, geometry);
+        glAttachShader(handle, fragment);
+        glLinkProgram(handle);
+        GLint ok;
+        glGetProgramiv(handle, GL_LINK_STATUS, &ok);
+        if (!ok)
+        {
+            GLchar log[1024];
+            glGetProgramInfoLog(handle, sizeof log - 1, NULL, log);
+            log[sizeof log - 1] = '\0';
+            throw std::runtime_error(std::string("Linking failed: ") + log);
+        }
+
+        program = std::make_unique<Program>(std::move(handle), true);
+    }
+    catch (std::exception const& e)
+    {
+        mir::log_warning("Failed to build geometry shader %d, drawing without it: %s",
+            static_cast<int>(geometry_shader_id), e.what());
+    }
+
+    geometry_programs.push_back({ base.data.id, geometry_shader_id, std::move(program) });
+    return geometry_programs.back().program.get();
 }
 
 mir::graphics::gl::Program* miracle::ProgramFactory::resolve_custom(uint8_t id)

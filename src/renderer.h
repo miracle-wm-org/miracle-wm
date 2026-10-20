@@ -87,6 +87,10 @@ private:
         /// The real screen position of the surface group; only valid when
         /// [placement] is set. Used to derive the mapping onto the placement.
         mir::geometry::Rectangle override_real;
+        /// The window rectangle of the surface group, in screen pixels. A
+        /// geometry shader sees positions relative to this through `v_local`,
+        /// so that the content and the border share one coordinate space.
+        mir::geometry::Rectangle window_rect;
     };
 
     struct Vertex
@@ -175,6 +179,11 @@ private:
     /// Draws the current renderable and returns a follow-up draw if required.
     void draw(mir::graphics::Renderable const& renderable, DrawData const& data) const;
     void draw_border(mir::scene::Surface const& surface, DrawData const& data) const;
+    /// Returns the variant of \p base with the window's geometry shader, or
+    /// \p base when the window has none or it cannot be used.
+    Program const& with_geometry_stage(Program const& base, DrawData const& data) const;
+    /// Sets the per-window uniforms of a program that has a geometry stage.
+    void set_geometry_uniforms(ProgramData const& prog, DrawData const& data) const;
     void update_gl_viewport();
 
     /// Runs intermediate off-screen passes 0 .. pass_count-2 for a multi-pass
