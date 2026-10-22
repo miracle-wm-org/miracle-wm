@@ -44,6 +44,7 @@ nav:
     - getting_started/installation.md
     - getting_started/building.md
     - getting_started/logs.md
+    - getting_started/profiling.md
     - getting_started/what_is_a_wayland_compositor.md
   - Configuration:
     - configuration/introduction.md

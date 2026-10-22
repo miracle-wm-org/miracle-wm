@@ -76,6 +76,12 @@ The following options are available at build time:
 - `-DENABLE_TESTS`: If enabled, tests are built (default=true)
 - `-DEND_TO_END_TESTS`: If enabled, miracle's end-to-end tests will
   be compiled as part of the test suite.
+- `-DENABLE_LTO`: If enabled, link-time optimization is used. Slower
+  builds, faster binary. Cannot be combined with `-DENABLE_PROFILING`.
+- `-DENABLE_PROFILING`: If enabled, the build is prepared for a sampling
+  profiler: full debug info, frame pointers, and no LTO. Intended to be
+  combined with `-DCMAKE_BUILD_TYPE=RelWithDebInfo`. See
+  [Profiling](profiling.md).
 
 ### Feature Flags
 
