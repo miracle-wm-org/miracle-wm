@@ -151,6 +151,18 @@ void Animator::remove_by_animation_handle(AnimationHandle handle)
     // processes active/active_custom without holding processing_lock.
     std::lock_guard<std::mutex> lock(processing_lock);
     pending_remove.push_back(handle);
+
+    // Animations that haven't been promoted to the active list yet would
+    // otherwise slip past the removal on the next tick.
+    auto removed = std::erase_if(pending_active, [handle](Animation const& animation)
+    {
+        return animation.handle() == handle;
+    });
+    removed += std::erase_if(pending_active_custom, [handle](CustomAnimation const& animation)
+    {
+        return animation.handle() == handle;
+    });
+    animation_count.fetch_sub(static_cast<int>(removed), std::memory_order_release);
 }
 
 bool Animator::is_animating(AnimationHandle handle)

@@ -147,11 +147,20 @@ private:
         /// True for the active workspace, and for one that an effect has forced
         /// into the scene via [set_containers_shown].
         bool containers_shown = false;
+        /// Bumped by every [show] and [hide]. An animation frame carrying an
+        /// older generation belongs to a transition that has been superseded,
+        /// so it must not touch the workspace.
+        uint64_t animation_generation = 0;
     };
 
     mir::Synchronised<State> sync;
 
     void on_animation_start(bool is_hiding);
+
+    /// Cancels any in-flight show/hide animation and returns the generation
+    /// that the new transition's animation frames must carry.
+    uint64_t begin_transition();
+    void append_transition_animation(AnimationData&& data, bool is_hiding, uint64_t generation);
 
     /// From the provided node, find the next node in the provided direction.
     /// This method is guaranteed to return a Window node, not a Lane.
