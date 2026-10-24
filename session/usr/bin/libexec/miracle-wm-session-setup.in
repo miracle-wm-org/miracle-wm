@@ -133,7 +133,18 @@ systemctl --user reset-failed
 systemctl --user import-environment $VARIABLES
 systemctl --user start "$SESSION_TARGET"
 
-"$(dirname "$(readlink -f "$0")")/miracle-wm-wait-sni-ready" && systemctl --user start miracle-wm-xdg-autostart.target
+# Under classic snap confinement, the script resolves to the host's
+# python, which cannot see the dbus-next and tenacity modules bundled in the
+# snap. Point it at the bundled modules for this invocation.
+# 
+# See: https://github.com/miracle-wm-org/miracle-wm/issues/979
+if [ -n "$SNAP" ]; then
+    WAIT_SNI_PYTHONPATH="$SNAP/usr/lib/python3/dist-packages${PYTHONPATH:+:$PYTHONPATH}"
+else
+    WAIT_SNI_PYTHONPATH="$PYTHONPATH"
+fi
+
+PYTHONPATH="$WAIT_SNI_PYTHONPATH" "$(dirname "$(readlink -f "$0")")/miracle-wm-wait-sni-ready" && systemctl --user start miracle-wm-xdg-autostart.target
 
 # Optionally, wait until the compositor exits and cleanup variables and services.
 if [ -z "$WITH_CLEANUP" ] ||
