@@ -56,8 +56,9 @@ cd miracle-wm
 cmake -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
 
-# ... or a max-performance release build:
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_LTO=ON
+# ... or a max-performance release build (-DENABLE_NATIVE_ARCH=ON tunes for
+# this machine's CPU only, but leave it off if the binary will run elsewhere):
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_LTO=ON -DENABLE_NATIVE_ARCH=ON
 cmake --build build
 
 # Finally run with:
@@ -76,6 +77,11 @@ The following options are available at build time:
 - `-DENABLE_TESTS`: If enabled, tests are built (default=true)
 - `-DEND_TO_END_TESTS`: If enabled, miracle's end-to-end tests will
   be compiled as part of the test suite.
+- `-DENABLE_LTO`: If enabled, link-time optimization is used (default=false)
+- `-DENABLE_NATIVE_ARCH`: If enabled, compiles with `-march=native`,
+  producing a binary that may only run on CPUs like the build machine's.
+  Never enable this for distributed builds (snaps, distro packages)
+  (default=false)
 
 ### Feature Flags
 
