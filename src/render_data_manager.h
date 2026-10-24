@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_SURFACE_TRACKER_H
 #define MIRACLEWM_SURFACE_TRACKER_H
 
+#include <array>
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <mir/scene/surface.h>
@@ -43,6 +44,10 @@ struct RenderData
     glm::mat4 workspace_transform = glm::mat4(1.f);
     std::optional<mir::geometry::Rectangle> output_area;
     std::optional<uint8_t> shader_id = std::nullopt;
+    /// The per-window geometry shader, if any. See [SamplerRegistry::GeometryEntry].
+    std::optional<uint8_t> geometry_shader_id = std::nullopt;
+    /// Plugin-owned values handed to the geometry shader as `uniform vec4 u_params[4]`.
+    std::array<float, 16> shader_params = {};
 };
 
 class RenderDataManager
@@ -57,8 +62,11 @@ public:
     void focus_change(RenderDataManagerId id, bool is_focused);
     void needs_outline_change(RenderDataManagerId id, bool needs_outline);
     void shader_id_change(RenderDataManagerId id, std::optional<uint8_t> shader_id);
-    /// Reset every RenderData whose shader_id is in \p ids back to the default
-    /// shader (std::nullopt). Used when the shaders are removed (e.g. on plugin unload).
+    void geometry_shader_id_change(RenderDataManagerId id, std::optional<uint8_t> geometry_shader_id);
+    void shader_params_change(RenderDataManagerId id, std::array<float, 16> const& params);
+    /// Reset every RenderData whose shader_id or geometry_shader_id is in \p ids
+    /// back to the default (std::nullopt). Used when the shaders are removed (e.g.
+    /// on plugin unload).
     void reset_shaders(std::vector<uint8_t> const& ids);
     /// Copies the current render data into \p out and updates \p seen_generation,
     /// or does nothing if no data has changed since \p seen_generation. Callers on

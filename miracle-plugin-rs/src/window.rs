@@ -242,7 +242,7 @@ impl TryFrom<bindings::MirDepthLayer> for DepthLayer {
 /// Read-only fields describe the window at the time of the callback. Setter
 /// methods (`set_state`, `set_rectangle`, etc.) are available for windows
 /// returned by [`crate::plugin::managed_windows`].
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Window {
     /// The type of this window.
     pub window_type: WindowType,
@@ -426,6 +426,34 @@ impl Window {
     pub fn set_shader(&self, shader_id: Option<u8>) -> Result<(), ()> {
         let id = shader_id.map(|id| id as i32).unwrap_or(-1);
         let r = unsafe { miracle_window_set_shader_id(self.internal as i64, id) };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
+
+    /// Set the geometry shader applied to this window.
+    ///
+    /// Pass `Some(id)` with the ID returned by
+    /// [`crate::plugin::register_window_geometry_shader`] to activate the shader, or
+    /// `None` to clear it and revert to the window's plain geometry.
+    pub fn set_geometry_shader(&self, geometry_shader_id: Option<u8>) -> Result<(), ()> {
+        let id = geometry_shader_id.map(|id| id as i32).unwrap_or(-1);
+        let r = unsafe { miracle_window_set_geometry_shader_id(self.internal as i64, id) };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
+
+    /// Set the values this window's geometry shader reads as `uniform vec4 u_params[4]`.
+    ///
+    /// At most 16 values may be given; the rest are zero. Setting them redraws the window.
+    pub fn set_shader_params(&self, params: &[f32]) -> Result<(), ()> {
+        if params.len() > 16 {
+            return Err(());
+        }
+        let r = unsafe {
+            miracle_window_set_shader_params(
+                self.internal as i64,
+                params.as_ptr() as i32,
+                params.len() as i32,
+            )
+        };
         if r == 0 { Ok(()) } else { Err(()) }
     }
 }
