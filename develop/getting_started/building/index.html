@@ -3114,8 +3114,9 @@ git<span class="w"> </span>clone<span class="w"> </span>https://github.com/mirac
 cmake<span class="w"> </span>-B<span class="w"> </span>build<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Debug
 cmake<span class="w"> </span>--build<span class="w"> </span>build
 
-<span class="c1"># ... or a max-performance release build:</span>
-cmake<span class="w"> </span>-B<span class="w"> </span>build<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Release<span class="w"> </span>-DENABLE_LTO<span class="o">=</span>ON
+<span class="c1"># ... or a max-performance release build (-DENABLE_NATIVE_ARCH=ON tunes for</span>
+<span class="c1"># this machine's CPU only, but leave it off if the binary will run elsewhere):</span>
+cmake<span class="w"> </span>-B<span class="w"> </span>build<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Release<span class="w"> </span>-DENABLE_LTO<span class="o">=</span>ON<span class="w"> </span>-DENABLE_NATIVE_ARCH<span class="o">=</span>ON
 cmake<span class="w"> </span>--build<span class="w"> </span>build
 
 <span class="c1"># Finally run with:</span>
@@ -3132,6 +3133,11 @@ cmake<span class="w"> </span>--build<span class="w"> </span>build
 <li><code>-DENABLE_TESTS</code>: If enabled, tests are built (default=true)</li>
 <li><code>-DEND_TO_END_TESTS</code>: If enabled, miracle's end-to-end tests will
   be compiled as part of the test suite.</li>
+<li><code>-DENABLE_LTO</code>: If enabled, link-time optimization is used (default=false)</li>
+<li><code>-DENABLE_NATIVE_ARCH</code>: If enabled, compiles with <code>-march=native</code>,
+  producing a binary that may only run on CPUs like the build machine's.
+  Never enable this for distributed builds (snaps, distro packages)
+  (default=false)</li>
 </ul>
 <h3 id="feature-flags">Feature Flags<a class="headerlink" href="#feature-flags" title="Permanent link">&para;</a></h3>
 <ul>
