@@ -229,7 +229,8 @@ TEST_F(CAPIWrapperTest, CanAddCustomKeyCommand)
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         10,
-        "test-command"
+        "test-command",
+        false
     };
     miracle_config_add_custom_key_command(
         &wrapper->config,
@@ -289,7 +290,8 @@ TEST_F(CAPIWrapperTest, CanEditCustomKeyCommand)
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         10,
-        "test-command"
+        "test-command",
+        false
     };
     miracle_config_add_custom_key_command(
         &wrapper->config, &key_command);
@@ -298,7 +300,8 @@ TEST_F(CAPIWrapperTest, CanEditCustomKeyCommand)
         mir_keyboard_action_up,
         mir_input_event_modifier_alt,
         12,
-        "test-command-2"
+        "test-command-2",
+        false
     };
     miracle_config_edit_custom_key_command(
         &wrapper->config,
@@ -317,7 +320,8 @@ TEST_F(CAPIWrapperTest, CannotEditCustomKeyCommandWithIndexGreaterThanRange)
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         10,
-        "test-command"
+        "test-command",
+        false
     };
     miracle_config_add_custom_key_command(
         &wrapper->config,
@@ -327,7 +331,8 @@ TEST_F(CAPIWrapperTest, CannotEditCustomKeyCommandWithIndexGreaterThanRange)
         mir_keyboard_action_up,
         mir_input_event_modifier_alt,
         12,
-        "test-command-2"
+        "test-command-2",
+        false
     };
     miracle_config_edit_custom_key_command(
         &wrapper->config,
@@ -347,7 +352,8 @@ TEST_F(CAPIWrapperTest, CanRemoveCustomKeyCommand)
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         10,
-        "test-command"
+        "test-command",
+        false
     };
     miracle_config_add_custom_key_command(
         &wrapper->config,
@@ -1005,7 +1011,8 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         KEY_F,
-        "test-command"
+        "test-command",
+        false
     };
     miracle_config_add_custom_key_command(
         &wrapper->config,
