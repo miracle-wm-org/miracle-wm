@@ -86,6 +86,8 @@ public:
     void animation_handle(uint32_t) override;
     bool is_focused() const override;
     bool is_fullscreen() const override;
+    bool is_floatable() const override { return true; }
+    bool is_movable() const override { return true; }
     bool is_maximized() const;
     bool select_next(Direction) override;
     bool pinned() const override;

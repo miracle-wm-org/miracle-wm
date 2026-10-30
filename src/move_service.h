@@ -27,6 +27,7 @@ class AbstractCommandController;
 class Config;
 class CompositorState;
 class OutputManager;
+class WindowContainer;
 
 class MoveService
 {
@@ -44,6 +45,7 @@ private:
     float cursor_y = 0;
     int start_x = 0;
     int start_y = 0;
+    std::weak_ptr<WindowContainer> moving;
 };
 
 } // miracle

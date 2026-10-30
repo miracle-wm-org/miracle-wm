@@ -766,6 +766,24 @@ TEST_F(TwoOutputCommandControllerTest, ToggleFloatingPinnedWindowTilesOntoFocuse
     Mock::AllowLeak(window_controller.get());
 }
 
+TEST_F(TwoOutputCommandControllerTest, ToggleFloatingRejectsNonFloatableWindow)
+{
+    // Shell components (panels, launchers, popups) report that they are not floatable.
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    ON_CALL(*container, window()).WillByDefault(Return(window));
+    ON_CALL(*container, is_floatable()).WillByDefault(Return(false));
+    ON_CALL(*container, get_workspace()).WillByDefault(Return(nullptr));
+    state->add(container);
+    state->focus_container(container);
+
+    // The window must not be tiled onto any workspace.
+    EXPECT_CALL(*workspace1, get_root()).Times(0);
+    EXPECT_CALL(*workspace2, get_root()).Times(0);
+    EXPECT_CALL(*window_controller, modify(_, _)).Times(0);
+
+    EXPECT_FALSE(command_controller->toggle_floating({}));
+}
+
 // ---- try_move_to_scratchpad ----
 
 TEST_F(CommandControllerTest, MoveToScratchpad_DetachesFloatingWindow)
@@ -777,6 +795,18 @@ TEST_F(CommandControllerTest, MoveToScratchpad_DetachesFloatingWindow)
     EXPECT_CALL(*container, set_workspace(std::shared_ptr<AbstractWorkspace>(nullptr)));
     EXPECT_TRUE(command_controller->try_move_to_scratchpad({}));
     EXPECT_TRUE(scratchpad->contains(container));
+}
+
+TEST_F(CommandControllerTest, MoveToScratchpad_RejectsNonFloatableWindow)
+{
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    ON_CALL(*container, is_floatable()).WillByDefault(Return(false));
+    state->add(container);
+    state->focus_container(container);
+
+    EXPECT_CALL(*container, set_workspace(_)).Times(0);
+    EXPECT_FALSE(command_controller->try_move_to_scratchpad({}));
+    EXPECT_FALSE(scratchpad->contains(container));
 }
 
 TEST_F(CommandControllerTest, MoveToScratchpad_RejectsNonWindowContainers)

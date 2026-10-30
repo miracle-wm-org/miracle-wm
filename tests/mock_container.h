@@ -33,6 +33,8 @@ namespace test
             WindowContainer(0, std::make_shared<RenderDataManager>(), nullptr)
         {
             render_id_ = 0;
+            ON_CALL(*this, is_floatable()).WillByDefault(::testing::Return(true));
+            ON_CALL(*this, is_movable()).WillByDefault(::testing::Return(true));
         }
         MOCK_METHOD(void, show, (), (override));
         MOCK_METHOD(void, hide, (), (override));
@@ -75,6 +77,8 @@ namespace test
         MOCK_METHOD(void, animation_handle, (uint32_t), (override));
         MOCK_METHOD(bool, is_focused, (), (const, override));
         MOCK_METHOD(bool, is_fullscreen, (), (const, override));
+        MOCK_METHOD(bool, is_floatable, (), (const, override));
+        MOCK_METHOD(bool, is_movable, (), (const, override));
         MOCK_METHOD(std::optional<miral::Window>, window, (), (const, override));
         MOCK_METHOD(bool, select_next, (Direction), (override));
         MOCK_METHOD(bool, pinned, (), (const, override));

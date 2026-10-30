@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "output_manager.h"
+#include "window_container.h"
 #include <mir/log.h>
 
 using namespace miracle;
@@ -49,18 +50,24 @@ bool MoveService::handle_pointer_event(
         if (action == mir_pointer_action_button_up && (config->get_primary_button() & buttons) == 0)
         {
             command_controller->set_mode(WindowManagerMode::normal);
+            moving.reset();
             return false;
         }
 
-        if (!state.focused_container())
+        // Only the container that accepted the move may be moved. If it has gone away, or
+        // focus has moved elsewhere, the move is over.
+        auto const container = moving.lock();
+        if (!container || container != state.focused_container())
         {
-            mir::log_warning("handle_pointer_event: focused container no longer exists while dragging");
+            mir::log_warning("handle_pointer_event: moved container is no longer focused");
+            command_controller->set_mode(WindowManagerMode::normal);
+            moving.reset();
             return false;
         }
 
         auto const dx = static_cast<int>(ceilf(x - cursor_x));
         auto const dy = static_cast<int>(ceilf(y - cursor_y));
-        state.focused_container()->move_to(start_x + dx, start_y + dy, false);
+        container->move_to(start_x + dx, start_y + dy, false);
         return true;
     }
     else if (action == mir_pointer_action_button_down)
@@ -88,6 +95,10 @@ bool MoveService::handle_pointer_event(
         if (intersected != state.focused_container())
             return false;
 
+        if (!intersected->is_movable())
+            return false;
+
+        moving = intersected;
         command_controller->set_mode(WindowManagerMode::moving);
         command_controller->select_container(intersected);
         cursor_x = x;

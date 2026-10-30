@@ -67,6 +67,10 @@ public:
     virtual bool move_to(Container& other) = 0;
     using Container::move_to; // un-hide Container::move_to(int, int, bool)
     virtual bool is_fullscreen() const = 0;
+    /// Returns true if this container may be toggled between floating and tiled.
+    virtual bool is_floatable() const = 0;
+    /// Returns true if this container may be moved by the user with the pointer.
+    virtual bool is_movable() const = 0;
     virtual bool drag_start() = 0;
     virtual bool drag_stop() = 0;
     virtual void drag(int x, int y) = 0;

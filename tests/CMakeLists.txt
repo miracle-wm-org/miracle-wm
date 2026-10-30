@@ -32,6 +32,7 @@ set(SOURCES
     test_animator.cpp
     test_feature_flags.cpp
     test_drag_and_drop_service.cpp
+    test_move_service.cpp
     test_resize_service.cpp
     test_render_data_manager.cpp
     test_scene_override_manager.cpp

@@ -52,6 +52,7 @@ private:
     float container_start_y = 0;
     float current_x = 0;
     float current_y = 0;
+    std::weak_ptr<WindowContainer> dragging;
     std::weak_ptr<WindowContainer> last_intersected;
 
     void drag_to(

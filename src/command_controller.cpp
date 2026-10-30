@@ -1220,6 +1220,13 @@ bool CommandController::try_move_to_scratchpad(std::vector<ContainerScope> const
             continue;
         }
 
+        if (!window_container->is_floatable())
+        {
+            mir::log_error("try_move_to_scratchpad: only floatable windows can be moved to the scratchpad");
+            result = false;
+            continue;
+        }
+
         // Scratchpad windows are floating, so tiled windows must be floated first
         if (Container::as_leaf(window_container))
         {
@@ -1271,6 +1278,9 @@ bool CommandController::toggle_floating_internal(std::shared_ptr<Container> cons
 {
     if (auto const wc = Container::as_window_container(container))
     {
+        if (!wc->is_floatable())
+            return false;
+
         auto const focused_output = output_manager->focused();
         if (!focused_output)
             return false;

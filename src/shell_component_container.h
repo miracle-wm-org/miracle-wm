@@ -98,6 +98,8 @@ public:
     LayoutScheme get_layout() const override { return LayoutScheme::none; }
     bool matches(ContainerScope const&) const override { return false; }
     bool is_fullscreen() const override;
+    bool is_floatable() const override { return false; }
+    bool is_movable() const override { return false; }
     bool can_animate() override;
     nlohmann::json to_json(bool is_workspace_visible) const override;
 
