@@ -779,6 +779,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#allow_on_lockscreen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        allow_on_lockscreen
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3089,6 +3100,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#allow_on_lockscreen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        allow_on_lockscreen
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3147,6 +3169,7 @@ bound to the same key combination.</p>
 <span class="w">    </span><span class="nt">action</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;up|down|repeat|modifiers&gt;</span>
 <span class="w">    </span><span class="nt">modifiers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;Modifier[]&gt;</span>
 <span class="w">    </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;KeysymName&gt;</span>
+<span class="w">    </span><span class="nt">allow_on_lockscreen</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;bool&gt;</span><span class="w">   </span><span class="c1"># optional</span>
 </code></pre></div>
 <h2 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">&para;</a></h2>
 <h3 id="command"><code>command</code><a class="headerlink" href="#command" title="Permanent link">&para;</a></h3>
@@ -3264,6 +3287,29 @@ bound to the same key combination.</p>
 <p><small>required</small> <strong>type:</strong> KeysymName</p>
 <p>Name of the XKB keysym that the action responds to. See the <a href="https://xkbcommon.org/doc/current/xbkcommon-keysyms_8h.html">xkbcommon keysym list</a> for available names (e.g., <code>Return</code>, <code>z</code>, <code>Up</code>).</p>
 <p>For shifted characters, use the shifted keysym directly instead of combining a lowercase key with the <code>shift</code> modifier. For example, use <code>Q</code> instead of <code>q</code> + <code>shift</code>, and use <code>exclam</code> instead of <code>1</code> + <code>shift</code>.</p>
+</dd>
+</dl>
+<h3 id="allow_on_lockscreen"><code>allow_on_lockscreen</code><a class="headerlink" href="#allow_on_lockscreen" title="Permanent link">&para;</a></h3>
+<dl>
+<dd>
+<p><small>optional</small> <strong>type:</strong> Boolean <strong>default:</strong> <code>false</code></p>
+<p>Whether the command may run while the session is locked. While the lock
+screen is up, every other key binding (including the
+<a href="../default_keybinds/">Default Keybinds</a>) is ignored and the key goes to the
+lock screen instead. This is useful for media, volume and brightness keys:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">custom_actions</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+</span>
+<span class="w">    </span><span class="nt">action</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">down</span>
+<span class="w">    </span><span class="nt">modifiers</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
+<span class="w">    </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">XF86AudioRaiseVolume</span>
+<span class="w">    </span><span class="nt">allow_on_lockscreen</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Anything bound with <code>allow_on_lockscreen: true</code> can be run by whoever is
+at the keyboard of a locked session. Never allow a command that unlocks
+the session, shows its contents or opens a shell.</p>
+</div>
 </dd>
 </dl>
 <h2 id="default">Default<a class="headerlink" href="#default" title="Permanent link">&para;</a></h2>

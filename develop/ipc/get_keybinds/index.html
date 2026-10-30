@@ -3021,7 +3021,11 @@ using the same vocabulary the configuration file accepts (<code>"shift"</code>, 
 
 <span class="w">            </span><span class="c1">// The XKB keysym, numerically and by name.</span>
 <span class="w">            </span><span class="nt">"xkb_keysym"</span><span class="p">:</span><span class="w"> </span><span class="mi">120</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">"xkb_keysym_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"x"</span>
+<span class="w">            </span><span class="nt">"xkb_keysym_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"x"</span><span class="p">,</span>
+
+<span class="w">            </span><span class="c1">// Whether a custom action may run while the session is locked.</span>
+<span class="w">            </span><span class="c1">// null for built-in actions, which never run on the lock screen.</span>
+<span class="w">            </span><span class="nt">"allow_on_lockscreen"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
 <span class="w">        </span><span class="p">}</span>
 <span class="w">        </span><span class="c1">// ...</span>
 <span class="w">    </span><span class="p">]</span>
