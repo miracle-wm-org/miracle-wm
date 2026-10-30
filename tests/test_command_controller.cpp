@@ -461,6 +461,98 @@ TEST_F(CommandControllerTest, ModeToJsonNamesEveryMode)
     }
 }
 
+namespace
+{
+class RecordingModeObserver : public ModeObserver
+{
+public:
+    void on_mode_changed(WindowManagerMode mode) override { modes.push_back(mode); }
+    std::vector<WindowManagerMode> modes;
+};
+}
+
+TEST_F(CommandControllerTest, LockEntersLockedMode)
+{
+    command_controller->lock();
+    EXPECT_THAT(state->mode(), Eq(WindowManagerMode::locked));
+    EXPECT_TRUE(command_controller->is_locked());
+}
+
+TEST_F(CommandControllerTest, LockAndUnlockAdviseModeObservers)
+{
+    auto const observer = std::make_shared<RecordingModeObserver>();
+    mode_observer_registrar->register_interest(observer);
+
+    command_controller->lock();
+    command_controller->unlock();
+    EXPECT_THAT(observer->modes, ElementsAre(WindowManagerMode::locked, WindowManagerMode::normal));
+}
+
+TEST_F(CommandControllerTest, SetModeCannotLeaveLockedMode)
+{
+    // e.g. an overview outro or the end of a drag finishing after the lock
+    command_controller->lock();
+    command_controller->set_mode(WindowManagerMode::normal);
+    EXPECT_THAT(state->mode(), Eq(WindowManagerMode::locked));
+}
+
+TEST_F(CommandControllerTest, UnlockReturnsToNormalMode)
+{
+    state->mode(WindowManagerMode::resizing);
+    command_controller->lock();
+    command_controller->unlock();
+    EXPECT_THAT(state->mode(), Eq(WindowManagerMode::normal));
+    EXPECT_FALSE(command_controller->is_locked());
+}
+
+TEST_F(CommandControllerTest, UnlockDoesNothingWhenNotLocked)
+{
+    state->mode(WindowManagerMode::resizing);
+    command_controller->unlock();
+    EXPECT_THAT(state->mode(), Eq(WindowManagerMode::resizing));
+}
+
+TEST_F(CommandControllerTest, CannotToggleResizeModeWhileLocked)
+{
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    state->add(container);
+    state->focus_container(container);
+    command_controller->lock();
+
+    command_controller->try_toggle_resize_mode();
+    EXPECT_THAT(state->mode(), Eq(WindowManagerMode::locked));
+}
+
+TEST_F(CommandControllerTest, CannotToggleFullscreenWhileLocked)
+{
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    state->add(container);
+    state->focus_container(container);
+    command_controller->lock();
+
+    EXPECT_CALL(*container, toggle_fullscreen()).Times(0);
+    EXPECT_FALSE(command_controller->try_toggle_fullscreen({}));
+}
+
+TEST_F(CommandControllerTest, CannotSelectWorkspaceByIdWhileLocked)
+{
+    command_controller->lock();
+    EXPECT_FALSE(command_controller->select_workspace_by_id(0, false));
+}
+
+TEST_F(CommandControllerTest, CannotQuitWhileLocked)
+{
+    command_controller->lock();
+    EXPECT_FALSE(command_controller->quit());
+}
+
+TEST_F(CommandControllerTest, CannotReloadConfigWhileLocked)
+{
+    command_controller->lock();
+    EXPECT_CALL(*config, reload()).Times(0);
+    EXPECT_FALSE(command_controller->reload_config());
+}
+
 // Fixture with two outputs to test cross-output workspace transfers
 class TwoOutputCommandControllerTest : public Test
 {
@@ -735,7 +827,8 @@ TEST_F(CommandControllerTest, KeyBindingsJson)
          .modifiers = mir_input_event_modifier_meta,
          .keysym = XKB_KEY_x,
          .default_key_command = DefaultKeyCommand::MAX,
-         .command = "echo Hi" },
+         .command = "echo Hi",
+         .allow_on_lockscreen = true },
         { .source = KeyBindingSource::built_in_override,
          .action = mir_keyboard_action_down,
          .configured_modifiers = miracle_input_event_modifier_default,
@@ -771,10 +864,12 @@ TEST_F(CommandControllerTest, KeyBindingsJson)
     EXPECT_THAT(keybinds[0]["xkb_keysym"], Eq(XKB_KEY_x));
     EXPECT_THAT(keybinds[0]["xkb_keysym_name"], Eq("x"));
     EXPECT_THAT(keybinds[0]["keyboard_action"], Eq("down"));
+    EXPECT_THAT(keybinds[0]["allow_on_lockscreen"], Eq(true));
 
     EXPECT_THAT(keybinds[1]["action"], Eq("terminal"));
     EXPECT_TRUE(keybinds[1]["command"].is_null());
     EXPECT_THAT(keybinds[1]["xkb_keysym_name"], Eq("Escape"));
+    EXPECT_TRUE(keybinds[1]["allow_on_lockscreen"].is_null());
 
     EXPECT_THAT(keybinds[2]["action"], Eq("terminal"));
     EXPECT_TRUE(keybinds[2]["command"].is_null());

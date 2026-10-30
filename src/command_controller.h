@@ -120,6 +120,9 @@ public:
     bool try_move_to_mark(std::string const& mark, std::vector<ContainerScope> const& scope) override;
     bool reload_config() override;
     void set_mode(WindowManagerMode mode) override;
+    void lock() override;
+    void unlock() override;
+    [[nodiscard]] bool is_locked() const override;
     void select_container(std::shared_ptr<Container> const&) override;
     void mark(
         std::vector<ContainerScope> const& scope,

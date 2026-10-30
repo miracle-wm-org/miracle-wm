@@ -53,6 +53,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <map>
 #include <mir/geometry/rectangle.h>
 #include <mir/log.h>
+#include <mir/scene/surface.h>
 #include <mir/server.h>
 #include <mir_toolkit/events/enums.h>
 #include <miral/toolkit_event.h>
@@ -98,7 +99,8 @@ bool can_be_focused(std::shared_ptr<AbstractWorkspace> const& workspace)
 
 class Policy::Self : public virtual WorkspaceObserver,
                      public virtual ContainerListener,
-                     public virtual ConfigObserver
+                     public virtual ConfigObserver,
+                     public virtual SessionLockObserver
 {
 public:
     explicit Self(Policy& policy, std::shared_ptr<mir::ServerActionQueue> const& queue) :
@@ -210,6 +212,30 @@ public:
         has_loaded_once = true;
     }
 
+    void on_session_locked() override
+    {
+        // Mir tells us on its own thread, possibly while it holds locks of its
+        // own, so hop onto the main loop before taking the window management lock.
+        queue->enqueue(this, [&policy = policy]
+        {
+            policy.window_controller->invoke_under_lock([&policy]
+            {
+                policy.on_session_locked();
+            });
+        });
+    }
+
+    void on_session_unlocked() override
+    {
+        queue->enqueue(this, [&policy = policy]
+        {
+            policy.window_controller->invoke_under_lock([&policy]
+            {
+                policy.on_session_unlocked();
+            });
+        });
+    }
+
     void on_plugins_changed(std::vector<PluginConfiguration> const& plugins) override
     {
         update_plugins(
@@ -241,12 +267,14 @@ Policy::Policy(
     std::shared_ptr<DisplayConfig> const& display_config,
     std::shared_ptr<ConfigObserverRegistrar> const& config_observer_registrar,
     miral::Magnifier const& magnifier,
-    std::shared_ptr<SamplerRegistry> const& sampler_registry) :
+    std::shared_ptr<SamplerRegistry> const& sampler_registry,
+    std::shared_ptr<SessionLockObserverRegistrar> const& session_lock_observer_registrar) :
     tools { tools },
     config { config },
     state { state },
     output_listener { output_listener },
     config_observer_registrar { config_observer_registrar },
+    session_lock_observer_registrar { session_lock_observer_registrar },
     animator(std::make_shared<Animator>()),
     plugin_manager(load_plugin_manager()),
     window_id_map_(std::make_shared<WindowIdMap>()),
@@ -317,6 +345,7 @@ Policy::Policy(
     output_listener->register_listener(ipc_connection_manager);
     config_observer_registrar->register_interest(self);
     config_observer_registrar->register_interest(debug_overlay_controller);
+    session_lock_observer_registrar->register_interest(self);
     animator_loop->start();
 
     server.set_exception_handler([ipc_connection_manager = ipc_connection_manager]
@@ -338,6 +367,49 @@ Policy::~Policy()
     config_observer_registrar->unregister_interest(ipc_connection_manager.get());
     output_listener->unregister_listener(ipc_connection_manager);
     config_observer_registrar->unregister_interest(self.get());
+    session_lock_observer_registrar->unregister_interest(self.get());
+}
+
+void Policy::on_session_locked()
+{
+    overview_controller->break_tap();
+
+    // The lock screen has to have the input and the screen to itself, so
+    // anything that owns either goes away immediately rather than animating out.
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+        scene_override->cancel();
+
+    switch (state->mode())
+    {
+    case WindowManagerMode::dragging:
+        drag_and_drop_service->stop_drag(*state);
+        break;
+    case WindowManagerMode::resizing:
+        resize_service->cancel();
+        break;
+    default:
+        break;
+    }
+
+    command_controller->lock();
+}
+
+void Policy::on_session_unlocked()
+{
+    command_controller->unlock();
+}
+
+void Policy::run_custom_key_command(CustomKeyCommand const& command, unsigned int modifiers, uint32_t keysym)
+{
+    BindingEvent const binding_event(
+        BINDING_MODE_STRINGS[static_cast<size_t>(state->mode())],
+        command.command,
+        modifiers,
+        keysym,
+        BindingEventType::keyboard);
+    ipc_connection_manager->on_binding_event(binding_event);
+
+    launcher->launch({ command.command });
 }
 
 bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
@@ -345,6 +417,18 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
     auto const action = miral::toolkit::mir_keyboard_event_action(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
     auto const keysym = miral::toolkit::mir_keyboard_event_keysym(event);
+
+    // Everything goes to the lock screen, save for the custom actions that
+    // have explicitly been allowed to run on it.
+    if (state->mode() == WindowManagerMode::locked)
+    {
+        auto const custom_key_command = config->matches_custom_key_command(action, keysym, modifiers);
+        if (!custom_key_command || !custom_key_command->allow_on_lockscreen)
+            return false;
+
+        run_custom_key_command(*custom_key_command, modifiers, keysym);
+        return true;
+    }
 
     if (auto const scene_override = state->scene_override_manager()->try_resolve())
     {
@@ -360,15 +444,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
 
     if (auto const custom_key_command = config->matches_custom_key_command(action, keysym, modifiers))
     {
-        BindingEvent const binding_event(
-            BINDING_MODE_STRINGS[static_cast<size_t>(state->mode())],
-            custom_key_command->command,
-            modifiers,
-            keysym,
-            BindingEventType::keyboard);
-        ipc_connection_manager->on_binding_event(binding_event);
-
-        launcher->launch({ custom_key_command->command });
+        run_custom_key_command(*custom_key_command, modifiers, keysym);
         return true;
     }
 
@@ -537,6 +613,17 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
     auto const modifiers = miral::toolkit::mir_pointer_event_modifiers(event) & MODIFIER_MASK;
     auto const buttons = mir_pointer_event_buttons(event);
     state->cursor_position = { x, y };
+
+    if (state->mode() == WindowManagerMode::locked)
+    {
+        if (config->cursor().focus_mode == CursorFocusMode::Hover || action == mir_pointer_action_button_down)
+        {
+            auto const window = window_controller->window_at(x, y);
+            if (window && window != tools.active_window())
+                window_controller->select_active_window(window);
+        }
+        return false;
+    }
 
     if (auto const scene_override = state->scene_override_manager()->try_resolve())
     {

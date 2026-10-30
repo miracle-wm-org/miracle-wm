@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <gtest/gtest.h>
 #include <miracle/cpp/config-cpp.h>
 #include <vector>
+#include <xkbcommon/xkbcommon-keysyms.h>
 
 using namespace testing;
 
@@ -494,4 +495,102 @@ TEST_F(AnimationConfigurationTest, RoundTripsScaleAndC5ThroughSave)
     ASSERT_THAT(reloaded.data.size(), Eq(1u));
     EXPECT_THAT(reloaded.data[0].scale, FloatEq(0.75f));
     EXPECT_THAT(reloaded.data[0].c5, FloatEq(2.5f));
+}
+
+class CustomActionConfigurationTest : public Test
+{
+protected:
+    std::filesystem::path tmp_path;
+
+    void SetUp() override
+    {
+        tmp_path = std::filesystem::temp_directory_path() / "miracle_test_custom_actions.yaml";
+    }
+
+    void TearDown() override
+    {
+        std::filesystem::remove(tmp_path);
+    }
+
+    void write_yaml(std::string const& content)
+    {
+        std::ofstream f(tmp_path);
+        f << content;
+    }
+
+    static std::string custom_action_with(std::string const& extra)
+    {
+        return "custom_actions:\n"
+               "  - command: echo Hi\n"
+               "    action: down\n"
+               "    modifiers:\n"
+               "      - primary\n"
+               "    key: x\n"
+            + extra;
+    }
+};
+
+TEST_F(CustomActionConfigurationTest, AllowOnLockscreenDefaultsToFalse)
+{
+    write_yaml(custom_action_with(""));
+    auto const result = miracle::load_config(tmp_path.string());
+    EXPECT_TRUE(result.errors.empty());
+    ASSERT_THAT(result.config.custom_key_commands->size(), Eq(1u));
+    EXPECT_FALSE(result.config.custom_key_commands.value[0].allow_on_lockscreen);
+}
+
+TEST_F(CustomActionConfigurationTest, ParsesAllowOnLockscreen)
+{
+    write_yaml(custom_action_with("    allow_on_lockscreen: true\n"));
+    auto const result = miracle::load_config(tmp_path.string());
+    EXPECT_TRUE(result.errors.empty());
+    ASSERT_THAT(result.config.custom_key_commands->size(), Eq(1u));
+    EXPECT_TRUE(result.config.custom_key_commands.value[0].allow_on_lockscreen);
+}
+
+TEST_F(CustomActionConfigurationTest, MalformedAllowOnLockscreenIsReportedAndStaysLockedOut)
+{
+    write_yaml(custom_action_with("    allow_on_lockscreen: sometimes\n"));
+    auto const result = miracle::load_config(tmp_path.string());
+    EXPECT_FALSE(result.errors.empty());
+    ASSERT_THAT(result.config.custom_key_commands->size(), Eq(1u));
+    EXPECT_FALSE(result.config.custom_key_commands.value[0].allow_on_lockscreen);
+}
+
+TEST_F(CustomActionConfigurationTest, RoundTripsAllowOnLockscreenThroughSave)
+{
+    miracle::ConfigData config;
+    config.custom_key_commands->push_back(miracle::CustomKeyCommand {
+        mir_keyboard_action_down, mir_input_event_modifier_meta, XKB_KEY_x, "allowed", true });
+    config.custom_key_commands->push_back(miracle::CustomKeyCommand {
+        mir_keyboard_action_down, mir_input_event_modifier_meta, XKB_KEY_y, "not-allowed", false });
+
+    auto const save_result = miracle::save_config(tmp_path.string(), config);
+    ASSERT_TRUE(save_result.success);
+
+    // Only written when set, so configs that never used it come back unchanged.
+    std::ifstream f(tmp_path);
+    std::string const saved { std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>() };
+    EXPECT_THAT(saved, HasSubstr("allow_on_lockscreen: true"));
+    EXPECT_THAT(saved, Not(HasSubstr("allow_on_lockscreen: false")));
+
+    auto const load_result = miracle::load_config(tmp_path.string());
+    ASSERT_THAT(load_result.config.custom_key_commands->size(), Eq(2u));
+    EXPECT_TRUE(load_result.config.custom_key_commands.value[0].allow_on_lockscreen);
+    EXPECT_FALSE(load_result.config.custom_key_commands.value[1].allow_on_lockscreen);
+}
+
+TEST_F(CustomActionConfigurationTest, MergeKeepsAllowOnLockscreen)
+{
+    miracle::ConfigData first;
+    first.custom_key_commands->push_back(miracle::CustomKeyCommand {
+        mir_keyboard_action_down, mir_input_event_modifier_meta, XKB_KEY_x, "first", true });
+    miracle::ConfigData second;
+    second.custom_key_commands->push_back(miracle::CustomKeyCommand {
+        mir_keyboard_action_down, mir_input_event_modifier_meta, XKB_KEY_y, "second", false });
+
+    auto const merged = first.merge_with(second);
+    ASSERT_THAT(merged.custom_key_commands->size(), Eq(2u));
+    for (auto const& command : *merged.custom_key_commands)
+        EXPECT_THAT(command.allow_on_lockscreen, Eq(command.command == "first"));
 }

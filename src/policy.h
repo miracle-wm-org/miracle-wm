@@ -33,6 +33,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugin_bridge.h"
 #include "resize_service.h"
 #include "scratchpad.h"
+#include "session_lock_observer.h"
 #include "window_allocation.h"
 #include "window_id_map.h"
 #include "window_manager_tools_window_controller.h"
@@ -81,7 +82,8 @@ public:
         std::shared_ptr<DisplayConfig> const& display_config,
         std::shared_ptr<ConfigObserverRegistrar> const& config_observer_registrar,
         miral::Magnifier const& magnifier,
-        std::shared_ptr<SamplerRegistry> const& sampler_registry);
+        std::shared_ptr<SamplerRegistry> const& sampler_registry,
+        std::shared_ptr<SessionLockObserverRegistrar> const& session_lock_observer_registrar);
     ~Policy() override;
 
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
@@ -137,6 +139,7 @@ private:
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<OutputListenerMultiplexer> output_listener;
     std::shared_ptr<ConfigObserverRegistrar> config_observer_registrar;
+    std::shared_ptr<SessionLockObserverRegistrar> session_lock_observer_registrar;
     std::shared_ptr<Animator> animator;
     std::shared_ptr<PluginManager> plugin_manager;
     std::shared_ptr<WindowIdMap> window_id_map_;
@@ -162,6 +165,18 @@ private:
     BindingEventListener* binding_event_listener_;
     /// Push the fastest connected output's refresh rate to the animator loop.
     void update_animator_frame_rate();
+
+    /// Tears down anything that owns input (the overview, a resize, a drag)
+    /// and enters [WindowManagerMode::locked]. Must run under the window
+    /// management lock.
+    void on_session_locked();
+
+    /// Leaves [WindowManagerMode::locked]. Must run under the window
+    /// management lock.
+    void on_session_unlocked();
+
+    /// Launches \p command and reports the binding to IPC clients.
+    void run_custom_key_command(CustomKeyCommand const& command, unsigned int modifiers, uint32_t keysym);
 
     std::unique_ptr<AnimatorLoop> animator_loop;
     /// Refresh rate of each connected output keyed by output id, so the

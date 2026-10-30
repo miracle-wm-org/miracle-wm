@@ -171,6 +171,7 @@ add_library(miracle-wm-implementation STATIC
         src/animation.cpp
         src/program_factory.cpp
         src/mode_observer.cpp
+        src/session_lock_observer.cpp
         src/shell_component_container.cpp
         src/layout_scheme.cpp
         src/scratchpad.cpp

@@ -45,6 +45,9 @@ struct MIRACLE_WM_CONFIG_API CustomKeyCommand
     uint modifiers;
     uint key;
     std::string command;
+
+    /// Whether the command may run while the session is locked.
+    bool allow_on_lockscreen = false;
 };
 
 struct MIRACLE_WM_CONFIG_API BuiltInKeyCommandOverride

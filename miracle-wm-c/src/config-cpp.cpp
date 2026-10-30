@@ -754,10 +754,16 @@ void read_custom_actions(YAML::Node const& custom_actions, ParsingContext& conte
         if (!try_parse_modifiers(modifiers_node, modifiers, context))
             continue;
 
+        // A malformed value is reported but leaves the action locked out,
+        // which is the safe default.
+        bool allow_on_lockscreen = false;
+        try_parse_value(sub_node, "allow_on_lockscreen", allow_on_lockscreen, context, true);
+
         context.result.config.custom_key_commands->push_back({ keyboard_action.value(),
             modifiers,
             static_cast<uint>(keysym),
-            command });
+            command,
+            allow_on_lockscreen });
     }
 }
 
@@ -1633,6 +1639,8 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
                     out << name;
             }
             out << YAML::EndSeq;
+            if (action.allow_on_lockscreen)
+                out << YAML::Key << "allow_on_lockscreen" << YAML::Value << true;
             out << YAML::EndMap;
         }
         out << YAML::EndSeq;

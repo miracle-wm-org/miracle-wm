@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_container.h"
 #include "window_helpers.h"
 #include <mir/log.h>
+#include <mir/scene/surface.h>
 #include <mir/server_action_queue.h>
 
 using namespace miracle;
@@ -179,6 +180,17 @@ void WindowManagerToolsWindowController::noclip(miral::Window const& window)
 
 void WindowManagerToolsWindowController::select_active_window(miral::Window const& window)
 {
+    // While locked, the lock screen's own surfaces still have to be able to take
+    // the keyboard - they only map after the lock has begun - but nothing that
+    // is hidden behind them may.
+    if (state->mode() == WindowManagerMode::locked)
+    {
+        auto const surface = window.operator std::shared_ptr<mir::scene::Surface>();
+        if (surface && surface->visible_on_lock_screen())
+            tools.select_active_window(window);
+        return;
+    }
+
     // The carousel focuses whatever is centered when it is dismissed, so
     // [overview] selects just like [normal] does.
     if (state->mode() != WindowManagerMode::normal && state->mode() != WindowManagerMode::overview)

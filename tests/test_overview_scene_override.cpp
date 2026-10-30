@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "animator.h"
 #include "compositor_state.h"
 #include "leaf_container.h"
+#include "mock_command_controller.h"
 #include "mock_output.h"
 #include "mock_output_factory.h"
 #include "mock_parent_container.h"
@@ -28,7 +29,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
 #include "output_manager.h"
+#include "overview_controller.h"
 #include "overview_scene_override_delegate.h"
+#include "scene_override.h"
 #include "shell_application_spawner.h"
 #include "shell_component_container.h"
 #include "stub_configuration.h"
@@ -350,6 +353,112 @@ TEST_F(OverviewSceneOverrideTest, CancellingPutsEverythingBackIntoTheOcclusionCu
 
     EXPECT_FALSE(container_of(toplevel)->occlusion_bypass());
     EXPECT_FALSE(container_of(background)->occlusion_bypass());
+}
+
+TEST_F(OverviewSceneOverrideTest, CancelTearsTheOverviewDownAtOnce)
+{
+    report_windows_as_backgrounds();
+
+    add_background();
+    auto const toplevel = add_toplevel();
+
+    auto const override_ = create();
+    ASSERT_NE(nullptr, override_);
+
+    override_->cancel();
+
+    EXPECT_TRUE(delegate.exit_started);
+    EXPECT_TRUE(delegate.done);
+    EXPECT_FALSE(container_of(toplevel)->occlusion_bypass());
+}
+
+TEST_F(OverviewSceneOverrideTest, CancellingDuringTheOutroEndsItWithoutWaiting)
+{
+    report_windows_as_backgrounds();
+
+    add_background();
+    auto const toplevel = add_toplevel();
+
+    auto const override_ = create();
+    ASSERT_NE(nullptr, override_);
+
+    override_->handle_keyboard_event(mir_input_event_get_keyboard_event(
+        mir_event_get_input_event(escape_press().get())));
+    ASSERT_TRUE(delegate.exit_started);
+    ASSERT_FALSE(delegate.done);
+
+    // e.g. the session locking while the overview animates away
+    override_->cancel();
+
+    EXPECT_TRUE(delegate.done);
+    EXPECT_FALSE(container_of(toplevel)->occlusion_bypass());
+}
+
+namespace
+{
+/// Makes Super the primary modifier, so that tapping it enters the overview.
+class SuperPrimaryConfiguration : public test::StubConfiguration
+{
+public:
+    [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override { return mir_input_event_modifier_meta; }
+};
+
+void tap_super(OverviewController& controller)
+{
+    for (auto const action : { mir_keyboard_action_down, mir_keyboard_action_up })
+    {
+        auto const event = mir::events::make_key_event(
+            mir_input_event_type_key,
+            std::chrono::nanoseconds { 0 },
+            action,
+            XKB_KEY_Super_L,
+            KEY_LEFTMETA,
+            mir_input_event_modifier_meta);
+        controller.handle_keyboard_event(
+            mir_input_event_get_keyboard_event(mir_event_get_input_event(event.get())),
+            mir_input_event_modifier_meta);
+    }
+}
+}
+
+TEST_F(OverviewSceneOverrideTest, TappingSuperOpensTheOverview)
+{
+    report_windows_as_backgrounds();
+    add_background();
+    add_toplevel();
+
+    auto const command_controller = std::make_shared<NiceMock<test::MockCommandController>>();
+    OverviewController controller(
+        compositor_state, output_manager, animator, window_controller,
+        std::make_shared<SuperPrimaryConfiguration>(), command_controller);
+
+    EXPECT_CALL(*command_controller, set_mode(WindowManagerMode::overview));
+    tap_super(controller);
+
+    auto const installed = compositor_state->scene_override_manager()->try_resolve();
+    ASSERT_NE(nullptr, installed);
+
+    // Cancelling must hand the scene back, as it does when the session locks.
+    EXPECT_CALL(*command_controller, set_mode(WindowManagerMode::normal));
+    installed->cancel();
+    EXPECT_EQ(nullptr, compositor_state->scene_override_manager()->try_resolve());
+}
+
+TEST_F(OverviewSceneOverrideTest, TappingSuperDoesNotOpenTheOverviewWhileLocked)
+{
+    report_windows_as_backgrounds();
+    add_background();
+    add_toplevel();
+    compositor_state->mode(WindowManagerMode::locked);
+
+    auto const command_controller = std::make_shared<NiceMock<test::MockCommandController>>();
+    OverviewController controller(
+        compositor_state, output_manager, animator, window_controller,
+        std::make_shared<SuperPrimaryConfiguration>(), command_controller);
+
+    EXPECT_CALL(*command_controller, set_mode(_)).Times(0);
+    tap_super(controller);
+    EXPECT_EQ(nullptr, compositor_state->scene_override_manager()->try_resolve());
 }
 
 TEST_F(OverviewSceneOverrideTest, DestroyingAnOverrideThatWasNeverInstalledRestoresTheCull)

@@ -47,6 +47,7 @@ public:
     {
     }
     void handle_output_changed() override { }
+    void cancel() override { }
 
 private:
     bool* destroyed;

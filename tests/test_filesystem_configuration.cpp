@@ -300,6 +300,33 @@ TEST_F(FilesystemConfigurationTest, CanCreateCustomAction)
     EXPECT_EQ(custom_action->command, "echo Hi");
     EXPECT_EQ(custom_action->key, XKB_KEY_x);
     EXPECT_EQ(custom_action->action, mir_keyboard_action_down);
+    EXPECT_FALSE(custom_action->allow_on_lockscreen);
+}
+
+TEST_F(FilesystemConfigurationTest, CanCreateCustomActionAllowedOnLockscreen)
+{
+    YAML::Node node;
+    YAML::Node action_override_node;
+    action_override_node["command"] = "echo Hi";
+    action_override_node["action"] = "down";
+    action_override_node["modifiers"].push_back("primary");
+    action_override_node["key"] = "x";
+    action_override_node["allow_on_lockscreen"] = true;
+    node["custom_actions"].push_back(action_override_node);
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto custom_action = config.matches_custom_key_command(
+        MirKeyboardAction::mir_keyboard_action_down,
+        XKB_KEY_x,
+        mir_input_event_modifier_meta);
+    ASSERT_NE(custom_action, nullptr);
+    EXPECT_TRUE(custom_action->allow_on_lockscreen);
+
+    auto const bindings = config.describe_key_bindings();
+    ASSERT_FALSE(bindings.empty());
+    EXPECT_EQ(bindings[0].source, KeyBindingSource::custom);
+    EXPECT_TRUE(bindings[0].allow_on_lockscreen);
 }
 
 TEST_F(FilesystemConfigurationTest, DefaultKeyBindingsAreReported)

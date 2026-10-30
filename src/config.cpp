@@ -686,7 +686,8 @@ std::vector<KeyBindingInfo> FilesystemConfiguration::describe_key_bindings() con
             .modifiers = resolve(command.modifiers),
             .keysym = command.key,
             .default_key_command = DefaultKeyCommand::MAX,
-            .command = command.command });
+            .command = command.command,
+            .allow_on_lockscreen = command.allow_on_lockscreen });
     }
 
     for (auto const& override : overrides)
