@@ -835,14 +835,14 @@ TEST_F(CommandControllerTest, KeyBindingsJson)
          .modifiers = mir_input_event_modifier_meta,
          .keysym = XKB_KEY_Escape,
          .default_key_command = DefaultKeyCommand::Terminal,
-         .command = ""        },
+         .command = "" },
         { .source = KeyBindingSource::built_in_default,
          .action = mir_keyboard_action_down,
          .configured_modifiers = miracle_input_event_modifier_default,
          .modifiers = mir_input_event_modifier_meta,
          .keysym = XKB_KEY_Return,
          .default_key_command = DefaultKeyCommand::Terminal,
-         .command = ""        }
+         .command = "" }
     };
     EXPECT_CALL(*config, describe_key_bindings)
         .WillOnce(Return(bindings));
