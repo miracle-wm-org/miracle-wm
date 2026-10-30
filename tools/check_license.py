@@ -2,7 +2,9 @@
 
 from pathlib import Path
 import os
+import re
 import argparse
+from datetime import date
 
 LICENSE = """/**
 Copyright (C) 2025  Matthew Kosarek
@@ -58,6 +60,15 @@ to_exclude = [
     "wlr-output-management-unstable-v1_wrapper.cpp"
 ]
 
+def license_pattern(license: str) -> re.Pattern:
+    # Accept any copyright year so that new files can use the current year.
+    return re.compile(re.escape(license).replace("2025", r"\d{4}"))
+
+
+def with_current_year(license: str) -> str:
+    return license.replace("2025", str(date.today().year))
+
+
 for d in to_check:
     root_dir = Path(__file__).parent.parent / d
     error_files = []
@@ -71,10 +82,8 @@ for d in to_check:
             with open(file, 'r') as original:
                 content = original.read()
                 is_error = False
-                if d == "miraclemsg":
-                    if not content.startswith(MIRACLEMSG_LICENSE):
-                        is_error = True
-                elif not content.startswith(LICENSE):
+                expected = MIRACLEMSG_LICENSE if d == "miraclemsg" else LICENSE
+                if not license_pattern(expected).match(content):
                     is_error = True
 
                 if is_error:
@@ -87,7 +96,7 @@ for d in to_check:
             data = error_data[i]
             with open(file, 'w') as f:
                 to_write = MIRACLEMSG_LICENSE if "miraclemsg" in file else LICENSE
-                f.write(to_write)
+                f.write(with_current_year(to_write))
                 f.write(data)
     elif len(error_files) > 0:
         print("The following files are missing the GPL License at the top: ")
