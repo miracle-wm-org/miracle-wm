@@ -843,6 +843,9 @@ bool CommandController::try_close_window(std::vector<ContainerScope> const& scop
 
 bool CommandController::quit()
 {
+    if (state->mode() == WindowManagerMode::locked)
+        return false;
+
     interface->quit();
     return true;
 }
@@ -1886,6 +1889,8 @@ bool CommandController::can_set_layout() const
 
 bool CommandController::reload_config()
 {
+    if (state->mode() == WindowManagerMode::locked)
+        return false;
 
     config->reload();
     return true;
@@ -1893,8 +1898,36 @@ bool CommandController::reload_config()
 
 void CommandController::set_mode(WindowManagerMode mode)
 {
+    // Teardown that finishes after the session has locked (an overview outro,
+    // the end of a drag) must not drop us back into a mode that accepts input.
+    if (state->mode() == WindowManagerMode::locked)
+        return;
+
     state->mode(mode);
     mode_observer_registrar->advise_changed(state->mode());
+}
+
+void CommandController::lock()
+{
+    if (state->mode() == WindowManagerMode::locked)
+        return;
+
+    state->mode(WindowManagerMode::locked);
+    mode_observer_registrar->advise_changed(state->mode());
+}
+
+void CommandController::unlock()
+{
+    if (state->mode() != WindowManagerMode::locked)
+        return;
+
+    state->mode(WindowManagerMode::normal);
+    mode_observer_registrar->advise_changed(state->mode());
+}
+
+bool CommandController::is_locked() const
+{
+    return state->mode() == WindowManagerMode::locked;
 }
 
 void CommandController::mark(
@@ -2499,6 +2532,10 @@ nlohmann::json CommandController::mode_to_json() const
         return {
             { "name", "overview" }
         };
+    case WindowManagerMode::locked:
+        return {
+            { "name", "locked" }
+        };
     default:
     {
         mir::log_error("handle_command: unknown binding state: %d", (int)state->mode());
@@ -2523,6 +2560,7 @@ nlohmann::json CommandController::key_bindings_json() const
             { "configured_modifiers", modifier_names(info.configured_modifiers)                                                                 },
             { "xkb_keysym",           info.keysym                                                                                               },
             { "xkb_keysym_name",      keysym_name(info.keysym)                                                                                  },
+            { "allow_on_lockscreen",  is_custom ? json(info.allow_on_lockscreen) : json(nullptr)                                                },
         });
     }
 

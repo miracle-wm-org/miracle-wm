@@ -42,7 +42,11 @@ Empty
 
             // The XKB keysym, numerically and by name.
             "xkb_keysym": 120,
-            "xkb_keysym_name": "x"
+            "xkb_keysym_name": "x",
+
+            // Whether a custom action may run while the session is locked.
+            // null for built-in actions, which never run on the lock screen.
+            "allow_on_lockscreen": false
         }
         // ...
     ]

@@ -50,11 +50,16 @@ enum class WindowManagerMode
     /// are refused as they are in the other non-normal modes.
     overview,
 
+    /// The session is locked. Only the lock screen may receive input, so every
+    /// command is refused, save for custom actions that are explicitly allowed
+    /// on the lock screen. Only an unlock may leave this mode.
+    locked,
+
     max
 };
 
 constexpr std::array<std::string, static_cast<int>(WindowManagerMode::max)> BINDING_MODE_STRINGS = {
-    "default", "resize", "dragging", "moving", "overview"
+    "default", "resize", "dragging", "moving", "overview", "locked"
 };
 
 class CompositorState

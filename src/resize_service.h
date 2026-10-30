@@ -40,6 +40,9 @@ public:
     bool handle_pointer_event(float x, float y, MirPointerAction action);
     void handle_request_resize(std::shared_ptr<WindowContainer> const& container, MirPointerAction action, MirResizeEdge edge, float x, float y);
 
+    /// Abandons a resize that is in progress, leaving the window as it is now.
+    void cancel();
+
 private:
     void stop();
 

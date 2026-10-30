@@ -105,7 +105,8 @@ public:
                 std::make_shared<DisplayConfig>(),
                 std::make_shared<ConfigObserverRegistrar>(),
                 miral::Magnifier(),
-                std::make_shared<SamplerRegistry>());
+                std::make_shared<SamplerRegistry>(),
+                std::make_shared<SessionLockObserverRegistrar>());
         };
     }
 
@@ -143,7 +144,8 @@ public:
                 std::make_shared<DisplayConfig>(),
                 std::make_shared<ConfigObserverRegistrar>(),
                 miral::Magnifier(),
-                std::make_shared<SamplerRegistry>());
+                std::make_shared<SamplerRegistry>(),
+                std::make_shared<SessionLockObserverRegistrar>());
         };
     }
 
@@ -180,7 +182,8 @@ public:
                 std::make_shared<DisplayConfig>(),
                 std::make_shared<ConfigObserverRegistrar>(),
                 miral::Magnifier(),
-                std::make_shared<SamplerRegistry>());
+                std::make_shared<SamplerRegistry>(),
+                std::make_shared<SessionLockObserverRegistrar>());
         };
     }
 
@@ -950,7 +953,8 @@ public:
                 std::make_shared<DisplayConfig>(),
                 std::make_shared<ConfigObserverRegistrar>(),
                 miral::Magnifier(),
-                std::make_shared<SamplerRegistry>());
+                std::make_shared<SamplerRegistry>(),
+                std::make_shared<SessionLockObserverRegistrar>());
             policy_ptr = policy.get();
             return policy;
         };
