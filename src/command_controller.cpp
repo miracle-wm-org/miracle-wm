@@ -652,8 +652,9 @@ bool CommandController::transfer_container_to_output(
     if (!target)
         return false;
 
+    // Note: [container] is deliberately not unfocused here. Mir still considers its window
+    // active, so selecting it again below would be a no-op that never re-focuses it.
     origin->delete_container(container);
-    state->unfocus_container(container);
 
     // Focusing the workspace selects whichever container it last had focused, so this
     // must happen before we graft and select [container].
