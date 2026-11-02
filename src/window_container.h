@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "container_effect.h"
+#include <atomic>
 #include <optional>
 
 namespace miracle
@@ -198,7 +199,8 @@ protected:
 
     miral::Window window_;
     bool resizable_ = true;
-    bool movable_ = true;
+    /// Plugins may change this at any time, including while the container is being moved.
+    std::atomic<bool> movable_ = true;
     std::optional<uint32_t> render_id_;
     uint32_t animation_handle_;
     ContainerEffect workspace_effect;

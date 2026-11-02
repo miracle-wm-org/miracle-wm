@@ -165,6 +165,8 @@ public:
     int32_t window_set_alpha(uint64_t window_internal, float alpha);
     int32_t window_request_focus(uint64_t window_internal);
     int32_t window_set_shader_id(uint64_t window_internal, int32_t shader_id_param);
+    /// Only plugin-managed windows carry a movable flag; returns -1 for any other window.
+    int32_t window_set_movable(uint64_t window_internal, bool movable);
 
     void set_plugin_userdata(uint32_t handle, std::string const& userdata_json);
     std::string const* get_plugin_userdata(uint32_t handle) const;

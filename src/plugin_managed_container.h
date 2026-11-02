@@ -87,7 +87,8 @@ public:
     bool is_focused() const override;
     bool is_fullscreen() const override;
     bool is_floatable() const override { return true; }
-    bool is_movable() const override { return true; }
+    bool is_movable() const override { return movable_; }
+    void set_movable(bool movable) { movable_ = movable; }
     bool is_maximized() const;
     bool select_next(Direction) override;
     bool pinned() const override;

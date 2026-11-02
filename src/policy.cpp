@@ -635,23 +635,28 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
     if (action == mir_pointer_action_button_down)
         overview_controller->break_tap();
 
-    // Select the output first
-    auto const focused = output_manager->focused();
-    for (auto const& output : output_manager->outputs())
+    // Select the output first. While moving, the move service decides when the cursor
+    // has crossed onto another output, as focusing that output's workspace here would
+    // steal focus from the moved container and end the move.
+    if (state->mode() != WindowManagerMode::moving)
     {
-        if (output->point_is_in_output(static_cast<int>(x), static_cast<int>(y)))
+        auto const focused = output_manager->focused();
+        for (auto const& output : output_manager->outputs())
         {
-            if (focused != output)
+            if (output->point_is_in_output(static_cast<int>(x), static_cast<int>(y)))
             {
-                if (focused)
-                    output_manager->unfocus(focused->id());
-                output_manager->focus(output->id());
-                if (auto const active = output->active())
+                if (focused != output)
                 {
-                    workspace_manager->request_focus(active->id());
+                    if (focused)
+                        output_manager->unfocus(focused->id());
+                    output_manager->focus(output->id());
+                    if (auto const active = output->active())
+                    {
+                        workspace_manager->request_focus(active->id());
+                    }
                 }
+                break;
             }
-            break;
         }
     }
 

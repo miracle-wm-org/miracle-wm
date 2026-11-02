@@ -428,6 +428,15 @@ impl Window {
         let r = unsafe { miracle_window_set_shader_id(self.internal as i64, id) };
         if r == 0 { Ok(()) } else { Err(()) }
     }
+
+    /// Set whether this window may be moved by the user.
+    ///
+    /// Only windows managed by this plugin can be changed. This may be called at any
+    /// time, including while the user is moving the window, in which case the move ends.
+    pub fn set_movable(&self, movable: bool) -> Result<(), ()> {
+        let r = unsafe { miracle_window_set_movable(self.internal as i64, movable as i32) };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
 }
 
 impl PartialEq for Window {

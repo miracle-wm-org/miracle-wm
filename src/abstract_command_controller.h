@@ -172,6 +172,14 @@ public:
 
     [[nodiscard]] virtual bool is_locked() const = 0;
     virtual void select_container(std::shared_ptr<Container> const&) = 0;
+
+    /// Moves [container] onto the active workspace of [output], focusing that
+    /// output and workspace and keeping [container] focused. The container's
+    /// position is left untouched, so that an in-progress move may continue.
+    virtual bool transfer_container_to_output(
+        std::shared_ptr<Container> const& container,
+        std::shared_ptr<AbstractOutput> const& output)
+        = 0;
     virtual void mark(
         std::vector<ContainerScope> const& scope,
         std::string const& mark,

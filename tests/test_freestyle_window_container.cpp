@@ -25,6 +25,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
 
+#include "render_data_manager.h"
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -82,6 +84,33 @@ protected:
     std::shared_ptr<FreestyleWindowContainer> container_with_border;
     std::shared_ptr<FreestyleWindowContainer> container_without_border;
 };
+
+// ---- set_workspace ----
+
+TEST_F(FreestyleWindowContainerTest, SetWorkspaceOnAnotherOutputUpdatesRenderOutputArea)
+{
+    // The renderer clips and culls windows by their stored output area, so moving to a
+    // workspace on another output must update it.
+    static geom::Rectangle const other_area {
+        { 1920, 0    },
+        { 1920, 1080 }
+    };
+    auto const other_output = std::make_shared<NiceMock<test::MockOutput>>();
+    auto const other_workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
+    ON_CALL(*other_output, get_area()).WillByDefault(ReturnRef(other_area));
+    ON_CALL(*other_workspace, get_output()).WillByDefault(Return(other_output));
+
+    container_with_border->set_workspace(other_workspace);
+
+    uint64_t generation = 0;
+    std::vector<RenderData> data;
+    state->render_data_manager()->copy_if_changed(generation, data);
+    auto const moved = std::ranges::count_if(data, [](RenderData const& d)
+    {
+        return d.output_area == other_area;
+    });
+    EXPECT_EQ(moved, 1);
+}
 
 // ---- needs_outline ----
 
