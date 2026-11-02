@@ -637,6 +637,32 @@ void CommandController::select_container(std::shared_ptr<Container> const& conta
     }
 }
 
+bool CommandController::transfer_container_to_output(
+    std::shared_ptr<Container> const& container,
+    std::shared_ptr<AbstractOutput> const& output)
+{
+    if (!container || !output)
+        return false;
+
+    auto const origin = container->get_output();
+    if (!origin || origin == output)
+        return false;
+
+    auto const target = output->active();
+    if (!target)
+        return false;
+
+    origin->delete_container(container);
+    state->unfocus_container(container);
+
+    // Focusing the workspace selects whichever container it last had focused, so this
+    // must happen before we graft and select [container].
+    workspace_manager->request_focus(target->id());
+    output->graft(container);
+    select_container(container);
+    return true;
+}
+
 bool CommandController::try_select(std::vector<ContainerScope> const& scope)
 {
     if (state->mode() != WindowManagerMode::normal)

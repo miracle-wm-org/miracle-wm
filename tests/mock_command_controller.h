@@ -99,6 +99,7 @@ namespace test
         MOCK_METHOD(void, unlock, (), (override));
         MOCK_METHOD(bool, is_locked, (), (const, override));
         MOCK_METHOD(void, select_container, (std::shared_ptr<Container> const&), (override));
+        MOCK_METHOD(bool, transfer_container_to_output, (std::shared_ptr<Container> const&, std::shared_ptr<AbstractOutput> const&), (override));
         MOCK_METHOD(void, mark, (std::vector<ContainerScope> const&, std::string const&, bool, bool), (override));
         MOCK_METHOD(void, unmark, (std::vector<ContainerScope> const&, std::string const&), (override));
         MOCK_METHOD(void, unmark_all, (std::vector<ContainerScope> const&), (override));

@@ -124,6 +124,9 @@ public:
     void unlock() override;
     [[nodiscard]] bool is_locked() const override;
     void select_container(std::shared_ptr<Container> const&) override;
+    bool transfer_container_to_output(
+        std::shared_ptr<Container> const& container,
+        std::shared_ptr<AbstractOutput> const& output) override;
     void mark(
         std::vector<ContainerScope> const& scope,
         std::string const& mark,

@@ -30,6 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "stub_window_controller.h"
 #include "workspace_manager.h"
 #include "workspace_observer.h"
+#include <deque>
 #include <gtest/gtest.h>
 #include <mutex>
 
@@ -85,6 +86,58 @@ public:
     std::shared_ptr<CompositorState> state = std::make_shared<CompositorState>();
     std::shared_ptr<CommandController> command_controller;
     MoveService service;
+
+    struct TestOutput
+    {
+        std::shared_ptr<AbstractOutput> output;
+        test::MockOutput* mock;
+        std::shared_ptr<::testing::NiceMock<test::MockWorkspace>> workspace;
+    };
+
+    /// Creates an output covering [area] whose active workspace has id [workspace_id].
+    TestOutput add_output(int id, geom::Rectangle const& area, uint32_t workspace_id)
+    {
+        auto const& stored_area = areas.emplace_back(area);
+        auto* mock = new ::testing::NiceMock<test::MockOutput>();
+        auto const workspace = std::make_shared<::testing::NiceMock<test::MockWorkspace>>();
+        ON_CALL(*mock, id()).WillByDefault(::testing::Return(id));
+        ON_CALL(*mock, get_area()).WillByDefault(::testing::ReturnRef(stored_area));
+        ON_CALL(*mock, active()).WillByDefault(::testing::Return(workspace));
+        ON_CALL(*mock, get_workspaces())
+            .WillByDefault(::testing::Return(std::vector<std::shared_ptr<AbstractWorkspace>> { workspace }));
+        ON_CALL(*workspace, id()).WillByDefault(::testing::Return(workspace_id));
+
+        EXPECT_CALL(*output_factory, create(::testing::_, ::testing::_, ::testing::_))
+            .WillOnce(testing::Return(std::shared_ptr<AbstractOutput>(mock)));
+        auto const output = output_manager->create("Output" + std::to_string(id), id, area, *workspace_manager);
+        // Hold the output weakly, as the output holds the workspace.
+        ON_CALL(*workspace, get_output())
+            .WillByDefault([weak = std::weak_ptr<AbstractOutput>(output)]
+        {
+            return weak.lock();
+        });
+        return { output, mock, workspace };
+    }
+
+    /// Makes [container] report [owner] as its output, following it as it is grafted
+    /// onto the outputs in [outputs].
+    void track_output(
+        std::shared_ptr<test::MockContainer> const& container,
+        std::shared_ptr<AbstractOutput>& owner,
+        std::vector<TestOutput> const& outputs)
+    {
+        ON_CALL(*container, get_output()).WillByDefault(::testing::ReturnPointee(&owner));
+        for (auto const& o : outputs)
+        {
+            ON_CALL(*o.mock, graft(::testing::_))
+                .WillByDefault([&owner, weak = std::weak_ptr<AbstractOutput>(o.output)](auto const&)
+            {
+                owner = weak.lock();
+            });
+        }
+    }
+
+    std::deque<geom::Rectangle> areas;
 };
 
 namespace
@@ -104,13 +157,15 @@ TEST_F(MoveServiceTest, CanMoveMovableContainer)
     std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     ON_CALL(*mock_output, get_workspaces())
         .WillByDefault(::testing::Return(workspaces));
+    geom::Rectangle const output_area {
+        { 0,    0    },
+        { 1920, 1080 }
+    };
+    ON_CALL(*mock_output, get_area())
+        .WillByDefault(::testing::ReturnRef(output_area));
     EXPECT_CALL(*output_factory, create(::testing::_, ::testing::_, ::testing::_))
         .WillOnce(testing::Return(std::shared_ptr<AbstractOutput>(mock_output)));
-    output_manager->create("Output1", 1, {
-                                             { 0,    0    },
-                                             { 1920, 1080 }
-    },
-        *workspace_manager);
+    output_manager->create("Output1", 1, output_area, *workspace_manager);
 
     state->add(container);
     state->focus_container(container);
@@ -219,4 +274,155 @@ TEST_F(MoveServiceTest, MoveStopsWhenFocusMovesToAnotherContainer)
         mir_input_event_modifier_meta,
         mir_pointer_button_primary));
     EXPECT_EQ(state->mode(), WindowManagerMode::normal);
+}
+
+namespace
+{
+geom::Rectangle const left_area {
+    { 0,    0    },
+    { 1920, 1080 }
+};
+geom::Rectangle const right_area {
+    { 1920, 0    },
+    { 1920, 1080 }
+};
+int constexpr buffer = MoveService::output_switch_buffer;
+}
+
+class MoveServiceAcrossOutputsTest : public MoveServiceTest
+{
+public:
+    MoveServiceAcrossOutputsTest() :
+        left(add_output(1, left_area, 101)),
+        right(add_output(2, right_area, 102))
+    {
+        ON_CALL(*left.mock, intersect(::testing::_, ::testing::_))
+            .WillByDefault(::testing::Return(container));
+        ON_CALL(*container, get_logical_area())
+            .WillByDefault(::testing::Return(container_area));
+        owner = left.output;
+        track_output(container, owner, { left, right });
+
+        state->add(container);
+        state->focus_container(container);
+    }
+
+    bool press(float x, float y)
+    {
+        return service.handle_pointer_event(
+            *state, x, y, mir_pointer_action_button_down, mir_input_event_modifier_meta, mir_pointer_button_primary);
+    }
+
+    bool motion(float x, float y)
+    {
+        return service.handle_pointer_event(
+            *state, x, y, mir_pointer_action_motion, mir_input_event_modifier_meta, mir_pointer_button_primary);
+    }
+
+    bool release(float x, float y)
+    {
+        return service.handle_pointer_event(
+            *state, x, y, mir_pointer_action_button_up, mir_input_event_modifier_meta, 0);
+    }
+
+    TestOutput left;
+    TestOutput right;
+    std::shared_ptr<::testing::NiceMock<test::MockContainer>> container
+        = std::make_shared<::testing::NiceMock<test::MockContainer>>();
+    std::shared_ptr<AbstractOutput> owner;
+};
+
+TEST_F(MoveServiceAcrossOutputsTest, ContainerStaysOnOutputWhileCursorIsWithinBuffer)
+{
+    ASSERT_TRUE(press(1800, 150));
+
+    EXPECT_CALL(*left.mock, delete_container(::testing::_)).Times(0);
+    EXPECT_CALL(*right.mock, graft(::testing::_)).Times(0);
+    EXPECT_TRUE(motion(1920 + buffer - 1, 150));
+    EXPECT_EQ(owner, left.output);
+    EXPECT_EQ(state->mode(), WindowManagerMode::moving);
+}
+
+TEST_F(MoveServiceAcrossOutputsTest, ContainerTransfersOnceCursorPassesBuffer)
+{
+    ASSERT_TRUE(press(1800, 150));
+
+    std::shared_ptr<Container> const as_container = container;
+    EXPECT_CALL(*left.mock, delete_container(as_container));
+    EXPECT_CALL(*right.mock, graft(as_container));
+    EXPECT_TRUE(motion(1920 + buffer + 10, 150));
+
+    EXPECT_EQ(owner, right.output);
+    EXPECT_EQ(output_manager->focused(), right.output);
+    EXPECT_EQ(state->focused_container(), container);
+    EXPECT_EQ(state->mode(), WindowManagerMode::moving);
+}
+
+TEST_F(MoveServiceAcrossOutputsTest, MoveContinuesAfterTransfer)
+{
+    ASSERT_TRUE(press(1800, 150));
+
+    // The position is relative to where the move began, regardless of the output.
+    int const x = 1920 + buffer + 10;
+    EXPECT_CALL(*container, move_to(100 + (x - 1800), 100, false));
+    EXPECT_TRUE(motion(x, 150));
+    ASSERT_EQ(owner, right.output);
+
+    EXPECT_CALL(*container, move_to(100 + (x + 100 - 1800), 150, false));
+    EXPECT_TRUE(motion(x + 100, 200));
+}
+
+TEST_F(MoveServiceAcrossOutputsTest, ContainerDoesNotFlapAtBoundary)
+{
+    ASSERT_TRUE(press(1800, 150));
+
+    EXPECT_CALL(*right.mock, graft(::testing::_)).Times(1);
+    EXPECT_CALL(*left.mock, graft(::testing::_)).Times(0);
+
+    EXPECT_TRUE(motion(1920 + buffer + 1, 150));
+    for (int i = 0; i < 5; i++)
+    {
+        EXPECT_TRUE(motion(1920 - buffer + 1, 150));
+        EXPECT_TRUE(motion(1920 + buffer - 1, 150));
+    }
+    EXPECT_EQ(owner, right.output);
+}
+
+TEST_F(MoveServiceAcrossOutputsTest, ContainerReturnsOnceCursorPassesBufferOnOriginalOutput)
+{
+    ASSERT_TRUE(press(1800, 150));
+    EXPECT_TRUE(motion(1920 + buffer + 1, 150));
+    ASSERT_EQ(owner, right.output);
+
+    EXPECT_CALL(*left.mock, graft(::testing::_));
+    EXPECT_TRUE(motion(1920 - buffer - 1, 150));
+    EXPECT_EQ(owner, left.output);
+}
+
+TEST_F(MoveServiceAcrossOutputsTest, ReleasingWithinBufferTransfersToOutputUnderCursor)
+{
+    ASSERT_TRUE(press(1800, 150));
+    EXPECT_TRUE(motion(1920 + 5, 150));
+    ASSERT_EQ(owner, left.output);
+
+    EXPECT_CALL(*right.mock, graft(::testing::_));
+    release(1920 + 5, 150);
+    EXPECT_EQ(owner, right.output);
+    EXPECT_EQ(state->mode(), WindowManagerMode::normal);
+}
+
+TEST_F(MoveServiceAcrossOutputsTest, MoveEndsWhenMovabilityIsRevoked)
+{
+    ASSERT_TRUE(press(1800, 150));
+
+    ON_CALL(*container, is_movable()).WillByDefault(::testing::Return(false));
+    EXPECT_CALL(*container, move_to(::testing::_, ::testing::_, ::testing::_)).Times(0);
+    EXPECT_CALL(*right.mock, graft(::testing::_)).Times(0);
+
+    EXPECT_FALSE(motion(1920 + buffer + 10, 150));
+    EXPECT_EQ(state->mode(), WindowManagerMode::normal);
+    EXPECT_EQ(owner, left.output);
+
+    // Later motion does not resume the move.
+    EXPECT_FALSE(motion(1920 + buffer + 20, 150));
 }
