@@ -267,9 +267,10 @@ bool Animation::is_being_removed() const
 bool Animation::tick(float dt)
 {
     runtime_seconds += dt;
+    auto const builtin = evaluate_built_in();
     if (plugin_manager)
     {
-        auto const maybe_frame_result = plugin_manager->animate(data_, runtime_seconds);
+        auto const maybe_frame_result = plugin_manager->animate(data_, runtime_seconds, to_plugin_frame_result(builtin));
         if (maybe_frame_result)
         {
             auto const frame_result = maybe_frame_result.value();
@@ -309,20 +310,58 @@ bool Animation::tick(float dt)
         }
     }
 
-    float const t = (runtime_seconds / definition_.duration_seconds);
-    if (runtime_seconds >= definition_.duration_seconds)
-    {
+    on_tick(builtin);
+    // A built-in that completes early (e.g. `disabled`) must still land on the destination.
+    if (builtin.is_complete && runtime_seconds < definition_.duration_seconds)
         on_tick(finish());
-        return true;
-    }
+    return builtin.is_complete;
+}
 
+AnimationFrameResult Animation::evaluate_built_in() const
+{
+    if (runtime_seconds >= definition_.duration_seconds)
+        return finish();
+
+    float const t = (runtime_seconds / definition_.duration_seconds);
     AnimationFrameResult result;
     for (auto const& builtin_def : definition_.data)
         result = tick_built_in(builtin_def, t).merge(result);
-    on_tick(result);
-    if (result.is_complete)
-        on_tick(finish());
-    return result.is_complete;
+    return result;
+}
+
+miracle_plugin_animation_frame_result_t Animation::to_plugin_frame_result(AnimationFrameResult const& result)
+{
+    auto const pack = [](geom::Rectangle const& r, float* out)
+    {
+        out[0] = static_cast<float>(r.top_left.x.as_int());
+        out[1] = static_cast<float>(r.top_left.y.as_int());
+        out[2] = static_cast<float>(r.size.width.as_value());
+        out[3] = static_cast<float>(r.size.height.as_value());
+    };
+
+    miracle_plugin_animation_frame_result_t out {};
+    out.completed = result.is_complete ? 1 : 0;
+    if (result.rectangle)
+    {
+        out.has_area = 1;
+        pack(*result.rectangle, out.area);
+    }
+    if (result.transform)
+    {
+        out.has_transform = 1;
+        std::memcpy(out.transform, &*result.transform, sizeof(out.transform));
+    }
+    if (result.opacity)
+    {
+        out.has_opacity = 1;
+        out.opacity = *result.opacity;
+    }
+    if (result.clip_area)
+    {
+        out.has_clip_area = 1;
+        pack(*result.clip_area, out.clip_area);
+    }
+    return out;
 }
 
 AnimationFrameResult Animation::finish() const
@@ -330,7 +369,7 @@ AnimationFrameResult Animation::finish() const
     return { true, data_.area_end, glm::mat4(1.f), data_.opacity_end };
 }
 
-AnimationFrameResult Animation::tick_built_in(BuiltInAnimationDefinition const& builtin_def, float t)
+AnimationFrameResult Animation::tick_built_in(BuiltInAnimationDefinition const& builtin_def, float t) const
 {
     switch (builtin_def.type)
     {

@@ -168,6 +168,40 @@ void miracle::WindowContainer::set_window_shader_id(std::optional<uint8_t> shade
     rerender(true);
 }
 
+void miracle::WindowContainer::set_window_geometry_shader_id(std::optional<uint8_t> geometry_shader_id)
+{
+    if (render_id_.has_value())
+    {
+        if (auto const rdm_locked = rdm.lock())
+            rdm_locked->geometry_shader_id_change(render_id_.value(), geometry_shader_id);
+    }
+    request_redraw();
+}
+
+bool miracle::WindowContainer::set_window_shader_uniform(ShaderUniform const& uniform)
+{
+    if (render_id_.has_value())
+    {
+        if (auto const rdm_locked = rdm.lock())
+        {
+            if (!rdm_locked->shader_uniform_set(render_id_.value(), uniform))
+                return false;
+        }
+    }
+    request_redraw();
+    return true;
+}
+
+void miracle::WindowContainer::clear_window_shader_uniform(std::optional<std::string> const& name)
+{
+    if (render_id_.has_value())
+    {
+        if (auto const rdm_locked = rdm.lock())
+            rdm_locked->shader_uniform_clear(render_id_.value(), name);
+    }
+    request_redraw();
+}
+
 bool miracle::WindowContainer::can_animate()
 {
     return true;
@@ -260,6 +294,14 @@ void miracle::WindowContainer::set_occlusion_bypass(bool bypass)
 glm::mat4 miracle::WindowContainer::occlusion_bypass_transform()
 {
     return OCCLUSION_BYPASS;
+}
+
+void miracle::WindowContainer::request_redraw() const
+{
+    // Re-applying the current alpha notifies the surface observers
+    // unconditionally, which marks the scene as damaged.
+    if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
+        surface->set_alpha(surface->alpha());
 }
 
 void miracle::WindowContainer::rerender(bool force)

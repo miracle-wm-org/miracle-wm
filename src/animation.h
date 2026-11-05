@@ -130,8 +130,14 @@ public:
     [[nodiscard]] virtual bool is_being_removed() const;
     bool tick(float dt);
 
+    /// Converts \p result into the form handed across the plugin ABI.
+    static miracle_plugin_animation_frame_result_t to_plugin_frame_result(AnimationFrameResult const& result);
+
 private:
-    AnimationFrameResult tick_built_in(BuiltInAnimationDefinition const& builtin_def, float t);
+    /// Evaluates the configured built-in definition for the current runtime,
+    /// returning #finish once the duration has elapsed.
+    AnimationFrameResult evaluate_built_in() const;
+    AnimationFrameResult tick_built_in(BuiltInAnimationDefinition const& builtin_def, float t) const;
     AnimationFrameResult finish() const;
 
     float runtime_seconds = 0.f;

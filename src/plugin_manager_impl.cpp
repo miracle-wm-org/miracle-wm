@@ -22,8 +22,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "container.h"
 #include "plugin_bridge.h"
+#include "shader_uniform.h"
 
 #include <algorithm>
+#include <array>
 #include <cstring>
 #include <mir/log.h>
 #include <miral/toolkit_event.h>
@@ -766,6 +768,151 @@ WasmEdge_FunctionTypeContext* create_func_type(
         returns.data(), static_cast<uint32_t>(returns.size()));
 }
 
+WasmEdge_Result host_miracle_window_set_geometry_shader_id(
+    void* data,
+    WasmEdge_CallingFrameContext const*,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int64_t const window_internal = WasmEdge_ValueGetI64(params[0]);
+    int32_t const geometry_shader_id = WasmEdge_ValueGetI32(params[1]);
+    returns[0] = WasmEdge_ValueGenI32(
+        bridge->window_set_geometry_shader_id(static_cast<uint64_t>(window_internal), geometry_shader_id));
+    return WasmEdge_Result_Success;
+}
+
+WasmEdge_Result host_miracle_window_set_shader_uniform(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame, "host_miracle_window_set_shader_uniform");
+    if (!memory)
+        return WasmEdge_Result_Fail;
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int64_t const window_internal = WasmEdge_ValueGetI64(params[0]);
+    int32_t const name_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const name_len = WasmEdge_ValueGetI32(params[2]);
+    uint32_t const type_param = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[3]));
+    int32_t const value_ptr = WasmEdge_ValueGetI32(params[4]);
+
+    auto const type = ShaderUniform::type_from(type_param);
+    if (!type || name_len <= 0 || name_len > static_cast<int32_t>(ShaderUniform::max_name_length))
+    {
+        returns[0] = WasmEdge_ValueGenI32(-1);
+        return WasmEdge_Result_Success;
+    }
+
+    auto const* const name = WasmEdge_MemoryInstanceGetPointerConst(
+        memory, static_cast<uint32_t>(name_ptr), static_cast<uint32_t>(name_len));
+    // Copied rather than read in place, as the plugin need not align the value.
+    std::array<std::byte, 16 * sizeof(float)> value;
+    auto const r = WasmEdge_MemoryInstanceGetData(
+        memory,
+        reinterpret_cast<uint8_t*>(value.data()),
+        static_cast<uint32_t>(value_ptr),
+        static_cast<uint32_t>(ShaderUniform::value_size(*type)));
+    if (!name || !WasmEdge_ResultOK(r))
+    {
+        mir::log_error("host_miracle_window_set_shader_uniform: name or value is out of bounds");
+        returns[0] = WasmEdge_ValueGenI32(-1);
+        return WasmEdge_Result_Success;
+    }
+
+    returns[0] = WasmEdge_ValueGenI32(bridge->window_set_shader_uniform(
+        static_cast<uint64_t>(window_internal),
+        std::string_view(reinterpret_cast<char const*>(name), static_cast<size_t>(name_len)),
+        type_param,
+        value.data()));
+    return WasmEdge_Result_Success;
+}
+
+WasmEdge_Result host_miracle_window_clear_shader_uniform(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame, "host_miracle_window_clear_shader_uniform");
+    if (!memory)
+        return WasmEdge_Result_Fail;
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int64_t const window_internal = WasmEdge_ValueGetI64(params[0]);
+    int32_t const name_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const name_len = WasmEdge_ValueGetI32(params[2]);
+
+    // A zero length clears every uniform. In WASM, NULL is a valid offset, so
+    // only the length is checked.
+    std::optional<std::string_view> name;
+    if (name_len != 0)
+    {
+        auto const* const bytes = name_len < 0
+            ? nullptr
+            : WasmEdge_MemoryInstanceGetPointerConst(memory, static_cast<uint32_t>(name_ptr), static_cast<uint32_t>(name_len));
+        if (!bytes)
+        {
+            mir::log_error("host_miracle_window_clear_shader_uniform: name is out of bounds");
+            returns[0] = WasmEdge_ValueGenI32(-1);
+            return WasmEdge_Result_Success;
+        }
+        name = std::string_view(reinterpret_cast<char const*>(bytes), static_cast<size_t>(name_len));
+    }
+
+    returns[0] = WasmEdge_ValueGenI32(
+        bridge->window_clear_shader_uniform(static_cast<uint64_t>(window_internal), name));
+    return WasmEdge_Result_Success;
+}
+
+WasmEdge_Result host_miracle_cancel_custom_animation(
+    void* data,
+    WasmEdge_CallingFrameContext const*,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int32_t const plugin_handle = WasmEdge_ValueGetI32(params[0]);
+    int32_t const animation_id = WasmEdge_ValueGetI32(params[1]);
+    returns[0] = WasmEdge_ValueGenI32(bridge->cancel_custom_animation(
+        static_cast<uint32_t>(plugin_handle), static_cast<uint32_t>(animation_id)));
+    return WasmEdge_Result_Success;
+}
+
+WasmEdge_Result host_miracle_register_window_geometry_shader(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame, "host_miracle_register_window_geometry_shader");
+    if (!memory)
+        return WasmEdge_Result_Fail;
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int32_t const plugin_handle = WasmEdge_ValueGetI32(params[0]);
+    int32_t const source_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const source_len = WasmEdge_ValueGetI32(params[2]);
+
+    auto const* const source = source_len < 0
+        ? nullptr
+        : WasmEdge_MemoryInstanceGetPointerConst(memory, static_cast<uint32_t>(source_ptr), static_cast<uint32_t>(source_len));
+    if (!source)
+    {
+        mir::log_error("host_miracle_register_window_geometry_shader: source is out of bounds");
+        returns[0] = WasmEdge_ValueGenI32(-1);
+        return WasmEdge_Result_Success;
+    }
+
+    auto const id = bridge->register_window_geometry_shader(
+        std::string(reinterpret_cast<char const*>(source), static_cast<size_t>(source_len)),
+        static_cast<uint32_t>(plugin_handle));
+    returns[0] = WasmEdge_ValueGenI32(static_cast<int32_t>(id));
+    return WasmEdge_Result_Success;
+}
+
 WasmEdge_Result host_miracle_queue_custom_animation(
     void* data,
     WasmEdge_CallingFrameContext const* frame,
@@ -1101,6 +1248,26 @@ void PluginManagerImpl::Self::create_host_module()
         create_func_type({ i32, i32, i32 }, { i32 }),
         host_miracle_queue_custom_animation, &host_fn_data);
 
+    add_host_function(module, "miracle_window_set_geometry_shader_id",
+        create_func_type({ i64, i32 }, { i32 }),
+        host_miracle_window_set_geometry_shader_id, bridge.get());
+
+    add_host_function(module, "miracle_window_set_shader_uniform",
+        create_func_type({ i64, i32, i32, i32, i32 }, { i32 }),
+        host_miracle_window_set_shader_uniform, bridge.get());
+
+    add_host_function(module, "miracle_window_clear_shader_uniform",
+        create_func_type({ i64, i32, i32 }, { i32 }),
+        host_miracle_window_clear_shader_uniform, bridge.get());
+
+    add_host_function(module, "miracle_cancel_custom_animation",
+        create_func_type({ i32, i32 }, { i32 }),
+        host_miracle_cancel_custom_animation, bridge.get());
+
+    add_host_function(module, "miracle_register_window_geometry_shader",
+        create_func_type({ i32, i32, i32 }, { i32 }),
+        host_miracle_register_window_geometry_shader, bridge.get());
+
     add_host_function(module, "miracle_register_window_sample_to_rgba",
         create_func_type({ i32, i32, i32 }, { i32 }),
         host_miracle_register_window_sample_to_rgba, bridge.get());
@@ -1236,7 +1403,9 @@ void PluginManagerImpl::unload_all()
 }
 
 std::optional<miracle_plugin_animation_frame_result_t> PluginManagerImpl::animate(
-    AnimationData const& data, float runtime_seconds)
+    AnimationData const& data,
+    float runtime_seconds,
+    miracle_plugin_animation_frame_result_t const& builtin)
 {
     std::lock_guard lock(mutex_);
     if (self->loaded_modules.empty())
@@ -1295,6 +1464,8 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManagerImpl::animat
         frame_data.has_workspace = 0;
         frame_data.workspace_name[0] = '\0';
     }
+    frame_data.has_builtin = 1;
+    frame_data.builtin = builtin;
 
     for (auto const& target_module : self->loaded_modules)
     {

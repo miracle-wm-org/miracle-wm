@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_WM_PROGRAM_FACTORY_H
 
 #include "sampler_registry.h"
+#include "shader_uniform.h"
 
 #include <GLES2/gl2.h>
 #include <array>
@@ -27,6 +28,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/graphics/program.h>
 #include <mir/graphics/program_factory.h>
 #include <mutex>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <variant>
 #include <vector>
 
@@ -70,6 +74,36 @@ private:
 using ProgramHandle = GLHandle<&glDeleteProgram>;
 using ShaderHandle = GLHandle<&glDeleteShader>;
 
+/// Uploads plugin-owned [ShaderUniform]s to a single program.
+///
+/// GL keeps uniform values per program, and a program is shared by every window
+/// drawn with it. A uniform that one window sets would otherwise leak into the
+/// next window drawn with the same program, so [upload] zeroes any uniform that
+/// the previous upload set but the current one does not.
+class CustomUniforms
+{
+public:
+    explicit CustomUniforms(GLuint program_id);
+
+    /// Upload \p uniforms to the program, which must be in use. Uniforms the
+    /// program does not declare, or declares with a different type, are skipped.
+    void upload(std::vector<ShaderUniform> const& uniforms) const;
+
+private:
+    struct Location
+    {
+        GLint location;
+        GLenum type;
+    };
+
+    /// The program's active, non-array uniforms of a type a [ShaderUniform] can hold.
+    std::unordered_map<std::string, Location> locations;
+    /// The uniforms set by the previous [upload].
+    mutable std::vector<Location> uploaded;
+    /// Names already warned about, so that a mismatch is only logged once.
+    mutable std::unordered_set<std::string> mismatched;
+};
+
 struct ProgramData
 {
     GLuint id = 0;
@@ -91,17 +125,30 @@ struct ProgramData
     GLint border_color_uniform = -1;
     GLint border_width_uniform = -1;
     GLint border_radius_uniform = -1;
+    /// Uniforms that only programs with a geometry stage have.
+    GLint world_to_clip_uniform = -1;
+    GLint window_rect_uniform = -1;
+    GLint window_size_uniform = -1;
+    CustomUniforms custom_uniforms;
     mutable long long last_used_frameno = 0;
 
-    ProgramData(GLuint program_id);
+    /// \param has_geometry_stage whether the program has a geometry stage, in
+    ///        which case the screen transforms are folded into `u_world_to_clip`.
+    ProgramData(GLuint program_id, bool has_geometry_stage = false);
 };
 
 class Program : public mir::graphics::gl::Program
 {
 public:
-    explicit Program(ProgramHandle&& program);
+    explicit Program(ProgramHandle&& program, bool has_geometry_stage = false);
     ProgramHandle program_handle;
     ProgramData data;
+
+    /// The sampler sources the program was built from, kept so that a variant
+    /// with a geometry stage can be built from the same sampler later. Empty
+    /// for programs that are not window content programs (e.g. the border).
+    std::string extension_fragment;
+    std::string sample_fragment;
 };
 
 /// Lightweight program for intermediate (non-final) passes that don't need
@@ -116,6 +163,7 @@ struct PassProgram
     GLint tex_uniform = -1;
     GLint tex_source_uniform = -1;
     GLint surface_size_uniform = -1;
+    CustomUniforms custom_uniforms;
 };
 
 class ProgramFactory : public mir::graphics::gl::ProgramFactory
@@ -126,6 +174,9 @@ public:
     /// Creates a fragment shader for the given [id] that appends
     /// the [extension_fragment] to the top, and expects [fragment_fragment]
     /// to implement [sample_to_rgba] for that texture.
+    ///
+    /// If the \p id is already available, we return that cached
+    /// version of the shader instead.
     mir::graphics::gl::Program& compile_fragment_shader(
         void const* id,
         char const* extension_fragment,
@@ -152,9 +203,33 @@ public:
     /// Retrieves the border shader
     Program const& border() const { return border_program; }
 
-    /// Register the sampler method and return its unique identifier.
-    /// This returned id may be used later in "resolve" to get the shader
+    /// Whether the GL context supports geometry shaders (OpenGL ES 3.2+).
+    bool geometry_shaders_supported() const { return geometry_shaders_supported_; }
+
+    /// Returns a variant of \p base (a window content program, or [border])
+    /// with the registered geometry shader \p geometry_shader_id inserted
+    /// between its vertex and fragment stages.
+    ///
+    /// \returns the program, or nullptr if geometry shaders are unsupported,
+    ///          the shader is not registered, or it failed to build. Callers
+    ///          should draw with \p base instead.
+    Program const* geometry_variant(Program const& base, uint8_t geometry_shader_id);
+
 private:
+    struct GeometryProgram
+    {
+        // The id of the base program to which this one is connected. This is a program
+        // that - by itself - does not have a geometry shader.
+        GLuint base;
+
+        // The id of the geometry shader program.
+        uint8_t geometry_shader_id;
+
+        /// Null when the program failed to build, so it is not retried every frame.
+        std::unique_ptr<Program> program;
+    };
+
+    static bool detect_geometry_support();
     static GLuint compile_shader(GLenum type, GLchar const* src);
     static ProgramHandle link_shader(
         ShaderHandle const& vertex_shader,
@@ -163,6 +238,7 @@ private:
     PassProgram& compile_intermediate_pass(void const* key, char const* sampler_glsl);
 
     std::shared_ptr<SamplerRegistry> sampler_registry_;
+    bool const geometry_shaders_supported_;
     ShaderHandle const vertex_shader;
     ShaderHandle const pass_vertex_shader;
     ShaderHandle const border_vertex_shader;
@@ -171,6 +247,7 @@ private:
     Program const border_program;
     std::vector<std::pair<void const*, std::unique_ptr<Program>>> programs;
     std::vector<std::pair<void const*, std::unique_ptr<PassProgram>>> pass_programs;
+    std::vector<GeometryProgram> geometry_programs;
     // GL requires us to synchronise multi-threaded access to the shader APIs.
     std::mutex compilation_mutex;
 };

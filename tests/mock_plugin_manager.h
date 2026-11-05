@@ -33,7 +33,7 @@ namespace test
         MOCK_METHOD(PluginLoadResult, load_wasm_module, (std::string const&, std::string const&), (override));
         MOCK_METHOD(bool, unload_wasm_module, (PluginHandle), (override));
         MOCK_METHOD(void, unload_all, (), (override));
-        MOCK_METHOD((std::optional<miracle_plugin_animation_frame_result_t>), animate, (AnimationData const&, float), (override));
+        MOCK_METHOD((std::optional<miracle_plugin_animation_frame_result_t>), animate, (AnimationData const&, float, miracle_plugin_animation_frame_result_t const&), (override));
         MOCK_METHOD(void, custom_animate, (PluginHandle, uint32_t, float, float), (override));
         MOCK_METHOD((std::optional<PluginWindowPlacement>), place_new_window, (miral::ApplicationInfo const&, miral::WindowSpecification const&, uint64_t), (override));
         MOCK_METHOD(void, window_deleted, (miral::WindowInfo const&), (override));

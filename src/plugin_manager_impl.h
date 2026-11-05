@@ -46,7 +46,9 @@ public:
     bool unload_wasm_module(PluginHandle handle) override;
     void unload_all() override;
     std::optional<miracle_plugin_animation_frame_result_t> animate(
-        AnimationData const& data, float runtime_seconds) override;
+        AnimationData const& data,
+        float runtime_seconds,
+        miracle_plugin_animation_frame_result_t const& builtin) override;
     void custom_animate(PluginHandle plugin_handle, uint32_t animation_id, float dt, float elapsed_seconds) override;
     std::optional<PluginWindowPlacement> place_new_window(
         miral::ApplicationInfo const& app_info,

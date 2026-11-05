@@ -112,6 +112,55 @@ void RenderDataManager::shader_id_change(RenderDataManagerId id, std::optional<u
     }
 }
 
+void RenderDataManager::geometry_shader_id_change(RenderDataManagerId id, std::optional<uint8_t> geometry_shader_id)
+{
+    std::lock_guard lock(mutex);
+    if (auto* const data = find_by_id(render_data, id))
+    {
+        data->geometry_shader_id = geometry_shader_id;
+        ++generation;
+    }
+}
+
+bool RenderDataManager::shader_uniform_set(RenderDataManagerId id, ShaderUniform const& uniform)
+{
+    std::lock_guard lock(mutex);
+    auto* const data = find_by_id(render_data, id);
+    if (!data)
+        return true;
+
+    auto& uniforms = data->shader_uniforms;
+    auto const it = std::find_if(uniforms.begin(), uniforms.end(), [&](ShaderUniform const& existing)
+    {
+        return existing.name == uniform.name;
+    });
+    if (it != uniforms.end())
+        *it = uniform;
+    else if (uniforms.size() < ShaderUniform::max_per_window)
+        uniforms.push_back(uniform);
+    else
+        return false;
+
+    ++generation;
+    return true;
+}
+
+void RenderDataManager::shader_uniform_clear(RenderDataManagerId id, std::optional<std::string> const& name)
+{
+    std::lock_guard lock(mutex);
+    if (auto* const data = find_by_id(render_data, id))
+    {
+        if (name)
+            std::erase_if(data->shader_uniforms, [&](ShaderUniform const& existing)
+            {
+                return existing.name == *name;
+            });
+        else
+            data->shader_uniforms.clear();
+        ++generation;
+    }
+}
+
 void RenderDataManager::reset_shaders(std::vector<uint8_t> const& ids)
 {
     std::lock_guard lock(mutex);
@@ -120,6 +169,11 @@ void RenderDataManager::reset_shaders(std::vector<uint8_t> const& ids)
         if (data.shader_id && std::find(ids.begin(), ids.end(), *data.shader_id) != ids.end())
         {
             data.shader_id = std::nullopt;
+            ++generation;
+        }
+        if (data.geometry_shader_id && std::find(ids.begin(), ids.end(), *data.geometry_shader_id) != ids.end())
+        {
+            data.geometry_shader_id = std::nullopt;
             ++generation;
         }
     }

@@ -20,8 +20,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "container_effect.h"
+#include "shader_uniform.h"
 #include <atomic>
 #include <optional>
+#include <string>
 
 namespace miracle
 {
@@ -133,6 +135,25 @@ public:
     virtual void set_window_alpha(float alpha);
     virtual void set_window_shader_id(std::optional<uint8_t> shader_id);
 
+    /// Set (or, with std::nullopt, clear) the per-window geometry shader.
+    ///
+    /// Safe to call from any thread: only the render data is touched, and the
+    /// compositor is asked to redraw the surface.
+    void set_window_geometry_shader_id(std::optional<uint8_t> geometry_shader_id);
+
+    /// Set a plugin-owned uniform on every program that draws this window,
+    /// replacing any uniform of the same name.
+    ///
+    /// Safe to call from any thread, like [set_window_geometry_shader_id].
+    ///
+    /// \returns false if the window already has [ShaderUniform::max_per_window] uniforms
+    bool set_window_shader_uniform(ShaderUniform const& uniform);
+
+    /// Clear the uniform called \p name, or every uniform if \p name is std::nullopt.
+    ///
+    /// Safe to call from any thread, like [set_window_geometry_shader_id].
+    void clear_window_shader_uniform(std::optional<std::string> const& name);
+
     /// Retrieve the visible area of the container.
     ///
     /// This area may be different from the logical area and be used to clip it.
@@ -194,6 +215,10 @@ protected:
     /// \param force push even if nothing changed, e.g. to make the compositor
     ///              redraw the surface for reasons the surface can't see
     void rerender(bool force = false);
+
+    /// Marks the surface as damaged without touching any of the cached
+    /// transform/alpha state, so it is safe off the window-manager thread.
+    void request_redraw() const;
     std::weak_ptr<RenderDataManager> rdm;
     std::shared_ptr<WindowController> window_controller_;
 

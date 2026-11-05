@@ -242,7 +242,7 @@ impl TryFrom<bindings::MirDepthLayer> for DepthLayer {
 /// Read-only fields describe the window at the time of the callback. Setter
 /// methods (`set_state`, `set_rectangle`, etc.) are available for windows
 /// returned by [`crate::plugin::managed_windows`].
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Window {
     /// The type of this window.
     pub window_type: WindowType,
@@ -429,6 +429,52 @@ impl Window {
         if r == 0 { Ok(()) } else { Err(()) }
     }
 
+    /// Set the geometry shader applied to this window.
+    ///
+    /// Pass `Some(id)` with the ID returned by
+    /// [`crate::plugin::register_window_geometry_shader`] to activate the shader, or
+    /// `None` to clear it and revert to the window's plain geometry.
+    pub fn set_geometry_shader(&self, geometry_shader_id: Option<u8>) -> Result<(), ()> {
+        let id = geometry_shader_id.map(|id| id as i32).unwrap_or(-1);
+        let r = unsafe { miracle_window_set_geometry_shader_id(self.internal as i64, id) };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
+
+    /// Set the uniform called `name` on every shader that draws this window, replacing any
+    /// previous value of the same name. Setting it redraws the window.
+    ///
+    /// Shaders that do not declare `name`, or that declare it with another type, ignore it.
+    /// A window may have at most 16 uniforms, and names may be at most 64 bytes long. Names
+    /// that the compositor sets itself (e.g. `u_world_to_clip`, `alpha`) and those starting
+    /// with `gl_` are rejected.
+    pub fn set_shader_uniform(&self, name: &str, value: ShaderUniform) -> Result<(), ()> {
+        let (ty, values) = value.to_raw();
+        let r = unsafe {
+            miracle_window_set_shader_uniform(
+                self.internal as i64,
+                name.as_ptr() as i32,
+                name.len() as i32,
+                ty as i32,
+                values.as_ptr() as i32,
+            )
+        };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
+
+    /// Clear the uniform called `name`, or every uniform if `name` is `None`. Shaders that
+    /// read a cleared uniform see zero. Clearing redraws the window.
+    pub fn clear_shader_uniform(&self, name: Option<&str>) -> Result<(), ()> {
+        let name = name.unwrap_or("");
+        let r = unsafe {
+            miracle_window_clear_shader_uniform(
+                self.internal as i64,
+                name.as_ptr() as i32,
+                name.len() as i32,
+            )
+        };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
+
     /// Set whether this window may be moved by the user.
     ///
     /// Only windows managed by this plugin can be changed. This may be called at any
@@ -436,6 +482,57 @@ impl Window {
     pub fn set_movable(&self, movable: bool) -> Result<(), ()> {
         let r = unsafe { miracle_window_set_movable(self.internal as i64, movable as i32) };
         if r == 0 { Ok(()) } else { Err(()) }
+    }
+}
+
+/// The value of a uniform set with [`Window::set_shader_uniform`], named after its GLSL type.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ShaderUniform {
+    Float(f32),
+    Vec2([f32; 2]),
+    Vec3([f32; 3]),
+    Vec4([f32; 4]),
+    Int(i32),
+    /// A matrix in column-major order.
+    Mat4(Mat4),
+}
+
+impl ShaderUniform {
+    /// Returns the `miracle_shader_uniform_type` and the raw value that the host reads.
+    fn to_raw(self) -> (bindings::miracle_shader_uniform_type, [u32; 16]) {
+        let mut values = [0u32; 16];
+        let mut write = |floats: &[f32]| {
+            for (value, float) in values.iter_mut().zip(floats) {
+                *value = float.to_bits();
+            }
+        };
+        let ty = match self {
+            ShaderUniform::Float(x) => {
+                write(&[x]);
+                bindings::miracle_shader_uniform_type_miracle_shader_uniform_type_float
+            }
+            ShaderUniform::Vec2(v) => {
+                write(&v);
+                bindings::miracle_shader_uniform_type_miracle_shader_uniform_type_vec2
+            }
+            ShaderUniform::Vec3(v) => {
+                write(&v);
+                bindings::miracle_shader_uniform_type_miracle_shader_uniform_type_vec3
+            }
+            ShaderUniform::Vec4(v) => {
+                write(&v);
+                bindings::miracle_shader_uniform_type_miracle_shader_uniform_type_vec4
+            }
+            ShaderUniform::Mat4(m) => {
+                write(&m.to_cols_array());
+                bindings::miracle_shader_uniform_type_miracle_shader_uniform_type_mat4
+            }
+            ShaderUniform::Int(i) => {
+                values[0] = i as u32;
+                bindings::miracle_shader_uniform_type_miracle_shader_uniform_type_int
+            }
+        };
+        (ty, values)
     }
 }
 
