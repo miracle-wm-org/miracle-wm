@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container.h"
 #include "container_effect.h"
 #include "shader_uniform.h"
+#include <atomic>
 #include <optional>
 #include <string>
 
@@ -69,6 +70,10 @@ public:
     virtual bool move_to(Container& other) = 0;
     using Container::move_to; // un-hide Container::move_to(int, int, bool)
     virtual bool is_fullscreen() const = 0;
+    /// Returns true if this container may be toggled between floating and tiled.
+    virtual bool is_floatable() const = 0;
+    /// Returns true if this container may be moved by the user with the pointer.
+    virtual bool is_movable() const = 0;
     virtual bool drag_start() = 0;
     virtual bool drag_stop() = 0;
     virtual void drag(int x, int y) = 0;
@@ -219,7 +224,8 @@ protected:
 
     miral::Window window_;
     bool resizable_ = true;
-    bool movable_ = true;
+    /// Plugins may change this at any time, including while the container is being moved.
+    std::atomic<bool> movable_ = true;
     std::optional<uint32_t> render_id_;
     uint32_t animation_handle_;
     ContainerEffect workspace_effect;

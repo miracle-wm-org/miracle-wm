@@ -140,6 +140,12 @@ unsafe extern "C" {
     /// Returns 0 on success, -1 on error.
     pub fn miracle_window_clear_shader_uniform(window_internal: i64, name_ptr: i32, name_len: i32) -> i32;
 
+    /// Set whether a plugin-managed window may be moved by the user.
+    ///
+    /// Pass 0 for not movable, any other value for movable.
+    /// Returns 0 on success, -1 if the window is unknown or not plugin-managed.
+    pub fn miracle_window_set_movable(window_internal: i64, movable: i32) -> i32;
+
     /// Request a workspace by optional number and/or name.
     ///
     /// If a workspace with the given number or name already exists, it is returned.

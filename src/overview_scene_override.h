@@ -224,6 +224,9 @@ public:
     void handle_window_closed(miral::Window const& window) override;
     void handle_output_changed() override;
 
+    /// Tears the override down immediately, without an exit animation.
+    void cancel() override;
+
 private:
     OverviewSceneOverride(
         std::vector<Entry> entries,
@@ -350,8 +353,6 @@ private:
     void commit_workspace_and_exit();
 
     void begin_exit();
-    /// Tears the override down immediately, without an exit animation.
-    void cancel();
     /// Puts every workspace that [enter_workspaces] revealed back into hiding
     /// and hands focus back to whatever had it before the reveal.
     ///

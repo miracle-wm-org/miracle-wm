@@ -637,6 +637,33 @@ void CommandController::select_container(std::shared_ptr<Container> const& conta
     }
 }
 
+bool CommandController::transfer_container_to_output(
+    std::shared_ptr<Container> const& container,
+    std::shared_ptr<AbstractOutput> const& output)
+{
+    if (!container || !output)
+        return false;
+
+    auto const origin = container->get_output();
+    if (!origin || origin == output)
+        return false;
+
+    auto const target = output->active();
+    if (!target)
+        return false;
+
+    // Note: [container] is deliberately not unfocused here. Mir still considers its window
+    // active, so selecting it again below would be a no-op that never re-focuses it.
+    origin->delete_container(container);
+
+    // Focusing the workspace selects whichever container it last had focused, so this
+    // must happen before we graft and select [container].
+    workspace_manager->request_focus(target->id());
+    output->graft(container);
+    select_container(container);
+    return true;
+}
+
 bool CommandController::try_select(std::vector<ContainerScope> const& scope)
 {
     if (state->mode() != WindowManagerMode::normal)
@@ -843,6 +870,9 @@ bool CommandController::try_close_window(std::vector<ContainerScope> const& scop
 
 bool CommandController::quit()
 {
+    if (state->mode() == WindowManagerMode::locked)
+        return false;
+
     interface->quit();
     return true;
 }
@@ -1217,6 +1247,13 @@ bool CommandController::try_move_to_scratchpad(std::vector<ContainerScope> const
             continue;
         }
 
+        if (!window_container->is_floatable())
+        {
+            mir::log_error("try_move_to_scratchpad: only floatable windows can be moved to the scratchpad");
+            result = false;
+            continue;
+        }
+
         // Scratchpad windows are floating, so tiled windows must be floated first
         if (Container::as_leaf(window_container))
         {
@@ -1268,6 +1305,9 @@ bool CommandController::toggle_floating_internal(std::shared_ptr<Container> cons
 {
     if (auto const wc = Container::as_window_container(container))
     {
+        if (!wc->is_floatable())
+            return false;
+
         auto const focused_output = output_manager->focused();
         if (!focused_output)
             return false;
@@ -1886,6 +1926,8 @@ bool CommandController::can_set_layout() const
 
 bool CommandController::reload_config()
 {
+    if (state->mode() == WindowManagerMode::locked)
+        return false;
 
     config->reload();
     return true;
@@ -1893,8 +1935,36 @@ bool CommandController::reload_config()
 
 void CommandController::set_mode(WindowManagerMode mode)
 {
+    // Teardown that finishes after the session has locked (an overview outro,
+    // the end of a drag) must not drop us back into a mode that accepts input.
+    if (state->mode() == WindowManagerMode::locked)
+        return;
+
     state->mode(mode);
     mode_observer_registrar->advise_changed(state->mode());
+}
+
+void CommandController::lock()
+{
+    if (state->mode() == WindowManagerMode::locked)
+        return;
+
+    state->mode(WindowManagerMode::locked);
+    mode_observer_registrar->advise_changed(state->mode());
+}
+
+void CommandController::unlock()
+{
+    if (state->mode() != WindowManagerMode::locked)
+        return;
+
+    state->mode(WindowManagerMode::normal);
+    mode_observer_registrar->advise_changed(state->mode());
+}
+
+bool CommandController::is_locked() const
+{
+    return state->mode() == WindowManagerMode::locked;
 }
 
 void CommandController::mark(
@@ -2499,6 +2569,10 @@ nlohmann::json CommandController::mode_to_json() const
         return {
             { "name", "overview" }
         };
+    case WindowManagerMode::locked:
+        return {
+            { "name", "locked" }
+        };
     default:
     {
         mir::log_error("handle_command: unknown binding state: %d", (int)state->mode());
@@ -2523,6 +2597,7 @@ nlohmann::json CommandController::key_bindings_json() const
             { "configured_modifiers", modifier_names(info.configured_modifiers)                                                                 },
             { "xkb_keysym",           info.keysym                                                                                               },
             { "xkb_keysym_name",      keysym_name(info.keysym)                                                                                  },
+            { "allow_on_lockscreen",  is_custom ? json(info.allow_on_lockscreen) : json(nullptr)                                                },
         });
     }
 

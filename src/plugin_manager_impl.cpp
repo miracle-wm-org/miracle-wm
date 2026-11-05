@@ -704,6 +704,20 @@ WasmEdge_Result host_miracle_window_set_shader_id(
     return WasmEdge_Result_Success;
 }
 
+WasmEdge_Result host_miracle_window_set_movable(
+    void* data,
+    WasmEdge_CallingFrameContext const*,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int64_t const window_internal = WasmEdge_ValueGetI64(params[0]);
+    int32_t const movable = WasmEdge_ValueGetI32(params[1]);
+    returns[0] = WasmEdge_ValueGenI32(
+        bridge->window_set_movable(static_cast<uint64_t>(window_internal), movable != 0));
+    return WasmEdge_Result_Success;
+}
+
 WasmEdge_Result host_miracle_get_plugin_userdata(
     void* data,
     WasmEdge_CallingFrameContext const* frame,
@@ -1221,6 +1235,9 @@ void PluginManagerImpl::Self::create_host_module()
     add_host_function(module, "miracle_window_set_shader_id",
         create_func_type({ i64, i32 }, { i32 }),
         host_miracle_window_set_shader_id, bridge.get());
+    add_host_function(module, "miracle_window_set_movable",
+        create_func_type({ i64, i32 }, { i32 }),
+        host_miracle_window_set_movable, bridge.get());
 
     add_host_function(module, "miracle_get_plugin_userdata",
         create_func_type({ i32, i32, i32 }, { i32 }),

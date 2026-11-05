@@ -186,6 +186,12 @@ public:
     /// animation). This can happen frequently, so implementations must be
     /// cheap and idempotent.
     virtual void handle_output_changed() = 0;
+
+    /// Called on the window management thread when the override must end
+    /// immediately, without any exit animation (e.g. because the session has
+    /// been locked). Implementations must release themselves from the
+    /// [SceneOverrideManager] and must be idempotent.
+    virtual void cancel() = 0;
 };
 }
 

@@ -460,7 +460,7 @@ extern "C"
 
         auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         if (index >= data->custom_key_commands->size())
-            return { 0, 0, 0, nullptr };
+            return { 0, 0, 0, nullptr, false };
 
         static thread_local std::string command_copy;
         const auto& cmd = data->custom_key_commands.value[index];
@@ -470,7 +470,8 @@ extern "C"
             static_cast<uint>(cmd.action),
             cmd.modifiers,
             cmd.key,
-            command_copy.c_str()
+            command_copy.c_str(),
+            cmd.allow_on_lockscreen
         };
     }
 
@@ -493,7 +494,8 @@ extern "C"
         data->custom_key_commands->push_back(miracle::CustomKeyCommand { static_cast<MirKeyboardAction>(key_command->action),
             key_command->modifiers,
             key_command->key,
-            key_command->command });
+            key_command->command,
+            key_command->allow_on_lockscreen });
     }
 
     void miracle_config_edit_custom_key_command(
@@ -518,7 +520,8 @@ extern "C"
         data->custom_key_commands.value[index] = { static_cast<MirKeyboardAction>(key_command->action),
             key_command->modifiers,
             key_command->key,
-            key_command->command };
+            key_command->command,
+            key_command->allow_on_lockscreen };
     }
 
     bool miracle_config_remove_custom_key_command(miracle_config_data_t* config, size_t index)

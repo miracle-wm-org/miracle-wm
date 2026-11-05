@@ -183,6 +183,8 @@ public:
     int32_t window_set_shader_uniform(uint64_t window_internal, std::string_view name, uint32_t type, void const* value);
     /// \param name the uniform to clear, or std::nullopt to clear every uniform
     int32_t window_clear_shader_uniform(uint64_t window_internal, std::optional<std::string_view> name);
+    /// Only plugin-managed windows carry a movable flag; returns -1 for any other window.
+    int32_t window_set_movable(uint64_t window_internal, bool movable);
 
     void set_plugin_userdata(uint32_t handle, std::string const& userdata_json);
     std::string const* get_plugin_userdata(uint32_t handle) const;

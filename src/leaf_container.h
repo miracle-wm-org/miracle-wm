@@ -57,6 +57,8 @@ public:
     void set_parent(std::shared_ptr<ParentContainer> const&) override;
     void set_state(MirWindowState state);
     bool is_fullscreen() const override;
+    bool is_floatable() const override { return true; }
+    bool is_movable() const override { return true; }
     void constrain() override;
     size_t get_min_width() const override;
     size_t get_min_height() const override;

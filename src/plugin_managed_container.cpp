@@ -343,6 +343,7 @@ std::shared_ptr<AbstractWorkspace> PluginManagedContainer::get_workspace() const
 void PluginManagedContainer::set_workspace(std::shared_ptr<AbstractWorkspace> const& workspace)
 {
     workspace_ = workspace;
+    update_output_area();
     for_each_observer([this](ContainerListener* observer)
     {
         observer->on_container_workspace_changed(*this);

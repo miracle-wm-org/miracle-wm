@@ -159,8 +159,27 @@ public:
     virtual bool try_move_to_output_by_name_list(std::vector<std::string> const& names, std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_move_to_mark(std::string const& mark, std::vector<ContainerScope> const& scope) = 0;
     virtual bool reload_config() = 0;
+    /// Sets the window manager mode. Refused while [WindowManagerMode::locked]
+    /// is set, so that nothing but [unlock] can leave the lock screen.
     virtual void set_mode(WindowManagerMode mode) = 0;
+
+    /// Enters [WindowManagerMode::locked]. Whatever was in progress (an
+    /// overview, a resize, a drag) must already have been torn down.
+    virtual void lock() = 0;
+
+    /// Leaves [WindowManagerMode::locked] for [WindowManagerMode::normal].
+    virtual void unlock() = 0;
+
+    [[nodiscard]] virtual bool is_locked() const = 0;
     virtual void select_container(std::shared_ptr<Container> const&) = 0;
+
+    /// Moves [container] onto the active workspace of [output], focusing that
+    /// output and workspace and keeping [container] focused. The container's
+    /// position is left untouched, so that an in-progress move may continue.
+    virtual bool transfer_container_to_output(
+        std::shared_ptr<Container> const& container,
+        std::shared_ptr<AbstractOutput> const& output)
+        = 0;
     virtual void mark(
         std::vector<ContainerScope> const& scope,
         std::string const& mark,

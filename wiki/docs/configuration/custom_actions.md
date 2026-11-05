@@ -26,6 +26,7 @@ custom_actions:
     action: <up|down|repeat|modifiers>
     modifiers: <Modifier[]>
     key: <KeysymName>
+    allow_on_lockscreen: <bool>   # optional
 ```
 
 ## Properties
@@ -81,6 +82,29 @@ custom_actions:
     Name of the XKB keysym that the action responds to. See the [xkbcommon keysym list](https://xkbcommon.org/doc/current/xbkcommon-keysyms_8h.html) for available names (e.g., `Return`, `z`, `Up`).
 
     For shifted characters, use the shifted keysym directly instead of combining a lowercase key with the `shift` modifier. For example, use `Q` instead of `q` + `shift`, and use `exclam` instead of `1` + `shift`.
+
+### `allow_on_lockscreen`
+
+:   <small>optional</small> **type:** Boolean **default:** `false`
+
+    Whether the command may run while the session is locked. While the lock
+    screen is up, every other key binding (including the
+    [Default Keybinds](default_keybinds.md)) is ignored and the key goes to the
+    lock screen instead. This is useful for media, volume and brightness keys:
+
+    ```yaml
+    custom_actions:
+      - command: wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+
+        action: down
+        modifiers: []
+        key: XF86AudioRaiseVolume
+        allow_on_lockscreen: true
+    ```
+
+    !!! warning
+        Anything bound with `allow_on_lockscreen: true` can be run by whoever is
+        at the keyboard of a locked session. Never allow a command that unlocks
+        the session, shows its contents or opens a shell.
 
 ## Default
 ```yaml

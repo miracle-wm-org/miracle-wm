@@ -153,6 +153,23 @@ IpcCommandExecutor::IpcCommandExecutor(
 
 std::vector<IpcValidationResult> IpcCommandExecutor::process(IpcParseResult const& parse_result)
 {
+    // Nothing may act on the desktop from outside while the lock screen is up.
+    if (command_controller->is_locked())
+    {
+        return std::vector<IpcValidationResult>(
+            parse_result.commands.size(),
+            IpcValidationResult::create_failure("The session is locked", false));
+    }
+
+    auto result = process_commands(parse_result);
+    if (parse_result.for_window)
+        apply_on_startup.lock()->push_back(parse_result);
+
+    return result;
+}
+
+std::vector<IpcValidationResult> IpcCommandExecutor::process_commands(IpcParseResult const& parse_result)
+{
     std::vector<IpcValidationResult> result;
     for (auto const& command : parse_result.commands)
     {
@@ -228,9 +245,6 @@ std::vector<IpcValidationResult> IpcCommandExecutor::process(IpcParseResult cons
         }
     }
 
-    if (parse_result.for_window)
-        apply_on_startup.lock()->push_back(parse_result);
-
     return result;
 }
 
@@ -258,7 +272,10 @@ void IpcCommandExecutor::apply_startup_commands_to(std::shared_ptr<WindowContain
         command_copy.scope.clear();
         command_copy.for_window = false;
         command_copy.scope.push_back(ContainerScope::from_container(container));
-        process(command_copy);
+
+        // Windows still open while the session is locked, and the rules that
+        // were registered for them must still apply.
+        process_commands(command_copy);
     }
 }
 

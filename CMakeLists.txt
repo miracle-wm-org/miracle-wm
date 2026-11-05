@@ -34,6 +34,11 @@ if(ENABLE_LTO)
   set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 endif()
 
+# Optional host-specific tuning. Off by default so that distributed builds (snap,
+# distro packages) run on any CPU of the target architecture, not just the
+# build machine's (see #978).
+option(ENABLE_NATIVE_ARCH "Optimize for the build machine's CPU (-march=native). Do not use for distributed builds" OFF)
+
 # ----------------------------------------
 # Build settings
 # ----------------------------------------
@@ -89,10 +94,11 @@ else()
 endif()
 
 if(CMAKE_BUILD_TYPE MATCHES Release)
-  add_compile_options(
-            -O3
-            -march=native
-    )
+  add_compile_options(-O3)
+endif()
+
+if(ENABLE_NATIVE_ARCH)
+  add_compile_options(-march=native)
 endif()
 
 # ----------------------------------------
@@ -166,6 +172,7 @@ add_library(miracle-wm-implementation STATIC
         src/animation.cpp
         src/program_factory.cpp
         src/mode_observer.cpp
+        src/session_lock_observer.cpp
         src/shell_component_container.cpp
         src/layout_scheme.cpp
         src/scratchpad.cpp

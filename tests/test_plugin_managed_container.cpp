@@ -92,6 +92,30 @@ protected:
     std::shared_ptr<PluginManagedContainer> container_not_movable;
 };
 
+// ---- is_movable ----
+
+TEST_F(PluginManagedContainerTest, IsMovableReflectsPlacement)
+{
+    EXPECT_TRUE(container_resizable_and_movable->is_movable());
+    EXPECT_FALSE(container_not_movable->is_movable());
+}
+
+TEST_F(PluginManagedContainerTest, SetMovableChangesMovability)
+{
+    container_not_movable->set_movable(true);
+    EXPECT_TRUE(container_not_movable->is_movable());
+
+    container_not_movable->set_movable(false);
+    EXPECT_FALSE(container_not_movable->is_movable());
+}
+
+TEST_F(PluginManagedContainerTest, MoveToIsRefusedAfterMovabilityIsRevoked)
+{
+    container_resizable_and_movable->set_movable(false);
+    EXPECT_CALL(*window_controller, modify(_, _)).Times(0);
+    EXPECT_FALSE(container_resizable_and_movable->move_to(10, 10, false));
+}
+
 // ---- is_fullscreen ----
 
 TEST_F(PluginManagedContainerTest, IsFullscreenReturnsFalseByDefault)

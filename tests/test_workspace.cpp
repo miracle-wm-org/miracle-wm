@@ -612,6 +612,35 @@ TEST_F(WorkspaceTest, HideWithAnEndPointAnimatesWhenAnimationsAreEnabled)
     EXPECT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_restored);
 }
 
+TEST_F(WorkspaceTest, InstantShowCancelsAnInFlightAnimatedHide)
+{
+    config->animations_enabled = true;
+    auto leaf = create_leaf();
+
+    // The workspace starts sliding away, but is shown again (e.g. because it was
+    // picked as the replacement when its sibling was moved to another output)
+    // before that animation finishes.
+    workspace->hide(geom::Point(OUTPUT_WIDTH, 0));
+    workspace->show(geom::Point(0, 0));
+    animator->tick(10.f);
+
+    EXPECT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_restored);
+    EXPECT_EQ(workspace->alpha(), 1.f);
+    EXPECT_EQ(workspace->transform(), glm::mat4(1.f));
+}
+
+TEST_F(WorkspaceTest, InstantHideCancelsAnInFlightAnimatedShow)
+{
+    config->animations_enabled = true;
+    auto leaf = create_leaf();
+
+    workspace->show(geom::Point(OUTPUT_WIDTH, 0));
+    workspace->hide(geom::Point(0, 0));
+    animator->tick(10.f);
+
+    EXPECT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_hidden);
+}
+
 TEST_F(WorkspaceTest, SelectWindowPrefersTheLastSelectedContainer)
 {
     auto const first = create_leaf();

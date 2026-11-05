@@ -29,6 +29,9 @@ namespace test
     class MockSession : public mir::scene::Session
     {
     public:
+#ifdef MIR_VERSION_2_31_OR_GREATER
+        MOCK_METHOD(mir::frontend::SessionCredentials const&, creds, (), (const, override));
+#endif
         MOCK_METHOD(pid_t, process_id, (), (const, override));
         MOCK_METHOD(mir::Fd, socket_fd, (), (const, override));
         MOCK_METHOD(std::string, name, (), (const, override));

@@ -94,6 +94,7 @@ private:
     std::shared_ptr<DebugOverlayController> debug_overlay_controller;
     mir::Synchronised<std::vector<IpcParseResult>> apply_on_startup;
 
+    std::vector<IpcValidationResult> process_commands(IpcParseResult const&);
     IpcValidationResult process_exec(IpcCommand const&, IpcParseResult const&) const;
     IpcValidationResult process_split(IpcCommand const&, IpcParseResult const&) const;
     IpcValidationResult process_focus(IpcCommand const&, IpcParseResult const&) const;

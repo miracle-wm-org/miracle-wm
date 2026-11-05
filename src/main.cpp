@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "policy.h"
 #include "renderer.h"
 #include "sampler_registry.h"
+#include "session_lock_observer.h"
 #include "version.h"
 #include "wlr-ouput-management-unstable-v1.h"
 #include "wlr-output-management-unstable-v1_wrapper.h"
@@ -43,6 +44,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/keymap.h>
 #include <miral/magnifier.h>
 #include <miral/runner.h>
+#include <miral/session_lock_listener.h>
 #include <miral/simulated_secondary_click.h>
 #include <miral/slow_keys.h>
 #include <miral/sticky_keys.h>
@@ -64,7 +66,8 @@ public:
         std::shared_ptr<miracle::DisplayConfig> const& display_config,
         std::shared_ptr<miracle::ConfigObserverRegistrar> const& config_observer_registrar,
         Magnifier const& magnifier,
-        std::shared_ptr<miracle::SamplerRegistry> const& sampler_registry) :
+        std::shared_ptr<miracle::SamplerRegistry> const& sampler_registry,
+        std::shared_ptr<miracle::SessionLockObserverRegistrar> const& session_lock_observer_registrar) :
         launcher(launcher),
         config(config),
         compositor_state(compositor_state),
@@ -72,7 +75,8 @@ public:
         display_config(display_config),
         config_observer_registrar(config_observer_registrar),
         magnifier(magnifier),
-        sampler_registry(sampler_registry)
+        sampler_registry(sampler_registry),
+        session_lock_observer_registrar(session_lock_observer_registrar)
     {
     }
 
@@ -80,7 +84,7 @@ public:
     {
         config->operator()(server);
         auto policy = add_window_manager_policy<miracle::Policy>(
-            "tiling", server, launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier, sampler_registry);
+            "tiling", server, launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier, sampler_registry, session_lock_observer_registrar);
         options = std::make_shared<WindowManagerOptions>(std::initializer_list<WindowManagerOption> { policy });
         options->operator()(server);
     }
@@ -95,6 +99,7 @@ private:
     std::shared_ptr<miracle::ConfigObserverRegistrar> config_observer_registrar;
     Magnifier magnifier;
     std::shared_ptr<miracle::SamplerRegistry> sampler_registry;
+    std::shared_ptr<miracle::SessionLockObserverRegistrar> session_lock_observer_registrar;
 };
 
 int main(int argc, char const* argv[])
@@ -105,6 +110,7 @@ int main(int argc, char const* argv[])
     auto sampler_registry = std::make_shared<miracle::SamplerRegistry>();
     auto output_listener = std::make_shared<miracle::OutputListenerMultiplexer>();
     auto display_config = std::make_shared<miracle::DisplayConfig>();
+    auto session_lock_observer_registrar = std::make_shared<miracle::SessionLockObserverRegistrar>();
 
     ExternalClientLauncher external_client_launcher;
     InputConfiguration input_configuration;
@@ -263,7 +269,16 @@ int main(int argc, char const* argv[])
     };
 
     return runner.run_with(
-        { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier, sampler_registry),
+        { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier, sampler_registry, session_lock_observer_registrar),
+            SessionLockListener(
+                [session_lock_observer_registrar]
+    {
+        session_lock_observer_registrar->advise_locked();
+    },
+                [session_lock_observer_registrar]
+    {
+        session_lock_observer_registrar->advise_unlocked();
+    }),
             wayland_extensions,
             X11Support {}.default_to_enabled(),
             keymap,

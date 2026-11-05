@@ -95,7 +95,11 @@ namespace test
         MOCK_METHOD(bool, try_move_to_mark, (std::string const&, std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, reload_config, (), (override));
         MOCK_METHOD(void, set_mode, (WindowManagerMode), (override));
+        MOCK_METHOD(void, lock, (), (override));
+        MOCK_METHOD(void, unlock, (), (override));
+        MOCK_METHOD(bool, is_locked, (), (const, override));
         MOCK_METHOD(void, select_container, (std::shared_ptr<Container> const&), (override));
+        MOCK_METHOD(bool, transfer_container_to_output, (std::shared_ptr<Container> const&, std::shared_ptr<AbstractOutput> const&), (override));
         MOCK_METHOD(void, mark, (std::vector<ContainerScope> const&, std::string const&, bool, bool), (override));
         MOCK_METHOD(void, unmark, (std::vector<ContainerScope> const&, std::string const&), (override));
         MOCK_METHOD(void, unmark_all, (std::vector<ContainerScope> const&), (override));

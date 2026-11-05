@@ -489,6 +489,9 @@ extern "C"
 
         /// The command that will be triggered by this key combination.
         const char* command;
+
+        /// Whether the command may run while the session is locked.
+        bool allow_on_lockscreen;
     } miracle_custom_key_command_t;
 
     /// Retrieve the number of custom keybinds in the \p config.

@@ -288,3 +288,96 @@ TEST_F(DragAndDropServiceTest, DragToEmptyWorkspaceDetachesFromOldWorkspace)
         mir_input_event_modifier_none,
         0);
 }
+
+TEST_F(DragAndDropServiceTest, CannotStartDraggingContainerThatRejectsDrag)
+{
+    // Shell components reject drag_start(), so a drag must never begin on them.
+    auto container = std::make_shared<::testing::NiceMock<test::MockContainer>>();
+    test::MockOutput* mock_output = new test::MockOutput();
+    ON_CALL(*mock_output, intersect(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(container));
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
+    ON_CALL(*mock_output, get_workspaces())
+        .WillByDefault(::testing::Return(workspaces));
+    EXPECT_CALL(*output_factory, create(::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(testing::Return(std::shared_ptr<AbstractOutput>(mock_output)));
+    output_manager->create("Output1", 1, {
+                                             { 0,    0    },
+                                             { 1920, 1080 }
+    },
+        *workspace_manager);
+
+    state->add(container);
+    state->focus_container(container);
+
+    ON_CALL(*container, drag_start())
+        .WillByDefault(::testing::Return(false));
+
+    EXPECT_FALSE(service.handle_pointer_event(
+        *state,
+        100,
+        100,
+        mir_pointer_action_button_down,
+        mir_input_event_modifier_meta,
+        mir_pointer_button_primary));
+
+    EXPECT_EQ(state->mode(), WindowManagerMode::normal);
+}
+
+TEST_F(DragAndDropServiceTest, DragStopsWhenFocusMovesToAnotherContainer)
+{
+    test::MockOutput* mock_output = new test::MockOutput();
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
+    ON_CALL(*mock_output, get_workspaces())
+        .WillByDefault(::testing::Return(workspaces));
+    EXPECT_CALL(*output_factory, create(::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(testing::Return(std::shared_ptr<AbstractOutput>(mock_output)));
+    output_manager->create("Output1", 1, {
+                                             { 0,    0    },
+                                             { 1920, 1080 }
+    },
+        *workspace_manager);
+
+    auto container_drag = std::make_shared<::testing::NiceMock<test::MockContainer>>();
+    state->add(container_drag);
+    state->focus_container(container_drag);
+    ON_CALL(*mock_output, intersect(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(container_drag));
+    ON_CALL(*container_drag, drag_start())
+        .WillByDefault(::testing::Return(true));
+
+    service.handle_pointer_event(
+        *state,
+        100,
+        100,
+        mir_pointer_action_button_down,
+        mir_input_event_modifier_meta,
+        mir_pointer_button_primary);
+    ASSERT_EQ(state->mode(), WindowManagerMode::dragging);
+
+    // Focus moves to another container (e.g. a shell component) mid-drag. Neither container
+    // may be moved or grafted onto a workspace, and the drag must end.
+    auto const other = std::make_shared<::testing::NiceMock<test::MockContainer>>();
+    state->add(other);
+    state->focus_container(other);
+
+    std::shared_ptr<test::MockWorkspace> empty_workspace = std::make_shared<test::MockWorkspace>();
+    ON_CALL(*mock_output, active())
+        .WillByDefault(::testing::Return(empty_workspace));
+    ON_CALL(*empty_workspace, is_empty())
+        .WillByDefault(::testing::Return(true));
+
+    EXPECT_CALL(*empty_workspace, graft(::testing::_)).Times(0);
+    EXPECT_CALL(*other, drag(::testing::_, ::testing::_)).Times(0);
+    EXPECT_CALL(*container_drag, drag(::testing::_, ::testing::_)).Times(0);
+    EXPECT_CALL(*container_drag, drag_stop());
+
+    EXPECT_FALSE(service.handle_pointer_event(
+        *state,
+        500,
+        500,
+        mir_pointer_action_button_down,
+        mir_input_event_modifier_none,
+        0));
+    EXPECT_EQ(state->mode(), WindowManagerMode::normal);
+}

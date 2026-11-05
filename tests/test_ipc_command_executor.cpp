@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ipc_command.h"
 #include "ipc_command_executor.h"
 #include "mock_command_controller.h"
+#include "mock_container.h"
 #include "mock_launcher.h"
 #include <gmock/gmock.h>
 
@@ -32,10 +33,60 @@ public:
     {
     }
 
-    std::shared_ptr<test::MockCommandController> controller = std::make_shared<test::MockCommandController>();
+    std::shared_ptr<test::MockCommandController> controller = std::make_shared<NiceMock<test::MockCommandController>>();
     std::shared_ptr<test::MockLauncher> launcher = std::make_shared<test::MockLauncher>();
     IpcCommandExecutor executor;
 };
+
+TEST_F(IpcCommandExecutorTest, CommandsAreRefusedWhileLocked)
+{
+    ON_CALL(*controller, is_locked()).WillByDefault(Return(true));
+
+    IpcParseResult parse_result;
+    parse_result.commands.push_back(IpcCommand(IpcCommandType::exec, "exec ls", {}, { "ls" }));
+    parse_result.commands.push_back(IpcCommand(IpcCommandType::exit, "exit", {}, {}));
+
+    EXPECT_CALL(*launcher, launch(_)).Times(0);
+    EXPECT_CALL(*controller, quit()).Times(0);
+    auto const validation_result = executor.process(parse_result);
+    ASSERT_THAT(validation_result.size(), Eq(2));
+    for (auto const& result : validation_result)
+    {
+        EXPECT_FALSE(result.success);
+        EXPECT_FALSE(result.parse_error);
+        EXPECT_THAT(result.error, Eq("The session is locked"));
+    }
+}
+
+TEST_F(IpcCommandExecutorTest, ForWindowRulesStillApplyWhileLocked)
+{
+    IpcParseResult parse_result;
+    parse_result.for_window = true;
+    parse_result.commands.push_back(IpcCommand(IpcCommandType::exec, "exec ls", {}, { "ls" }));
+
+    // Once when the rule is registered, and once more when it is applied.
+    EXPECT_CALL(*launcher, launch(_)).Times(2);
+    executor.process(parse_result);
+
+    ON_CALL(*controller, is_locked()).WillByDefault(Return(true));
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    executor.apply_startup_commands_to(container);
+}
+
+TEST_F(IpcCommandExecutorTest, ForWindowRulesCannotBeRegisteredWhileLocked)
+{
+    ON_CALL(*controller, is_locked()).WillByDefault(Return(true));
+
+    IpcParseResult parse_result;
+    parse_result.for_window = true;
+    parse_result.commands.push_back(IpcCommand(IpcCommandType::exec, "exec ls", {}, { "ls" }));
+    executor.process(parse_result);
+
+    ON_CALL(*controller, is_locked()).WillByDefault(Return(false));
+    EXPECT_CALL(*launcher, launch(_)).Times(0);
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    executor.apply_startup_commands_to(container);
+}
 
 TEST_F(IpcCommandExecutorTest, ExecCommandWorksForSimpleCase)
 {

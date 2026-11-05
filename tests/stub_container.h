@@ -208,6 +208,16 @@ namespace test
             return false;
         }
 
+        bool is_floatable() const override
+        {
+            return true;
+        }
+
+        bool is_movable() const override
+        {
+            return true;
+        }
+
         std::optional<miral::Window> window() const override
         {
             return std::nullopt;

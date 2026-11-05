@@ -284,6 +284,8 @@ void Workspace::advise_focus_gained(std::shared_ptr<Container> const& container)
 
 void Workspace::show(geom::Point const& origin)
 {
+    auto const generation = begin_transition();
+
     // The output area may have changed while we were hidden, in which case the
     // recalculation was deferred until now.
     if (needs_area_recalculation_)
@@ -301,54 +303,18 @@ void Workspace::show(geom::Point const& origin)
     }
 
     auto const area = root()->get_logical_area();
-    std::weak_ptr<Workspace> const that = std::dynamic_pointer_cast<Workspace>(shared_from_this());
     AnimationData show_anim_data(AnimateableEvent::workspace_switch,
         geom::Rectangle(origin, area.size),
         geom::Rectangle(geom::Point(0, 0), area.size),
         0.f, 1.f);
-    show_anim_data.workspace = from_workspace(std::dynamic_pointer_cast<AbstractWorkspace>(shared_from_this()));
-    if (name().has_value())
-        show_anim_data.workspace_name = name().value();
-    animator->append(Animation(
-        animation_handle,
-        config->get_animation_definition(AnimateableEvent::workspace_switch),
-        std::move(show_anim_data),
-        [that = that](AnimationFrameResult const& asr)
-    {
-        if (auto const locked = that.lock())
-        {
-            locked->window_controller->invoke_under_lock([asr = asr, that = that]()
-            {
-                auto const locked = that.lock();
-                if (!locked)
-                    return;
-
-                glm::mat4 matrix(1.f);
-                if (asr.transform)
-                    matrix = matrix * asr.transform.value();
-                if (asr.rectangle)
-                {
-                    matrix = glm::translate(
-                        matrix,
-                        glm::vec3(
-                            asr.rectangle->top_left.x.as_value(),
-                            asr.rectangle->top_left.y.as_value(),
-                            0));
-                }
-
-                float const alpha = asr.opacity ? *asr.opacity : 1.f;
-                locked->transform(matrix);
-                locked->alpha(alpha);
-                if (asr.is_complete)
-                    locked->on_animation_end(false);
-            });
-        }
-    }, plugin_manager));
+    append_transition_animation(std::move(show_anim_data), false, generation);
     on_animation_start(false);
 }
 
 void Workspace::hide(geom::Point const& end)
 {
+    auto const generation = begin_transition();
+
     // An end of (0, 0) means "do not slide anywhere", which is how a caller that
     // has already animated this workspace off screen itself asks to simply have
     // it put away. Mirrors the same convention in [show].
@@ -363,19 +329,46 @@ void Workspace::hide(geom::Point const& end)
         geom::Rectangle(geom::Point(0, 0), area.size),
         geom::Rectangle(end, area.size),
         1.f, 0.f);
-    hide_anim_data.workspace = from_workspace(std::dynamic_pointer_cast<AbstractWorkspace>(shared_from_this()));
+    append_transition_animation(std::move(hide_anim_data), true, generation);
+    on_animation_start(true);
+}
+
+uint64_t Workspace::begin_transition()
+{
+    // A show or hide supersedes whatever transition was in flight. Without this,
+    // an instant show that lands while an animated hide is still running (e.g. the
+    // workspace was picked to replace a sibling moved to another output) would be
+    // undone when that hide completes, leaving the active workspace invisible.
+    animator->remove_by_animation_handle(animation_handle);
+    return ++sync.lock()->animation_generation;
+}
+
+void Workspace::append_transition_animation(AnimationData&& data, bool is_hiding, uint64_t generation)
+{
+    data.workspace = from_workspace(std::dynamic_pointer_cast<AbstractWorkspace>(shared_from_this()));
     if (name().has_value())
-        hide_anim_data.workspace_name = name().value();
+        data.workspace_name = name().value();
+
+    std::weak_ptr<Workspace> const that = std::dynamic_pointer_cast<Workspace>(shared_from_this());
     animator->append(Animation(
         animation_handle,
         config->get_animation_definition(AnimateableEvent::workspace_switch),
-        std::move(hide_anim_data),
-        [this](AnimationFrameResult const& asr)
+        std::move(data),
+        [that, is_hiding, generation](AnimationFrameResult const& asr)
     {
-        window_controller->invoke_under_lock([asr = asr, this]()
+        auto const locked = that.lock();
+        if (!locked)
+            return;
+
+        locked->window_controller->invoke_under_lock([asr = asr, that, is_hiding, generation]()
         {
-            auto const locked = std::dynamic_pointer_cast<Workspace>(shared_from_this());
+            auto const locked = that.lock();
             if (!locked)
+                return;
+
+            // The frame may have been queued behind the lock held by a newer
+            // [show] or [hide], in which case it is stale.
+            if (locked->sync.lock()->animation_generation != generation)
                 return;
 
             glm::mat4 matrix(1.f);
@@ -395,10 +388,9 @@ void Workspace::hide(geom::Point const& end)
             locked->transform(matrix);
             locked->alpha(alpha);
             if (asr.is_complete)
-                locked->on_animation_end(true);
+                locked->on_animation_end(is_hiding);
         });
     }, plugin_manager));
-    on_animation_start(true);
 }
 
 bool Workspace::for_each_window(std::function<bool(std::shared_ptr<WindowContainer>)> const& f) const

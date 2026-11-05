@@ -70,6 +70,8 @@ void OverviewController::handle_keyboard_event(MirKeyboardEvent const* event, un
 
 void OverviewController::try_start()
 {
+    // Covers [WindowManagerMode::locked] too: the overview would show the
+    // desktop over the lock screen and take the keyboard away from it.
     if (compositor_state->mode() != WindowManagerMode::normal)
         return;
 

@@ -229,7 +229,8 @@ TEST_F(CAPIWrapperTest, CanAddCustomKeyCommand)
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         10,
-        "test-command"
+        "test-command",
+        false
     };
     miracle_config_add_custom_key_command(
         &wrapper->config,
@@ -242,6 +243,45 @@ TEST_F(CAPIWrapperTest, CanAddCustomKeyCommand)
     EXPECT_EQ(cmd.modifiers, mir_input_event_modifier_meta);
     EXPECT_EQ(cmd.key, 10);
     EXPECT_STREQ(cmd.command, "test-command");
+    EXPECT_FALSE(cmd.allow_on_lockscreen);
+}
+
+TEST_F(CAPIWrapperTest, CanAddCustomKeyCommandAllowedOnLockscreen)
+{
+    miracle_custom_key_command_t key_command = {
+        mir_keyboard_action_down,
+        mir_input_event_modifier_meta,
+        10,
+        "test-command",
+        true
+    };
+    miracle_config_add_custom_key_command(
+        &wrapper->config,
+        &key_command);
+
+    auto cmd = miracle_config_get_custom_key_command(&wrapper->config, 0);
+    EXPECT_TRUE(cmd.allow_on_lockscreen);
+}
+
+TEST_F(CAPIWrapperTest, CanEditCustomKeyCommandAllowOnLockscreen)
+{
+    miracle_custom_key_command_t key_command = {
+        mir_keyboard_action_down,
+        mir_input_event_modifier_meta,
+        10,
+        "test-command",
+        false
+    };
+    miracle_config_add_custom_key_command(
+        &wrapper->config, &key_command);
+
+    key_command.allow_on_lockscreen = true;
+    miracle_config_edit_custom_key_command(
+        &wrapper->config,
+        0, &key_command);
+
+    auto cmd = miracle_config_get_custom_key_command(&wrapper->config, 0);
+    EXPECT_TRUE(cmd.allow_on_lockscreen);
 }
 
 TEST_F(CAPIWrapperTest, CanEditCustomKeyCommand)
@@ -250,7 +290,8 @@ TEST_F(CAPIWrapperTest, CanEditCustomKeyCommand)
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         10,
-        "test-command"
+        "test-command",
+        false
     };
     miracle_config_add_custom_key_command(
         &wrapper->config, &key_command);
@@ -259,7 +300,8 @@ TEST_F(CAPIWrapperTest, CanEditCustomKeyCommand)
         mir_keyboard_action_up,
         mir_input_event_modifier_alt,
         12,
-        "test-command-2"
+        "test-command-2",
+        false
     };
     miracle_config_edit_custom_key_command(
         &wrapper->config,
@@ -278,7 +320,8 @@ TEST_F(CAPIWrapperTest, CannotEditCustomKeyCommandWithIndexGreaterThanRange)
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         10,
-        "test-command"
+        "test-command",
+        false
     };
     miracle_config_add_custom_key_command(
         &wrapper->config,
@@ -288,7 +331,8 @@ TEST_F(CAPIWrapperTest, CannotEditCustomKeyCommandWithIndexGreaterThanRange)
         mir_keyboard_action_up,
         mir_input_event_modifier_alt,
         12,
-        "test-command-2"
+        "test-command-2",
+        false
     };
     miracle_config_edit_custom_key_command(
         &wrapper->config,
@@ -308,7 +352,8 @@ TEST_F(CAPIWrapperTest, CanRemoveCustomKeyCommand)
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         10,
-        "test-command"
+        "test-command",
+        false
     };
     miracle_config_add_custom_key_command(
         &wrapper->config,
@@ -966,7 +1011,8 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         KEY_F,
-        "test-command"
+        "test-command",
+        false
     };
     miracle_config_add_custom_key_command(
         &wrapper->config,

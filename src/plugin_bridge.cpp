@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "leaf_container.h"
 #include "output_manager.h"
 #include "parent_container.h"
+#include "plugin_managed_container.h"
 #include "plugin_manager.h"
 #include "shader_uniform.h"
 #include "window_container.h"
@@ -824,6 +825,21 @@ int32_t PluginBridge::window_clear_shader_uniform(uint64_t window_internal, std:
         return -1;
 
     container->clear_window_shader_uniform(name ? std::optional<std::string>(*name) : std::nullopt);
+    return 0;
+}
+
+int32_t PluginBridge::window_set_movable(uint64_t window_internal, bool movable)
+{
+    auto it = window_id_map->find(window_internal);
+    if (it == window_id_map->end())
+        return -1;
+
+    auto const container = std::dynamic_pointer_cast<PluginManagedContainer>(
+        window_controller->get_window_container(it->second));
+    if (!container)
+        return -1;
+
+    container->set_movable(movable);
     return 0;
 }
 

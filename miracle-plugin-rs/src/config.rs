@@ -18,6 +18,7 @@
 //!             modifiers: vec![Modifier::Primary],
 //!             key: Key::new("Return"),
 //!             command: "kitty".to_string(),
+//!             allow_on_lockscreen: false,
 //!         }]),
 //!         inner_gaps: Some(Gaps { x: 5, y: 5 }),
 //!         ..Default::default()
@@ -339,6 +340,10 @@ pub struct CustomKeyAction {
     pub key: Key,
     /// The shell command to execute.
     pub command: String,
+    /// Whether the command may run while the session is locked (e.g. for
+    /// media or brightness keys).
+    #[serde(skip_serializing_if = "is_false")]
+    pub allow_on_lockscreen: bool,
 }
 
 /// Override the key binding for a built-in compositor action.

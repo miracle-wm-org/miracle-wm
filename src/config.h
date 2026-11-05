@@ -57,6 +57,7 @@ struct KeyBindingInfo
     uint keysym = 0;
     DefaultKeyCommand default_key_command = DefaultKeyCommand::MAX;
     std::string command;
+    bool allow_on_lockscreen = false;
 };
 
 class Config

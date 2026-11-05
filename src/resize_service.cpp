@@ -44,6 +44,13 @@ void ResizeService::stop()
     command_controller->set_mode(WindowManagerMode::normal);
 }
 
+void ResizeService::cancel()
+{
+    std::lock_guard lock { mutex_ };
+    if (is_resizing)
+        stop();
+}
+
 bool ResizeService::handle_pointer_event(float x, float y, MirPointerAction action)
 {
     std::lock_guard lock { mutex_ };

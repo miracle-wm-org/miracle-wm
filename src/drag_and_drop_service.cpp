@@ -48,22 +48,21 @@ bool DragAndDropService::handle_pointer_event(CompositorState& state, float x, f
     if (!config->drag_and_drop().enabled)
         return false;
 
-    auto const window_container = std::dynamic_pointer_cast<WindowContainer>(state.focused_container());
-
     if (state.mode() == WindowManagerMode::dragging)
     {
         if (action == mir_pointer_action_button_up && (config->get_primary_button() & buttons) == 0)
         {
-            command_controller->set_mode(WindowManagerMode::normal);
-            if (window_container)
-                window_container->drag_stop();
-            last_intersected.reset();
+            stop_drag(state);
             return true;
         }
 
-        if (!state.focused_container())
+        // Only the container that accepted the drag may be dragged. If it has gone away, or
+        // focus has moved elsewhere, the drag is over.
+        auto const window_container = dragging.lock();
+        if (!window_container || window_container != state.focused_container())
         {
-            mir::log_warning("handle_drag_and_drop_pointer_event: focused container no longer exists while dragging");
+            mir::log_warning("handle_drag_and_drop_pointer_event: dragged container is no longer focused");
+            stop_drag(state);
             return false;
         }
 
@@ -122,15 +121,17 @@ bool DragAndDropService::handle_pointer_event(CompositorState& state, float x, f
             return false;
 
         auto const intersected = output_manager->focused()->intersect(x, y);
-        if (!intersected || !intersected->drag_start())
+        if (!intersected || intersected != state.focused_container())
+            return false;
+
+        if (!intersected->drag_start())
         {
             mir::log_warning("Cannot drag container");
             return false;
         }
 
-        if (intersected != state.focused_container())
-            return false;
-
+        dragging = intersected;
+        last_intersected.reset();
         command_controller->set_mode(WindowManagerMode::dragging);
         command_controller->select_container(intersected);
         cursor_start_x = x;
@@ -145,12 +146,13 @@ bool DragAndDropService::handle_pointer_event(CompositorState& state, float x, f
     return false;
 }
 
-void DragAndDropService::stop_drag(CompositorState const& state)
+void DragAndDropService::stop_drag(CompositorState const&)
 {
     command_controller->set_mode(WindowManagerMode::normal);
-    auto const window_container = std::dynamic_pointer_cast<WindowContainer>(state.focused_container());
-    if (window_container)
+    if (auto const window_container = dragging.lock())
         window_container->drag_stop();
+    dragging.reset();
+    last_intersected.reset();
 }
 
 void DragAndDropService::drag_to(
