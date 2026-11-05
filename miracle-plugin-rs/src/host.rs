@@ -122,11 +122,23 @@ unsafe extern "C" {
     /// Returns 0 on success, -1 on error.
     pub fn miracle_window_set_geometry_shader_id(window_internal: i64, geometry_shader_id: i32) -> i32;
 
-    /// Set the values a window's geometry shader reads as `uniform vec4 u_params[4]`.
-    /// `params_ptr` is a WASM linear memory offset pointing to `count` contiguous f32 values,
-    /// and `count` is at most 16.
+    /// Set a uniform on every shader that draws a window.
+    /// `name_ptr` is a WASM linear memory offset pointing to `name_len` UTF-8 bytes, `ty` is a
+    /// `miracle_shader_uniform_type`, and `value_ptr` points to as many f32 (or i32) values as
+    /// `ty` holds.
     /// Returns 0 on success, -1 on error.
-    pub fn miracle_window_set_shader_params(window_internal: i64, params_ptr: i32, count: i32) -> i32;
+    pub fn miracle_window_set_shader_uniform(
+        window_internal: i64,
+        name_ptr: i32,
+        name_len: i32,
+        ty: i32,
+        value_ptr: i32,
+    ) -> i32;
+
+    /// Clear a uniform set with `miracle_window_set_shader_uniform`, or every uniform if
+    /// `name_len` is 0.
+    /// Returns 0 on success, -1 on error.
+    pub fn miracle_window_clear_shader_uniform(window_internal: i64, name_ptr: i32, name_len: i32) -> i32;
 
     /// Request a workspace by optional number and/or name.
     ///

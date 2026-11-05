@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "container.h"
 #include "plugin_bridge.h"
+#include "shader_uniform.h"
 
 #include <algorithm>
 #include <array>
@@ -767,42 +768,88 @@ WasmEdge_Result host_miracle_window_set_geometry_shader_id(
     return WasmEdge_Result_Success;
 }
 
-WasmEdge_Result host_miracle_window_set_shader_params(
+WasmEdge_Result host_miracle_window_set_shader_uniform(
     void* data,
     WasmEdge_CallingFrameContext const* frame,
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
 {
-    auto* memory = get_memory_from_frame(frame, "host_miracle_window_set_shader_params");
+    auto* memory = get_memory_from_frame(frame, "host_miracle_window_set_shader_uniform");
     if (!memory)
         return WasmEdge_Result_Fail;
 
     auto const bridge = static_cast<PluginBridge*>(data);
     int64_t const window_internal = WasmEdge_ValueGetI64(params[0]);
-    int32_t const params_ptr = WasmEdge_ValueGetI32(params[1]);
-    int32_t const count = WasmEdge_ValueGetI32(params[2]);
+    int32_t const name_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const name_len = WasmEdge_ValueGetI32(params[2]);
+    uint32_t const type_param = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[3]));
+    int32_t const value_ptr = WasmEdge_ValueGetI32(params[4]);
 
-    std::array<float, 16> values = {};
-    if (count < 0 || count > static_cast<int32_t>(values.size()))
+    auto const type = ShaderUniform::type_from(type_param);
+    if (!type || name_len <= 0 || name_len > static_cast<int32_t>(ShaderUniform::max_name_length))
     {
         returns[0] = WasmEdge_ValueGenI32(-1);
         return WasmEdge_Result_Success;
     }
 
+    auto const* const name = WasmEdge_MemoryInstanceGetPointerConst(
+        memory, static_cast<uint32_t>(name_ptr), static_cast<uint32_t>(name_len));
+    // Copied rather than read in place, as the plugin need not align the value.
+    std::array<std::byte, 16 * sizeof(float)> value;
     auto const r = WasmEdge_MemoryInstanceGetData(
         memory,
-        reinterpret_cast<uint8_t*>(values.data()),
-        static_cast<uint32_t>(params_ptr),
-        static_cast<uint32_t>(count) * sizeof(float));
-    if (!WasmEdge_ResultOK(r))
+        reinterpret_cast<uint8_t*>(value.data()),
+        static_cast<uint32_t>(value_ptr),
+        static_cast<uint32_t>(ShaderUniform::value_size(*type)));
+    if (!name || !WasmEdge_ResultOK(r))
     {
-        mir::log_error("host_miracle_window_set_shader_params: failed to read params");
+        mir::log_error("host_miracle_window_set_shader_uniform: name or value is out of bounds");
         returns[0] = WasmEdge_ValueGenI32(-1);
         return WasmEdge_Result_Success;
+    }
+
+    returns[0] = WasmEdge_ValueGenI32(bridge->window_set_shader_uniform(
+        static_cast<uint64_t>(window_internal),
+        std::string_view(reinterpret_cast<char const*>(name), static_cast<size_t>(name_len)),
+        type_param,
+        value.data()));
+    return WasmEdge_Result_Success;
+}
+
+WasmEdge_Result host_miracle_window_clear_shader_uniform(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame, "host_miracle_window_clear_shader_uniform");
+    if (!memory)
+        return WasmEdge_Result_Fail;
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int64_t const window_internal = WasmEdge_ValueGetI64(params[0]);
+    int32_t const name_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const name_len = WasmEdge_ValueGetI32(params[2]);
+
+    // A zero length clears every uniform. In WASM, NULL is a valid offset, so
+    // only the length is checked.
+    std::optional<std::string_view> name;
+    if (name_len != 0)
+    {
+        auto const* const bytes = name_len < 0
+            ? nullptr
+            : WasmEdge_MemoryInstanceGetPointerConst(memory, static_cast<uint32_t>(name_ptr), static_cast<uint32_t>(name_len));
+        if (!bytes)
+        {
+            mir::log_error("host_miracle_window_clear_shader_uniform: name is out of bounds");
+            returns[0] = WasmEdge_ValueGenI32(-1);
+            return WasmEdge_Result_Success;
+        }
+        name = std::string_view(reinterpret_cast<char const*>(bytes), static_cast<size_t>(name_len));
     }
 
     returns[0] = WasmEdge_ValueGenI32(
-        bridge->window_set_shader_params(static_cast<uint64_t>(window_internal), values.data(), count));
+        bridge->window_clear_shader_uniform(static_cast<uint64_t>(window_internal), name));
     return WasmEdge_Result_Success;
 }
 
@@ -1188,9 +1235,13 @@ void PluginManagerImpl::Self::create_host_module()
         create_func_type({ i64, i32 }, { i32 }),
         host_miracle_window_set_geometry_shader_id, bridge.get());
 
-    add_host_function(module, "miracle_window_set_shader_params",
+    add_host_function(module, "miracle_window_set_shader_uniform",
+        create_func_type({ i64, i32, i32, i32, i32 }, { i32 }),
+        host_miracle_window_set_shader_uniform, bridge.get());
+
+    add_host_function(module, "miracle_window_clear_shader_uniform",
         create_func_type({ i64, i32, i32 }, { i32 }),
-        host_miracle_window_set_shader_params, bridge.get());
+        host_miracle_window_clear_shader_uniform, bridge.get());
 
     add_host_function(module, "miracle_cancel_custom_animation",
         create_func_type({ i32, i32 }, { i32 }),

@@ -281,21 +281,100 @@ TEST_F(RenderDataManagerTest, RemoveTriggersCopy)
     ASSERT_TRUE(copied.empty());
 }
 
-TEST_F(RenderDataManagerTest, CanChangeGeometryShaderAndParams)
+TEST_F(RenderDataManagerTest, CanChangeGeometryShaderAndUniforms)
 {
     auto id = render_data_manager.add(RenderData {});
     get();
 
-    std::array<float, 16> params = {};
-    params[0] = 12.f;
-    params[1] = -3.f;
+    float const lag[] = { 12.f, -3.f };
+    auto const uniform = ShaderUniform::from_bytes("u_lag", ShaderUniform::Type::vec2, lag);
     render_data_manager.geometry_shader_id_change(id, 7);
-    render_data_manager.shader_params_change(id, params);
+    ASSERT_TRUE(render_data_manager.shader_uniform_set(id, uniform));
 
     auto result = get();
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result[0].geometry_shader_id, std::optional<uint8_t> { 7 });
-    ASSERT_EQ(result[0].shader_params, params);
+    ASSERT_EQ(result[0].shader_uniforms, std::vector { uniform });
+    ASSERT_EQ(result[0].shader_uniforms[0].floats[0], 12.f);
+    ASSERT_EQ(result[0].shader_uniforms[0].floats[1], -3.f);
+    ASSERT_EQ(result[0].shader_uniforms[0].floats[2], 0.f);
+}
+
+TEST_F(RenderDataManagerTest, SettingUniformOfSameNameReplacesIt)
+{
+    auto id = render_data_manager.add(RenderData {});
+    float const first = 1.f;
+    int32_t const second = 2;
+    render_data_manager.shader_uniform_set(id, ShaderUniform::from_bytes("u_value", ShaderUniform::Type::float1, &first));
+    render_data_manager.shader_uniform_set(id, ShaderUniform::from_bytes("u_value", ShaderUniform::Type::int1, &second));
+
+    auto result = get();
+    ASSERT_EQ(result[0].shader_uniforms.size(), 1);
+    ASSERT_EQ(result[0].shader_uniforms[0].type, ShaderUniform::Type::int1);
+    ASSERT_EQ(result[0].shader_uniforms[0].integer, 2);
+}
+
+TEST_F(RenderDataManagerTest, CannotSetMoreThanMaxUniforms)
+{
+    auto id = render_data_manager.add(RenderData {});
+    float const value = 1.f;
+    for (size_t i = 0; i < ShaderUniform::max_per_window; ++i)
+    {
+        ASSERT_TRUE(render_data_manager.shader_uniform_set(
+            id, ShaderUniform::from_bytes("u_" + std::to_string(i), ShaderUniform::Type::float1, &value)));
+    }
+
+    ASSERT_FALSE(render_data_manager.shader_uniform_set(
+        id, ShaderUniform::from_bytes("u_extra", ShaderUniform::Type::float1, &value)));
+    // An existing uniform may still be replaced.
+    ASSERT_TRUE(render_data_manager.shader_uniform_set(
+        id, ShaderUniform::from_bytes("u_0", ShaderUniform::Type::float1, &value)));
+    ASSERT_EQ(get()[0].shader_uniforms.size(), ShaderUniform::max_per_window);
+}
+
+TEST_F(RenderDataManagerTest, CanClearOneUniform)
+{
+    auto id = render_data_manager.add(RenderData {});
+    float const value = 1.f;
+    render_data_manager.shader_uniform_set(id, ShaderUniform::from_bytes("u_a", ShaderUniform::Type::float1, &value));
+    render_data_manager.shader_uniform_set(id, ShaderUniform::from_bytes("u_b", ShaderUniform::Type::float1, &value));
+    render_data_manager.shader_uniform_clear(id, "u_a");
+
+    auto result = get();
+    ASSERT_EQ(result[0].shader_uniforms.size(), 1);
+    ASSERT_EQ(result[0].shader_uniforms[0].name, "u_b");
+}
+
+TEST_F(RenderDataManagerTest, CanClearAllUniforms)
+{
+    auto id = render_data_manager.add(RenderData {});
+    float const value = 1.f;
+    render_data_manager.shader_uniform_set(id, ShaderUniform::from_bytes("u_a", ShaderUniform::Type::float1, &value));
+    render_data_manager.shader_uniform_set(id, ShaderUniform::from_bytes("u_b", ShaderUniform::Type::float1, &value));
+    render_data_manager.shader_uniform_clear(id, std::nullopt);
+
+    ASSERT_TRUE(get()[0].shader_uniforms.empty());
+}
+
+TEST(ShaderUniformTest, RejectsInvalidNames)
+{
+    EXPECT_TRUE(ShaderUniform::is_valid_name("u_lag"));
+    EXPECT_TRUE(ShaderUniform::is_valid_name("_x9"));
+    EXPECT_FALSE(ShaderUniform::is_valid_name(""));
+    EXPECT_FALSE(ShaderUniform::is_valid_name("9x"));
+    EXPECT_FALSE(ShaderUniform::is_valid_name("u_params[0]"));
+    EXPECT_FALSE(ShaderUniform::is_valid_name("u lag"));
+    EXPECT_FALSE(ShaderUniform::is_valid_name("gl_Position"));
+    EXPECT_FALSE(ShaderUniform::is_valid_name("alpha"));
+    EXPECT_FALSE(ShaderUniform::is_valid_name("u_world_to_clip"));
+    EXPECT_FALSE(ShaderUniform::is_valid_name(std::string(ShaderUniform::max_name_length + 1, 'a')));
+    EXPECT_TRUE(ShaderUniform::is_valid_name(std::string(ShaderUniform::max_name_length, 'a')));
+}
+
+TEST(ShaderUniformTest, RejectsUnknownTypes)
+{
+    EXPECT_EQ(ShaderUniform::type_from(5), ShaderUniform::Type::mat4);
+    EXPECT_EQ(ShaderUniform::type_from(6), std::nullopt);
 }
 
 TEST_F(RenderDataManagerTest, ResetShadersClearsGeometryShader)

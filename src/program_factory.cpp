@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "program_factory"
 
 #include "program_factory.h"
+#include <algorithm>
 #include <cstdio>
 #include <format>
 #include <mir/graphics/egl_error.h>
@@ -262,7 +263,137 @@ void main() {
 
 }
 
-miracle::ProgramData::ProgramData(GLuint program_id, bool has_geometry_stage)
+miracle::CustomUniforms::CustomUniforms(GLuint program_id)
+{
+    GLint count = 0;
+    GLint max_length = 0;
+    glGetProgramiv(program_id, GL_ACTIVE_UNIFORMS, &count);
+    glGetProgramiv(program_id, GL_ACTIVE_UNIFORM_MAX_LENGTH, &max_length);
+
+    std::string name(static_cast<size_t>(std::max(max_length, 1)), '\0');
+    for (GLint i = 0; i < count; ++i)
+    {
+        GLsizei length = 0;
+        GLint size = 0;
+        GLenum type = 0;
+        glGetActiveUniform(program_id, static_cast<GLuint>(i), static_cast<GLsizei>(name.size()), &length, &size, &type, name.data());
+        if (size != 1)
+            continue;
+
+        switch (type)
+        {
+        case GL_FLOAT:
+        case GL_FLOAT_VEC2:
+        case GL_FLOAT_VEC3:
+        case GL_FLOAT_VEC4:
+        case GL_INT:
+        case GL_FLOAT_MAT4:
+            break;
+        default:
+            continue;
+        }
+
+        // Skips the compositor's own uniforms, which a plugin may not set.
+        std::string uniform_name(name.data(), static_cast<size_t>(length));
+        if (!ShaderUniform::is_valid_name(uniform_name))
+            continue;
+
+        auto const location = glGetUniformLocation(program_id, uniform_name.c_str());
+        if (location >= 0)
+            locations.emplace(std::move(uniform_name), Location { location, type });
+    }
+}
+
+namespace
+{
+GLenum gl_type_of(miracle::ShaderUniform::Type type)
+{
+    using Type = miracle::ShaderUniform::Type;
+    switch (type)
+    {
+    case Type::float1:
+        return GL_FLOAT;
+    case Type::vec2:
+        return GL_FLOAT_VEC2;
+    case Type::vec3:
+        return GL_FLOAT_VEC3;
+    case Type::vec4:
+        return GL_FLOAT_VEC4;
+    case Type::int1:
+        return GL_INT;
+    case Type::mat4:
+        return GL_FLOAT_MAT4;
+    }
+    return 0;
+}
+
+void set_uniform(GLint location, GLenum type, float const* floats, int32_t integer)
+{
+    switch (type)
+    {
+    case GL_FLOAT:
+        glUniform1fv(location, 1, floats);
+        break;
+    case GL_FLOAT_VEC2:
+        glUniform2fv(location, 1, floats);
+        break;
+    case GL_FLOAT_VEC3:
+        glUniform3fv(location, 1, floats);
+        break;
+    case GL_FLOAT_VEC4:
+        glUniform4fv(location, 1, floats);
+        break;
+    case GL_INT:
+        glUniform1i(location, integer);
+        break;
+    case GL_FLOAT_MAT4:
+        glUniformMatrix4fv(location, 1, GL_FALSE, floats);
+        break;
+    default:
+        break;
+    }
+}
+}
+
+void miracle::CustomUniforms::upload(std::vector<ShaderUniform> const& uniforms) const
+{
+    if (uniforms.empty() && uploaded.empty())
+        return;
+
+    std::vector<Location> current;
+    for (auto const& uniform : uniforms)
+    {
+        auto const it = locations.find(uniform.name);
+        if (it == locations.end())
+            continue;
+
+        if (it->second.type != gl_type_of(uniform.type))
+        {
+            if (mismatched.insert(uniform.name).second)
+                mir::log_warning("Shader uniform '%s' was set with a type that the shader does not declare it as", uniform.name.c_str());
+            continue;
+        }
+
+        set_uniform(it->second.location, it->second.type, uniform.floats.data(), uniform.integer);
+        current.push_back(it->second);
+    }
+
+    static constexpr std::array<float, 16> zeros = {};
+    for (auto const& previous : uploaded)
+    {
+        auto const still_set = std::any_of(current.begin(), current.end(), [&](Location const& location)
+        {
+            return location.location == previous.location;
+        });
+        if (!still_set)
+            set_uniform(previous.location, previous.type, zeros.data(), 0);
+    }
+
+    uploaded = std::move(current);
+}
+
+miracle::ProgramData::ProgramData(GLuint program_id, bool has_geometry_stage) :
+    custom_uniforms { program_id }
 {
     id = program_id;
     position_attr = glGetAttribLocation(id, "position");
@@ -329,7 +460,6 @@ miracle::ProgramData::ProgramData(GLuint program_id, bool has_geometry_stage)
         world_to_clip_uniform = glGetUniformLocation(id, "u_world_to_clip");
         window_rect_uniform = glGetUniformLocation(id, "u_window_rect");
         window_size_uniform = glGetUniformLocation(id, "u_window_size");
-        params_uniform = glGetUniformLocation(id, "u_params");
     }
 }
 
@@ -346,7 +476,8 @@ miracle::PassProgram::PassProgram(ProgramHandle&& prog) :
     texcoord_attr { glGetAttribLocation(id, "texcoord") },
     tex_uniform { glGetUniformLocation(id, "tex") },
     tex_source_uniform { glGetUniformLocation(id, "tex_source") },
-    surface_size_uniform { glGetUniformLocation(id, "surfaceSize") }
+    surface_size_uniform { glGetUniformLocation(id, "surfaceSize") },
+    custom_uniforms { id }
 {
 }
 

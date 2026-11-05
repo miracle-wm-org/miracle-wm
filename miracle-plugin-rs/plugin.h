@@ -561,16 +561,53 @@ extern "C"
     /// \returns 0 on success, -1 on error
     int32_t miracle_window_set_geometry_shader_id(int64_t window_internal, int32_t geometry_shader_id);
 
-    /// Set the values a window's geometry shader reads as `uniform vec4 u_params[4]`.
+    /// The GLSL type of a uniform set with #miracle_window_set_shader_uniform.
+    typedef enum
+    {
+        /// `float`, read from 1 float.
+        miracle_shader_uniform_type_float = 0,
+        /// `vec2`, read from 2 floats.
+        miracle_shader_uniform_type_vec2 = 1,
+        /// `vec3`, read from 3 floats.
+        miracle_shader_uniform_type_vec3 = 2,
+        /// `vec4`, read from 4 floats.
+        miracle_shader_uniform_type_vec4 = 3,
+        /// `int`, read from 1 int32.
+        miracle_shader_uniform_type_int = 4,
+        /// `mat4`, read from 16 floats in column-major order.
+        miracle_shader_uniform_type_mat4 = 5,
+    } miracle_shader_uniform_type;
+
+    /// Set the uniform called \p name on every shader that draws a window.
     ///
-    /// The values are owned by the plugin; the compositor only forwards them.
-    /// Unset trailing values are zero. Setting them schedules a redraw of the window.
+    /// The value is owned by the plugin. This is only really useful for when you
+    /// are defining a custom shader (fragment, geometry, or otherwise), and need access
+    /// to some special data while it runs. Shaders that do not declare \p name, or that
+    /// declare it with a type other than \p type, ignore it.
+    ///
+    /// Setting a uniform replaces any previous value of the same name, and schedules a
+    /// redraw of the window. A window may have at most 16 uniforms, and names may be at
+    /// most 64 bytes long. Names that the compositor sets itself (e.g. `u_world_to_clip`,
+    /// `alpha`) and those starting with `gl_` are rejected, as are uniform arrays.
     ///
     /// \param window_internal the internal pointer from #miracle_window_info_t::internal
-    /// \param params pointer to \p count floats
-    /// \param count number of floats in \p params, at most 16
+    /// \param name pointer to the uniform's name bytes (not NUL-terminated)
+    /// \param name_len byte length of \p name
+    /// \param type a #miracle_shader_uniform_type
+    /// \param value pointer to as many floats (or int32s) as \p type holds
     /// \returns 0 on success, -1 on error
-    int32_t miracle_window_set_shader_params(int64_t window_internal, const float* params, int32_t count);
+    int32_t miracle_window_set_shader_uniform(
+        int64_t window_internal, const char* name, int32_t name_len, uint32_t type, const void* value);
+
+    /// Clear a uniform set with #miracle_window_set_shader_uniform.
+    ///
+    /// Shaders that read a cleared uniform see zero. Clearing schedules a redraw of the window.
+    ///
+    /// \param window_internal the internal pointer from #miracle_window_info_t::internal
+    /// \param name pointer to the uniform's name bytes, or NULL to clear every uniform
+    /// \param name_len byte length of \p name, or 0 to clear every uniform
+    /// \returns 0 on success, -1 on error
+    int32_t miracle_window_clear_shader_uniform(int64_t window_internal, const char* name, int32_t name_len);
 
     /// Queue a custom per-frame animation.
     ///
@@ -634,8 +671,9 @@ extern "C"
     ///
     /// uniform mat4 u_world_to_clip;  // gl_Position = u_world_to_clip * world
     /// uniform vec2 u_window_size;    // window size in pixels
-    /// uniform vec4 u_params[4];      // see #miracle_window_set_shader_params
     /// ```
+    ///
+    /// It may also declare any uniforms set with #miracle_window_set_shader_uniform.
     ///
     /// The content and the border only line up if the displacement is a function of
     /// `v_local`, `v_world` and the uniforms alone.

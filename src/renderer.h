@@ -182,8 +182,9 @@ private:
     /// Returns the variant of \p base with the window's geometry shader, or
     /// \p base when the window has none or it cannot be used.
     Program const& with_geometry_stage(Program const& base, DrawData const& data) const;
-    /// Sets the per-window uniforms of a program that has a geometry stage.
-    void set_geometry_uniforms(ProgramData const& prog, DrawData const& data) const;
+    /// Sets the per-window uniforms of a program: those of its geometry stage,
+    /// if it has one, and those set by plugins.
+    void set_window_uniforms(ProgramData const& prog, DrawData const& data) const;
     void update_gl_viewport();
 
     /// Runs intermediate off-screen passes 0 .. pass_count-2 for a multi-pass
@@ -194,7 +195,8 @@ private:
         uint8_t shader_id,
         size_t pass_count,
         mir::geometry::Size buf_size,
-        bool source_is_top_row_first) const;
+        bool source_is_top_row_first,
+        std::vector<ShaderUniform> const& uniforms) const;
 
     class OutputFilter;
     std::unique_ptr<OutputFilter> const output_surface;

@@ -545,6 +545,26 @@ pub struct miracle_pointer_event_t {
     #[doc = " The buttons held during the event."]
     pub buttons: u32,
 }
+#[doc = " `float`, read from 1 float."]
+pub const miracle_shader_uniform_type_miracle_shader_uniform_type_float:
+    miracle_shader_uniform_type = 0;
+#[doc = " `vec2`, read from 2 floats."]
+pub const miracle_shader_uniform_type_miracle_shader_uniform_type_vec2:
+    miracle_shader_uniform_type = 1;
+#[doc = " `vec3`, read from 3 floats."]
+pub const miracle_shader_uniform_type_miracle_shader_uniform_type_vec3:
+    miracle_shader_uniform_type = 2;
+#[doc = " `vec4`, read from 4 floats."]
+pub const miracle_shader_uniform_type_miracle_shader_uniform_type_vec4:
+    miracle_shader_uniform_type = 3;
+#[doc = " `int`, read from 1 int32."]
+pub const miracle_shader_uniform_type_miracle_shader_uniform_type_int: miracle_shader_uniform_type =
+    4;
+#[doc = " `mat4`, read from 16 floats in column-major order."]
+pub const miracle_shader_uniform_type_miracle_shader_uniform_type_mat4:
+    miracle_shader_uniform_type = 5;
+#[doc = " The GLSL type of a uniform set with #miracle_window_set_shader_uniform."]
+pub type miracle_shader_uniform_type = ::std::os::raw::c_uint;
 #[doc = " A single shader-pass descriptor used with #miracle_register_window_sample_to_rgba."]
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]

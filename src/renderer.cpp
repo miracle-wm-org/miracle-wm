@@ -541,7 +541,8 @@ int Renderer::run_offscreen_passes(
     uint8_t shader_id,
     size_t pass_count,
     mir::geometry::Size buf_size,
-    bool source_is_top_row_first) const
+    bool source_is_top_row_first,
+    std::vector<ShaderUniform> const& uniforms) const
 {
     // Save GL state that the off-screen passes will alter.
     GLint saved_fbo = 0;
@@ -603,6 +604,7 @@ int Renderer::run_offscreen_passes(
 
         if (pp->surface_size_uniform >= 0)
             glUniform2f(pp->surface_size_uniform, static_cast<GLfloat>(w), static_cast<GLfloat>(h));
+        pp->custom_uniforms.upload(uniforms);
 
         glEnableVertexAttribArray(static_cast<GLuint>(pp->position_attr));
         glEnableVertexAttribArray(static_cast<GLuint>(pp->texcoord_attr));
@@ -991,14 +993,20 @@ void Renderer::draw(
             *data.data.shader_id,
             num_passes,
             renderable.buffer()->size(),
-            source_is_top_row_first);
+            source_is_top_row_first,
+            data.data.shader_uniforms);
     }
 
-    // Resolve the final-pass program.
-    // For multi-pass: final pass (pass_count-1) via resolve_custom_pass.
-    // For single-pass custom or default: existing path.
-    // If a custom shader cannot be resolved (e.g. its owning plugin unloaded and the
-    // shader was removed), fall back to the default window shader instead of throwing.
+    // Resolve the shader program used for the draw call to this renderable.
+    //
+    // If we have a multi-pass shader (most likely because of a plugin), we resolve
+    // that instead. If it is the final pass, then we resolve using different logic
+    // for the previous and final passes.
+    //
+    // If it a single pass, we either opt to resolve a custom shader, or we fall back to
+    // the default built-in shader.
+    //
+    // Afterwards, we try and tack on a geometry shader if one is defined.
     auto const& base_program = [&]() -> Program const&
     {
         if (is_multipass)
@@ -1015,8 +1023,8 @@ void Renderer::draw(
         }
         return dynamic_cast<Program const&>(texture->shader(*program_factory));
     }();
-    auto const* const prog = &with_geometry_stage(base_program, data).data;
 
+    auto const* const prog = &with_geometry_stage(base_program, data).data;
     glUseProgram(prog->id);
     if (prog->last_used_frameno != frameno)
     { // Avoid reloading the screen-global uniforms on every renderable
@@ -1036,7 +1044,7 @@ void Renderer::draw(
             glm::value_ptr(screen_to_gl_coords));
     }
 
-    set_geometry_uniforms(*prog, data);
+    set_window_uniforms(*prog, data);
     glActiveTexture(GL_TEXTURE0);
 
     using namespace miracle::geometry_helpers::gl;
@@ -1174,7 +1182,6 @@ void Renderer::draw(
 
             glDrawArrays(p.type, 0, p.nvertices);
 
-            // We're done with the texture for now
             texture->add_syncpoint();
         }
     }
@@ -1212,7 +1219,7 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
         GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     auto const* const prog = &with_geometry_stage(program_factory->border(), data).data;
     glUseProgram(prog->id);
-    set_geometry_uniforms(*prog, data);
+    set_window_uniforms(*prog, data);
 
     // Next, we use the clip area as our rendering size
     auto const border_config = config->get_border_config();
@@ -1273,16 +1280,18 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
 Program const& Renderer::with_geometry_stage(Program const& base, DrawData const& data) const
 {
     // An override draws the surface somewhere other than its window rectangle,
-    // which is what the geometry shader's coordinates are relative to.
+    // which is what the geometry shader's coordinates are relative to. Hence,
+    // we don't apply geometry shaders when we have an overriding placement.
     if (!data.data.geometry_shader_id || data.placement)
         return base;
 
     if (auto const* const variant = program_factory->geometry_variant(base, *data.data.geometry_shader_id))
         return *variant;
+
     return base;
 }
 
-void Renderer::set_geometry_uniforms(ProgramData const& prog, DrawData const& data) const
+void Renderer::set_window_uniforms(ProgramData const& prog, DrawData const& data) const
 {
     if (prog.world_to_clip_uniform >= 0)
     {
@@ -1298,8 +1307,8 @@ void Renderer::set_geometry_uniforms(ProgramData const& prog, DrawData const& da
         glUniform4f(prog.window_rect_uniform, x(rect.top_left), y(rect.top_left), w, h);
     if (prog.window_size_uniform >= 0)
         glUniform2f(prog.window_size_uniform, w, h);
-    if (prog.params_uniform >= 0)
-        glUniform4fv(prog.params_uniform, 4, data.data.shader_params.data());
+
+    prog.custom_uniforms.upload(data.data.shader_uniforms);
 }
 
 void Renderer::set_viewport(mir::geometry::Rectangle const& rect)

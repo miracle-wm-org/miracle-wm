@@ -20,8 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "container_effect.h"
-#include <array>
+#include "shader_uniform.h"
 #include <optional>
+#include <string>
 
 namespace miracle
 {
@@ -135,11 +136,18 @@ public:
     /// compositor is asked to redraw the surface.
     void set_window_geometry_shader_id(std::optional<uint8_t> geometry_shader_id);
 
-    /// Set the plugin-owned values that the geometry shader reads as
-    /// `uniform vec4 u_params[4]`.
+    /// Set a plugin-owned uniform on every program that draws this window,
+    /// replacing any uniform of the same name.
     ///
     /// Safe to call from any thread, like [set_window_geometry_shader_id].
-    void set_window_shader_params(std::array<float, 16> const& params);
+    ///
+    /// \returns false if the window already has [ShaderUniform::max_per_window] uniforms
+    bool set_window_shader_uniform(ShaderUniform const& uniform);
+
+    /// Clear the uniform called \p name, or every uniform if \p name is std::nullopt.
+    ///
+    /// Safe to call from any thread, like [set_window_geometry_shader_id].
+    void clear_window_shader_uniform(std::optional<std::string> const& name);
 
     /// Retrieve the visible area of the container.
     ///

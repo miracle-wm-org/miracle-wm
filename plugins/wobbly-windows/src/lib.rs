@@ -21,7 +21,7 @@ use std::collections::HashMap;
 use glam::Vec2;
 use miracle_plugin::animation::{AnimationFrameData, AnimationFrameResult};
 use miracle_plugin::plugin::Plugin;
-use miracle_plugin::window::Window;
+use miracle_plugin::window::{ShaderUniform, Window};
 use miracle_plugin::{
     cancel_custom_animation, queue_custom_animation, register_window_geometry_shader,
 };
@@ -47,7 +47,7 @@ const MAX_FRAME: f32 = 1.0 / 30.0;
 const MAX_WOBBLE_SECONDS: f32 = 10.0;
 
 /// Subdivides each incoming triangle into an 8x8 grid so that the window can bend,
-/// and displaces every vertex by the lag in `u_params[0].xy`, weighted by its
+/// and displaces every vertex by the lag in `u_lag`, weighted by its
 /// distance from the window's center. The weight only depends on `v_local`, so the
 /// window's content and its border bend identically.
 ///
@@ -65,7 +65,7 @@ in vec4 v_world[];
 out vec2 g_texcoord;
 
 uniform mat4 u_world_to_clip;
-uniform vec4 u_params[4];
+uniform vec2 u_lag;
 
 const int N = 8;
 
@@ -78,7 +78,7 @@ void emit(float a, float b) {
     // 0 at the center of the window, 1 at its corners.
     vec2 centered = local * 2.0 - 1.0;
     float weight = 0.5 * dot(centered, centered);
-    world.xy += u_params[0].xy * weight;
+    world.xy += u_lag * weight;
 
     gl_Position = u_world_to_clip * world;
     g_texcoord = c * v_texcoord[0] + a * v_texcoord[1] + b * v_texcoord[2];
@@ -179,7 +179,7 @@ impl State {
     /// Detaches the wobble from `window_id` and stops ticking its spring.
     fn stop(&mut self, window_id: u64) {
         if let Some(spring) = self.springs.remove(&window_id) {
-            let _ = spring.window.set_shader_params(&[]);
+            let _ = spring.window.clear_shader_uniform(None);
             let _ = spring.window.set_geometry_shader(None);
             let _ = cancel_custom_animation(spring.animation_id);
         }
@@ -218,7 +218,9 @@ fn tick(window_id: u64, dt: f32, elapsed_seconds: f32) {
 
         spring.previous_target = spring.target;
         let lag = spring.lag();
-        let _ = spring.window.set_shader_params(&[lag.x, lag.y]);
+        let _ = spring
+            .window
+            .set_shader_uniform("u_lag", ShaderUniform::Vec2([lag.x, lag.y]));
     });
 }
 

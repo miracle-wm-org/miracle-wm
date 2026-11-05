@@ -178,12 +178,26 @@ void miracle::WindowContainer::set_window_geometry_shader_id(std::optional<uint8
     request_redraw();
 }
 
-void miracle::WindowContainer::set_window_shader_params(std::array<float, 16> const& params)
+bool miracle::WindowContainer::set_window_shader_uniform(ShaderUniform const& uniform)
 {
     if (render_id_.has_value())
     {
         if (auto const rdm_locked = rdm.lock())
-            rdm_locked->shader_params_change(render_id_.value(), params);
+        {
+            if (!rdm_locked->shader_uniform_set(render_id_.value(), uniform))
+                return false;
+        }
+    }
+    request_redraw();
+    return true;
+}
+
+void miracle::WindowContainer::clear_window_shader_uniform(std::optional<std::string> const& name)
+{
+    if (render_id_.has_value())
+    {
+        if (auto const rdm_locked = rdm.lock())
+            rdm_locked->shader_uniform_clear(render_id_.value(), name);
     }
     request_redraw();
 }

@@ -122,12 +122,41 @@ void RenderDataManager::geometry_shader_id_change(RenderDataManagerId id, std::o
     }
 }
 
-void RenderDataManager::shader_params_change(RenderDataManagerId id, std::array<float, 16> const& params)
+bool RenderDataManager::shader_uniform_set(RenderDataManagerId id, ShaderUniform const& uniform)
+{
+    std::lock_guard lock(mutex);
+    auto* const data = find_by_id(render_data, id);
+    if (!data)
+        return true;
+
+    auto& uniforms = data->shader_uniforms;
+    auto const it = std::find_if(uniforms.begin(), uniforms.end(), [&](ShaderUniform const& existing)
+    {
+        return existing.name == uniform.name;
+    });
+    if (it != uniforms.end())
+        *it = uniform;
+    else if (uniforms.size() < ShaderUniform::max_per_window)
+        uniforms.push_back(uniform);
+    else
+        return false;
+
+    ++generation;
+    return true;
+}
+
+void RenderDataManager::shader_uniform_clear(RenderDataManagerId id, std::optional<std::string> const& name)
 {
     std::lock_guard lock(mutex);
     if (auto* const data = find_by_id(render_data, id))
     {
-        data->shader_params = params;
+        if (name)
+            std::erase_if(data->shader_uniforms, [&](ShaderUniform const& existing)
+            {
+                return existing.name == *name;
+            });
+        else
+            data->shader_uniforms.clear();
         ++generation;
     }
 }

@@ -510,8 +510,10 @@ pub fn register_window_shader(passes: &[&str]) -> Option<u8> {
 ///
 /// uniform mat4 u_world_to_clip;  // gl_Position = u_world_to_clip * world
 /// uniform vec2 u_window_size;    // window size in pixels
-/// uniform vec4 u_params[4];      // see Window::set_shader_params
 /// ```
+///
+/// It may also declare any uniforms set with
+/// [`crate::window::Window::set_shader_uniform`].
 ///
 /// The content and the border only line up if the displacement is a function of
 /// `v_local`, `v_world` and the uniforms alone. Displaced vertices may leave the

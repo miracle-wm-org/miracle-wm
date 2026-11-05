@@ -26,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_manager.h"
 #include "parent_container.h"
 #include "plugin_manager.h"
+#include "shader_uniform.h"
 #include "window_container.h"
 #include "window_controller.h"
 #include "workspace_manager.h"
@@ -792,10 +793,11 @@ int32_t PluginBridge::window_set_geometry_shader_id(uint64_t window_internal, in
     return 0;
 }
 
-int32_t PluginBridge::window_set_shader_params(uint64_t window_internal, float const* params, int32_t count)
+int32_t PluginBridge::window_set_shader_uniform(
+    uint64_t window_internal, std::string_view name, uint32_t type_param, void const* value)
 {
-    std::array<float, 16> values = {};
-    if (count < 0 || count > static_cast<int32_t>(values.size()))
+    auto const type = ShaderUniform::type_from(type_param);
+    if (!type || !ShaderUniform::is_valid_name(name))
         return -1;
 
     auto it = window_id_map->find(window_internal);
@@ -806,8 +808,22 @@ int32_t PluginBridge::window_set_shader_params(uint64_t window_internal, float c
     if (!container)
         return -1;
 
-    std::copy_n(params, count, values.begin());
-    container->set_window_shader_params(values);
+    if (!container->set_window_shader_uniform(ShaderUniform::from_bytes(std::string(name), *type, value)))
+        return -1;
+    return 0;
+}
+
+int32_t PluginBridge::window_clear_shader_uniform(uint64_t window_internal, std::optional<std::string_view> name)
+{
+    auto it = window_id_map->find(window_internal);
+    if (it == window_id_map->end())
+        return -1;
+
+    auto const container = window_controller->get_window_container(it->second);
+    if (!container)
+        return -1;
+
+    container->clear_window_shader_uniform(name ? std::optional<std::string>(*name) : std::nullopt);
     return 0;
 }
 

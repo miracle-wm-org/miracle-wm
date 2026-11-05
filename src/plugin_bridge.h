@@ -29,6 +29,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/window_info.h>
 #include <miral/window_specification.h>
 #include <mutex>
+#include <optional>
+#include <string_view>
 #include <unordered_map>
 #include <variant>
 
@@ -177,7 +179,10 @@ public:
     int32_t window_request_focus(uint64_t window_internal);
     int32_t window_set_shader_id(uint64_t window_internal, int32_t shader_id_param);
     int32_t window_set_geometry_shader_id(uint64_t window_internal, int32_t geometry_shader_id_param);
-    int32_t window_set_shader_params(uint64_t window_internal, float const* params, int32_t count);
+    /// \param value points to [ShaderUniform::value_size] bytes for \p type
+    int32_t window_set_shader_uniform(uint64_t window_internal, std::string_view name, uint32_t type, void const* value);
+    /// \param name the uniform to clear, or std::nullopt to clear every uniform
+    int32_t window_clear_shader_uniform(uint64_t window_internal, std::optional<std::string_view> name);
 
     void set_plugin_userdata(uint32_t handle, std::string const& userdata_json);
     std::string const* get_plugin_userdata(uint32_t handle) const;
@@ -210,12 +215,6 @@ public:
     AbstractWorkspace* resolve_workspace(uint64_t workspace_internal);
 
 private:
-    std::shared_ptr<AbstractOutput> resolve_output(uint64_t output_id);
-    std::shared_ptr<AbstractWorkspace> resolve_workspace_shared(uint64_t workspace_id);
-    /// Walk the container tree and return the container with the given \p id, or nullptr.
-    std::shared_ptr<Container> find_container_by_id(uint64_t id);
-    uint64_t find_window_id(miral::Window const& window) const;
-    uint64_t find_application_id(miral::Application const& app) const;
     /// This is the information expected to be on a #miracle_window_info_t.
     struct PluginWindowInfo
     {
@@ -223,20 +222,12 @@ private:
         std::variant<miral::WindowSpecification, miral::Window> window_info;
     };
 
-    std::shared_ptr<OutputManager> output_manager;
-    std::shared_ptr<WindowController> window_controller;
-    std::shared_ptr<WorkspaceManager> workspace_manager;
-    std::shared_ptr<CompositorState> compositor_state;
-    std::shared_ptr<WindowIdMap> window_id_map;
-    std::shared_ptr<ApplicationIdMap> application_id_map;
-    std::shared_ptr<Animator> animator;
-    std::shared_ptr<mir::ServerActionQueue> server_action_queue;
-    std::shared_ptr<SamplerRegistry> sampler_registry_;
     struct CustomAnimationEntry
     {
         uint32_t plugin_handle;
         AnimationHandle animator_handle;
     };
+
     /// Custom animations that are still running, keyed by the id handed to the plugin.
     /// Entries are added on queue and removed on cancel or completion. Locked because
     /// plugins queue and cancel from both the animator thread (inside `animate`) and
@@ -247,6 +238,23 @@ private:
         uint32_t next_id = 1;
         std::unordered_map<uint32_t, CustomAnimationEntry> entries;
     };
+
+    std::shared_ptr<AbstractOutput> resolve_output(uint64_t output_id);
+    std::shared_ptr<AbstractWorkspace> resolve_workspace_shared(uint64_t workspace_id);
+    /// Walk the container tree and return the container with the given \p id, or nullptr.
+    std::shared_ptr<Container> find_container_by_id(uint64_t id);
+    uint64_t find_window_id(miral::Window const& window) const;
+    uint64_t find_application_id(miral::Application const& app) const;
+
+    std::shared_ptr<OutputManager> output_manager;
+    std::shared_ptr<WindowController> window_controller;
+    std::shared_ptr<WorkspaceManager> workspace_manager;
+    std::shared_ptr<CompositorState> compositor_state;
+    std::shared_ptr<WindowIdMap> window_id_map;
+    std::shared_ptr<ApplicationIdMap> application_id_map;
+    std::shared_ptr<Animator> animator;
+    std::shared_ptr<mir::ServerActionQueue> server_action_queue;
+    std::shared_ptr<SamplerRegistry> sampler_registry_;
     std::shared_ptr<CustomAnimations> const custom_animations = std::make_shared<CustomAnimations>();
     std::vector<std::shared_ptr<PluginWindowInfo>> plugin_window_infos;
     std::unordered_map<uint32_t, std::string> plugin_userdata_map;

@@ -18,12 +18,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_SURFACE_TRACKER_H
 #define MIRACLEWM_SURFACE_TRACKER_H
 
-#include <array>
+#include "shader_uniform.h"
+
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <mir/scene/surface.h>
 #include <miral/window.h>
 #include <mutex>
+#include <optional>
+#include <string>
 #include <vector>
 
 namespace miracle
@@ -46,8 +49,8 @@ struct RenderData
     std::optional<uint8_t> shader_id = std::nullopt;
     /// The per-window geometry shader, if any. See [SamplerRegistry::GeometryEntry].
     std::optional<uint8_t> geometry_shader_id = std::nullopt;
-    /// Plugin-owned values handed to the geometry shader as `uniform vec4 u_params[4]`.
-    std::array<float, 16> shader_params = {};
+    /// Plugin-owned uniforms handed to every program that draws the window.
+    std::vector<ShaderUniform> shader_uniforms = {};
 };
 
 class RenderDataManager
@@ -63,7 +66,13 @@ public:
     void needs_outline_change(RenderDataManagerId id, bool needs_outline);
     void shader_id_change(RenderDataManagerId id, std::optional<uint8_t> shader_id);
     void geometry_shader_id_change(RenderDataManagerId id, std::optional<uint8_t> geometry_shader_id);
-    void shader_params_change(RenderDataManagerId id, std::array<float, 16> const& params);
+    /// Set \p uniform, replacing any uniform of the same name.
+    ///
+    /// \returns false if the uniform is new and the data already has
+    ///          [ShaderUniform::max_per_window] uniforms.
+    bool shader_uniform_set(RenderDataManagerId id, ShaderUniform const& uniform);
+    /// Clear the uniform called \p name, or every uniform if \p name is std::nullopt.
+    void shader_uniform_clear(RenderDataManagerId id, std::optional<std::string> const& name);
     /// Reset every RenderData whose shader_id or geometry_shader_id is in \p ids
     /// back to the default (std::nullopt). Used when the shaders are removed (e.g.
     /// on plugin unload).
