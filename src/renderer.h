@@ -31,6 +31,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/window_manager_tools.h>
 #include <vector>
 
+#if __has_include(<mir/graphics/framebuffer_ptr.h>)
+#include <mir/graphics/framebuffer_ptr.h>
+#define MIRACLE_HAS_FRAMEBUFFER_PTR 1
+#endif
+
 namespace mir
 {
 namespace graphics
@@ -51,6 +56,12 @@ class CompositorState;
 class WindowToolsAccessor;
 class Animator;
 
+#ifdef MIRACLE_HAS_FRAMEBUFFER_PTR
+using RendererFramebufferPtr = mir::graphics::FramebufferPtr;
+#else
+using RendererFramebufferPtr = std::unique_ptr<mir::graphics::Framebuffer>;
+#endif
+
 class Renderer : public mir::renderer::Renderer
 {
 public:
@@ -64,7 +75,7 @@ public:
     // These are called with a valid GL context:
     void set_viewport(mir::geometry::Rectangle const& rect) override;
     void set_output_transform(glm::mat2 const&) override;
-    auto render(mir::graphics::RenderableList const&) const -> std::unique_ptr<mir::graphics::Framebuffer> override;
+    auto render(mir::graphics::RenderableList const&) const -> RendererFramebufferPtr override;
     void set_output_filter(MirOutputFilter filter) override;
 
     // This is called _without_ a GL context:
