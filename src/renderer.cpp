@@ -831,7 +831,7 @@ Renderer::DrawData Renderer::get_draw_data(
     return result;
 }
 
-auto Renderer::render(mg::RenderableList const& renderables) const -> std::unique_ptr<mg::Framebuffer>
+auto Renderer::render(mg::RenderableList const& renderables) const -> RendererFramebufferPtr
 {
     // A plugin-set screen shader takes precedence over the config path.
     auto const screen = sampler_registry->screen_shader_state();
