@@ -877,9 +877,16 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> RendererFr
             group_surface = surface;
             group_data = find_render_data(surface);
             group_placements.clear();
-            group_window_rect = surface
-                ? geom::Rectangle { surface->top_left(), surface->window_size() }
-                : geom::Rectangle {};
+            // The renderable only holds a raw, non-owning surface pointer, so the
+            // surface may already be destroyed on the window management thread.
+            // Only read live geometry through a pinned surface; otherwise fall
+            // back to the renderable's own snapshot.
+            auto const pinned = group_data
+                ? std::shared_ptr<mir::scene::Surface>(group_data->window)
+                : nullptr;
+            group_window_rect = pinned
+                ? geom::Rectangle { pinned->top_left(), pinned->window_size() }
+                : r->screen_position();
             if (scene_override && surface)
             {
                 group_real = geom::Rectangle { surface->top_left(), surface->window_size() };
