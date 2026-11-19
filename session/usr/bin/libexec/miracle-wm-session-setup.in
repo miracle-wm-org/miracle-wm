@@ -30,7 +30,8 @@
 #    Possible (but not exhaustive) list of variables:
 #    - DISPLAY - for X11 applications that are started as user session services
 #    - WAYLAND_DISPLAY - similarly, this is needed for wayland-native services
-#    - I3SOCK/SWAYSOCK - allow services to talk with miracle using i3 IPC protocol
+#    - MIRACLESOCK - allow services to talk with miracle over its IPC socket
+#    - I3SOCK/SWAYSOCK - the same socket, for i3/sway compatible clients
 #
 # 2. `xdg-desktop-portal` requires XDG_CURRENT_DESKTOP to be set in order to
 #    select the right implementation for screenshot and screencast portals.
@@ -61,10 +62,11 @@ export XDG_CURRENT_DESKTOP=mir:miracle-wm
 export XDG_SESSION_DESKTOP="${XDG_SESSION_DESKTOP:-miracle-wm}"
 export XDG_SESSION_TYPE=wayland
 VARIABLES="DESKTOP_SESSION XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE"
-VARIABLES="${VARIABLES} DISPLAY I3SOCK SWAYSOCK WAYLAND_DISPLAY"
+VARIABLES="${VARIABLES} DISPLAY I3SOCK MIRACLESOCK SWAYSOCK WAYLAND_DISPLAY"
 SESSION_TARGET="miracle-wm-session.target"
 SESSION_SHUTDOWN_TARGET="miracle-wm-session-shutdown.target"
 WITH_CLEANUP=1
+WATCH_SHUTDOWN=""
 
 print_usage() {
     cat <<EOH
@@ -97,6 +99,10 @@ while [ $# -gt 0 ]; do
         ;; # ignore (enabled by default)
     --no-cleanup)
         unset WITH_CLEANUP ;;
+    # Internal: wait for the compositor to exit and then tear down the session.
+    # This is run from a transient systemd user unit (see below), not by users.
+    --watch-shutdown)
+        WATCH_SHUTDOWN=1 ;;
     -*)
         echo "Unexpected option: $1" 1>&2
         print_usage
@@ -107,14 +113,74 @@ while [ $# -gt 0 ]; do
     shift
 done
 
+# IPC socket of this compositor. MIRACLESOCK is preferred; SWAYSOCK points at
+# the same socket and is kept as a fallback.
+OWN_SOCKET="${MIRACLESOCK:-$SWAYSOCK}"
+
+# Print the IPC socket of the compositor that currently owns the systemd
+# user session, if any. Sessions started by older versions of this script
+# only exported SWAYSOCK, so fall back to it.
+owning_session_socket() {
+    _env="$(systemctl --user show-environment 2>/dev/null)"
+    _sock="$(printf '%s\n' "$_env" | sed -n 's/^MIRACLESOCK=//p')"
+    if [ -z "$_sock" ]; then
+        _sock="$(printf '%s\n' "$_env" | sed -n 's/^SWAYSOCK=//p')"
+    fi
+    printf '%s\n' "$_sock"
+}
+
+# Succeeds if a compositor is still listening on the given IPC socket.
+session_is_alive() {
+    [ -n "$1" ] && [ -S "$1" ] || return 1
+    if hash miraclemsg 2>/dev/null; then
+        timeout 2 miraclemsg -q -s "$1" -t get_version >/dev/null 2>&1
+    fi
+}
+
+# Stop the session target and unset the variables, but only if this
+# compositor still owns the session. Another compositor may have taken it
+# over in the meantime (see the stale session handling below), in which case
+# tearing it down would break that session.
+session_cleanup() {
+    if [ -n "$OWN_SOCKET" ] && [ "$(owning_session_socket)" != "$OWN_SOCKET" ]; then
+        echo "Session is owned by another compositor; skipping cleanup"
+        return
+    fi
+    systemctl --user start --job-mode=replace-irreversibly "$SESSION_SHUTDOWN_TARGET"
+    if [ -n "$VARIABLES" ]; then
+        # shellcheck disable=SC2086
+        systemctl --user unset-environment $VARIABLES
+    fi
+}
+
+if [ -n "$WATCH_SHUTDOWN" ]; then
+    VARIABLES="$MIRACLE_WM_SESSION_VARIABLES"
+    # Wait until the compositor exits. This also returns if the compositor dies
+    # without sending the event, since the socket gets closed.
+    miraclemsg -t subscribe '["shutdown"]' >/dev/null 2>&1
+    session_cleanup
+    exit 0
+fi
+
 # Check if another Miracle session is already active.
 #
 # Ignores all other kinds of parallel or nested sessions
 # (Miracle on Gnome/KDE/X11/etc.), as the only way to detect these is to check
 # for (WAYLAND_)?DISPLAY and that is know to be broken on Arch.
+#
+# If the session target is active but the compositor that started it is gone
+# (e.g. the previous session was killed on logout before it could clean up),
+# the session is stale and we take it over. Otherwise, future logins would be
+# left without a graphical session.
 if systemctl --user -q is-active "$SESSION_TARGET"; then
-    echo "Another session found; refusing to overwrite the variables"
-    exit 1
+    PREVIOUS_SOCKET="$(owning_session_socket)"
+    if [ "$PREVIOUS_SOCKET" != "$OWN_SOCKET" ] && session_is_alive "$PREVIOUS_SOCKET"; then
+        echo "Another session found; refusing to overwrite the variables"
+        exit 1
+    fi
+
+    echo "Taking over stale session (previous IPC socket: ${PREVIOUS_SOCKET:-none})"
+    systemctl --user start --job-mode=replace-irreversibly "$SESSION_SHUTDOWN_TARGET"
 fi
 
 # DBus activation environment is independent from systemd. While most of
@@ -148,21 +214,32 @@ PYTHONPATH="$WAIT_SNI_PYTHONPATH" "$(dirname "$(readlink -f "$0")")/miracle-wm-w
 
 # Optionally, wait until the compositor exits and cleanup variables and services.
 if [ -z "$WITH_CLEANUP" ] ||
-    [ -z "$SWAYSOCK" ] ||
+    [ -z "$OWN_SOCKET" ] ||
     ! hash miraclemsg 2>/dev/null
 then
     exit 0;
 fi
 
-# declare cleanup handler and run it on script termination via kill or Ctrl-C
-session_cleanup () {
-    # stop the session target and unset the variables
-    systemctl --user start --job-mode=replace-irreversibly "$SESSION_SHUTDOWN_TARGET"
-    if [ -n "$VARIABLES" ]; then
-        # shellcheck disable=SC2086
-        systemctl --user unset-environment $VARIABLES
-    fi
-}
+# Wait for the compositor to exit from a transient unit in the systemd user
+# manager rather than from this process. This process lives in the login
+# session's scope, which logind kills on logout. The kill is applied to every
+# process in the scope, including any `systemctl` spawned by a cleanup trap, so
+# the cleanup would never land and the session target would stay active
+# forever.
+if hash systemd-run 2>/dev/null &&
+    systemd-run --user --quiet --collect \
+        --unit="miracle-wm-session-cleanup-$$" \
+        --description="Clean up miracle-wm session on compositor exit" \
+        --setenv=PATH="$PATH" \
+        --setenv=MIRACLESOCK="$OWN_SOCKET" \
+        --setenv=SWAYSOCK="$OWN_SOCKET" \
+        --setenv=MIRACLE_WM_SESSION_VARIABLES="$VARIABLES" \
+        "$(readlink -f "$0")" --watch-shutdown
+then
+    exit 0
+fi
+
+# Fall back to waiting in this process if the transient unit is unavailable.
 trap session_cleanup INT TERM
 # wait until the compositor exits
 miraclemsg -t subscribe '["shutdown"]'
