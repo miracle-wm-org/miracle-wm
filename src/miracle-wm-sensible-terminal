@@ -12,9 +12,46 @@
 # Invariants:
 # 1. $TERMINAL must come first
 # 2. Distribution-specific mechanisms come next, e.g. x-terminal-emulator
-# 3. The terminal emulator with best accessibility comes first.
-# 4. No order is guaranteed/desired for the remaining terminal emulators.
-for terminal in "$TERMINAL" x-terminal-emulator mate-terminal gnome-terminal terminator xfce4-terminal urxvt rxvt termit Eterm aterm uxterm xterm roxterm termite lxterminal terminology st qterminal lilyterm tilix terminix konsole kitty guake tilda alacritty hyper wezterm rio; do
+# 3. Terminal emulators with native Wayland support come next.
+# 4. X11-only (or legacy) terminal emulators come last, since they require
+#    Xwayland.
+# 5. No order is guaranteed/desired within each group.
+for terminal in \
+    "$TERMINAL" \
+    x-terminal-emulator \
+    ptyxis \
+    foot \
+    ghostty \
+    kitty \
+    alacritty \
+    wezterm \
+    rio \
+    kgx \
+    gnome-terminal \
+    konsole \
+    xfce4-terminal \
+    tilix \
+    terminator \
+    mate-terminal \
+    qterminal \
+    lxterminal \
+    terminology \
+    contour \
+    roxterm \
+    hyper \
+    terminix \
+    termite \
+    termit \
+    lilyterm \
+    guake \
+    tilda \
+    st \
+    urxvt \
+    rxvt \
+    Eterm \
+    aterm \
+    uxterm \
+    xterm; do
     if command -v "$terminal" > /dev/null 2>&1; then
         exec "$terminal" "$@"
         exit 0
