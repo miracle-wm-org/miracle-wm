@@ -41,6 +41,25 @@ namespace gl
         bool const is_flipped,
         std::optional<geometry::Rectangle> const& clip_area);
 
+    /// A rectangle in screen coordinates with fractional position and size.
+    struct RectF
+    {
+        float x = 0.f;
+        float y = 0.f;
+        float width = 0.f;
+        float height = 0.f;
+    };
+
+    /// Builds the quad that draws the \p src_bounds region of a \p buffer_size texture
+    /// into \p dest. \p clip_area behaves as it does for
+    /// [tessellate_renderable_into_rectangle], but is relative to \p dest, which need not
+    /// be the size of the buffer: the texture is stretched to fill it.
+    Primitive tessellate_texture_into_rectangle(
+        RectF const& dest,
+        geometry::Size const& buffer_size,
+        geometry::RectangleD const& src_bounds,
+        bool const is_flipped,
+        std::optional<geometry::Rectangle> const& clip_area);
 }
 }
 #endif /* MIR_GL_TESSELLATION_HELPERS_H_ */

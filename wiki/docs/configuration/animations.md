@@ -55,7 +55,7 @@ animations:
     duration: <float seconds>
     type: <built_in>
     parts?:
-      - type: <disabled|slide|grow|shrink|fade>
+      - type: <disabled|slide|grow|shrink|fade|window_resize>
         function: <linear|ease_in_*|ease_out_*|ease_in_out_*>  # see https://easings.net/
         c1?: <float=1.2>
         c2?: <float=1.83>
@@ -109,17 +109,25 @@ For animations with `type: built_in`:
     while a `fade` contributes an opacity.
 
     Where two parts set the same property, **the later part wins**. This
-    matters most when combining `fade` with `slide`: `slide` always sets
-    opacity to fully opaque, so a `fade` must be listed *after* a `slide` to
-    have any effect.
+    matters most when combining `fade` with `slide` or `window_resize`: both
+    always set opacity to fully opaque, so a `fade` must be listed *after*
+    them to have any effect.
 
     Properties per part:
 
 #### `type`
 
-:   <small>required</small> **type:** `disabled` | `slide` | `grow` | `shrink` | `fade`
+:   <small>required</small> **type:** `disabled` | `slide` | `grow` | `shrink` | `fade` | `window_resize`
 
     The animation effect to apply.
+
+    - `slide` moves the window to its new position. If the window also changes
+      size, its content is revealed or cut off by the animated area rather than
+      scaled.
+    - `window_resize` moves the window like `slide` does, it is intended
+      specifically for windows and nothing else. This is the default for `window_move`.
+    - `grow` and `shrink` scale the window up from, or down to, `scale`.
+    - `fade` animates the opacity of the window.
 
 #### `function`
 
@@ -204,7 +212,7 @@ animations:
     duration: 0.15
     type: built_in
     parts:
-      - type: slide
+      - type: window_resize
         function: ease_out_quart
   - event: window_close
     duration: 0.15

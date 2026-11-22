@@ -95,6 +95,14 @@ public:
     /// window size.
     void set_animation_area(std::optional<geom::Rectangle> const& area);
     [[nodiscard]] std::optional<geom::Rectangle> animation_area() const;
+
+    /// Tell the renderer whether to scale this window's content to fit its
+    /// animated clip area, which an animation asks for while it resizes the
+    /// window (see AnimationFrameResult::scales_content).
+    ///
+    /// \returns true if the value changed, in which case the window must be
+    ///          redrawn
+    bool set_scale_content_to_clip(bool scale_content_to_clip);
     float get_alpha() const;
     void on_focus_gained() override;
     virtual void on_focus_lost();
@@ -237,6 +245,7 @@ private:
     bool enable_render_data_ = true;
     bool urgent_ = false;
     bool occlusion_bypass_ = false;
+    bool scale_content_to_clip_ = false;
     std::optional<glm::mat4> last_applied_transform_;
     std::optional<float> last_applied_alpha_;
 };

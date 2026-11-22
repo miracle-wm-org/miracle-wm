@@ -1314,6 +1314,11 @@ bool CommandController::toggle_floating_internal(std::shared_ptr<Container> cons
 
         animator->remove_by_animation_handle(wc->animation_handle());
 
+        // TODO: Maybe add a "cancel" callback to an animation?
+        // The cancelled animation never delivers its final frame, which is what
+        // would otherwise stop the renderer from scaling the window's content.
+        wc->set_scale_content_to_clip(false);
+
         // Remove the container from whatever workspace it is on. Pinned windows have no
         // workspace, so they land on the active workspace of the focused output instead.
         auto workspace = wc->get_workspace();

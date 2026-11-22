@@ -238,6 +238,7 @@ void WindowManagerToolsWindowController::process_animation(
     try
     {
         auto const& rectangle = result.rectangle;
+        bool size_clamped = false;
 
         if (!container->window())
             return;
@@ -263,36 +264,53 @@ void WindowManagerToolsWindowController::process_animation(
             if (next_size != window.size())
                 spec.size() = next_size;
 
+            // A window held at its minimum size never commits a buffer at the
+            // size the animation asked for, so there is nothing to catch up to.
+            size_clamped = next_size != rectangle->size;
+
             tools.modify_window(info, spec);
         }
 
         auto const previous_clip = tools.info_for(window).clip_area();
         auto const window_container = Container::as_window_container(container);
+        bool scaling_changed = false;
         if (result.is_complete)
         {
             if (result.rectangle)
                 clip(window, result.rectangle.value());
             if (window_container)
+            {
                 window_container->set_animation_area(std::nullopt);
+                scaling_changed = window_container->set_scale_content_to_clip(false);
+            }
         }
         else if (result.clip_area)
         {
             clip(window, result.clip_area.value());
             if (window_container)
+            {
                 window_container->set_animation_area(result.clip_area);
+                scaling_changed = window_container->set_scale_content_to_clip(
+                    result.scales_content && !size_clamped);
+            }
         }
         else if (rectangle)
         {
             clip(window, rectangle.value());
             if (window_container)
+            {
                 window_container->set_animation_area(rectangle);
+                scaling_changed = window_container->set_scale_content_to_clip(false);
+            }
         }
 
         // Mir does not tell its observers about a clip change, so a frame that
         // only moves the clip would never be composited unless something else
         // on the surface is touched too.
+        // The same goes for the renderer starting or stopping to scale the
+        // window's content.
         bool const clip_changed = tools.info_for(window).clip_area() != previous_clip;
-        container->set_animation_effect(result.transform, result.opacity, clip_changed);
+        container->set_animation_effect(result.transform, result.opacity, clip_changed || scaling_changed);
     }
     catch (std::out_of_range const&)
     {

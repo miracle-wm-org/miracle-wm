@@ -51,6 +51,10 @@ struct RenderData
     std::optional<uint8_t> geometry_shader_id = std::nullopt;
     /// Plugin-owned uniforms handed to every program that draws the window.
     std::vector<ShaderUniform> shader_uniforms = {};
+    /// Set while an animation is resizing the window. The renderer then scales
+    /// the window's buffer to fit its animated clip area instead of drawing it
+    /// at its committed size.
+    bool scale_content_to_clip = false;
 };
 
 class RenderDataManager
@@ -66,6 +70,7 @@ public:
     void needs_outline_change(RenderDataManagerId id, bool needs_outline);
     void shader_id_change(RenderDataManagerId id, std::optional<uint8_t> shader_id);
     void geometry_shader_id_change(RenderDataManagerId id, std::optional<uint8_t> geometry_shader_id);
+    void scale_content_to_clip_change(RenderDataManagerId id, bool scale_content_to_clip);
     /// Set \p uniform, replacing any uniform of the same name.
     ///
     /// \returns false if the uniform is new and the data already has

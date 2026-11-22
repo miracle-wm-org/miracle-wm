@@ -76,10 +76,17 @@ struct AnimationFrameResult
     /// The current opacity set by the animation, if any.
     std::optional<float> opacity;
 
-    /// Separate scissor-clip region for slide animations.
+    /// The animated on-screen area of the window, for slide and window_resize
+    /// animations.
     /// When set, process_animation() uses this for clip() instead of rectangle,
     /// so rectangle can carry the final target size for modify_window().
     std::optional<mir::geometry::Rectangle> clip_area;
+
+    /// Whether the window's content is scaled to fit [clip_area] rather than
+    /// being cut off by it. A window_resize animation sets this while it changes
+    /// the size of the window, so that the change is smooth on screen however long the
+    /// client takes to commit a buffer at the new size.
+    bool scales_content = false;
 
     AnimationFrameResult merge(AnimationFrameResult const& other) const;
 };

@@ -365,12 +365,12 @@ TEST_F(AnimationConfigurationTest, WindowOpenDefaultGrowsAndFadesIn)
     EXPECT_THAT(def.data[1].function, Eq(miracle::EaseFunction::ease_out_quad));
 }
 
-TEST_F(AnimationConfigurationTest, WindowMoveDefaultSlidesWithAStrongDecelerate)
+TEST_F(AnimationConfigurationTest, WindowMoveDefaultResizesWithAStrongDecelerate)
 {
     auto const def = default_for(miracle::AnimateableEvent::window_move);
     EXPECT_THAT(def.duration_seconds, FloatEq(0.15f));
     ASSERT_THAT(def.data.size(), Eq(1u));
-    EXPECT_THAT(def.data[0].type, Eq(miracle::BultInAnimationType::slide));
+    EXPECT_THAT(def.data[0].type, Eq(miracle::BultInAnimationType::window_resize));
     EXPECT_THAT(def.data[0].function, Eq(miracle::EaseFunction::ease_out_quart));
 }
 

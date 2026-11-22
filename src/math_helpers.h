@@ -18,7 +18,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_MATH_HELPERS_H
 #define MIRACLE_WM_MATH_HELPERS_H
 
+#include "tessellation_helpers.h"
+
 #include <mir/geometry/rectangle.h>
+#include <optional>
 
 namespace miracle
 {
@@ -30,6 +33,31 @@ float as_float(T const& value)
 
 std::optional<mir::geometry::Rectangle> intersect(
     const mir::geometry::Rectangle& a, const mir::geometry::Rectangle& b);
+
+inline mir::gl::RectF to_rect_f(mir::geometry::Rectangle const& rect)
+{
+    return mir::gl::RectF {
+        static_cast<float>(rect.top_left.x.as_int()),
+        static_cast<float>(rect.top_left.y.as_int()),
+        static_cast<float>(rect.size.width.as_int()),
+        static_cast<float>(rect.size.height.as_int())
+    };
+}
+
+/// Maps \p rect, which is in the coordinates of \p src, into \p dst.
+/// \p src must not be empty.
+inline mir::gl::RectF map(
+    mir::gl::RectF const& rect, mir::gl::RectF const& src, mir::gl::RectF const& dst)
+{
+    float const kx = dst.width / src.width;
+    float const ky = dst.height / src.height;
+    return mir::gl::RectF {
+        dst.x + (rect.x - src.x) * kx,
+        dst.y + (rect.y - src.y) * ky,
+        rect.width * kx,
+        rect.height * ky
+    };
+}
 
 }
 

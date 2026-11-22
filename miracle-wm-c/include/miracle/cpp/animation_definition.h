@@ -104,6 +104,9 @@ enum class MIRACLE_WM_CONFIG_API BultInAnimationType
     grow,
     shrink,
     fade,
+    /// Moves a window like #slide does, but this is geared towards windows specifically,
+    /// so it does extra stuff (e.g. blending from the old size to the next somehow).
+    window_resize,
     max
 };
 
@@ -112,7 +115,8 @@ constexpr std::array<const char*, static_cast<int>(BultInAnimationType::max)> bu
     "slide",
     "grow",
     "shrink",
-    "fade"
+    "fade",
+    "window_resize"
 };
 
 /// Defines a built-in animation for miracle.

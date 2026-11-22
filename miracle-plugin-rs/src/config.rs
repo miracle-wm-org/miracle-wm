@@ -254,6 +254,7 @@ pub enum AnimationPartType {
     Grow,
     Shrink,
     Fade,
+    WindowResize,
 }
 
 // ─── EasingFunction ──────────────────────────────────────────────────────────

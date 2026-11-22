@@ -62,10 +62,11 @@ const std::array<miracle::AnimationDefinition, static_cast<int>(miracle::Animate
                 .function = miracle::EaseFunction::ease_out_quad } } },
     // window_move: the most repeated event, so the shortest. A strong
     // decelerate gives an immediate response to the keypress and a soft settle.
+    // A move usually resizes the window too, which window_resize keeps smooth.
     { true,
      0.15f,
      miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
-            .type = miracle::BultInAnimationType::slide,
+            .type = miracle::BultInAnimationType::window_resize,
             .function = miracle::EaseFunction::ease_out_quart } }    },
     // window_close: accelerating and shorter than the open, so dismissal feels
     // immediate.

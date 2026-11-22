@@ -186,6 +186,29 @@ AnimationDefinition linear_slide_definition()
     };
 }
 
+AnimationDefinition linear_window_resize_definition()
+{
+    return AnimationDefinition {
+        false,
+        1.f,
+        BuiltInAnimationList { BuiltInAnimationDefinition {
+            .type = BultInAnimationType::window_resize,
+            .function = EaseFunction::linear,
+        } }
+    };
+}
+
+AnimationData resize_data()
+{
+    // Both a growing and a shrinking axis.
+    return AnimationData {
+        AnimateableEvent::window_move,
+        mir::geometry::Rectangle(mir::geometry::Point(0, 0), mir::geometry::Size(100, 400)),
+        mir::geometry::Rectangle(mir::geometry::Point(0, 0), mir::geometry::Size(300, 200)),
+        1, 1
+    };
+}
+
 AnimationData slide_right_data()
 {
     return AnimationData {
@@ -381,4 +404,67 @@ TEST_F(EaseTest, EaseInBounceIsTheMirrorOfEaseOutBounce)
         EXPECT_NEAR(ease(in_definition, t), 1.f - ease(out_definition, 1.f - t), 1e-5f)
             << "at t=" << t;
     }
+}
+
+namespace
+{
+AnimationFrameResult frame_at(AnimationDefinition const& definition, AnimationData data, float seconds)
+{
+    std::optional<AnimationFrameResult> frame;
+    Animator animator;
+    animator.append(Animation(
+        animator.register_animateable(),
+        definition,
+        std::move(data),
+        [&](AnimationFrameResult const& result)
+    { frame = result; },
+        nullptr));
+    animator.tick(seconds);
+    EXPECT_TRUE(frame.has_value());
+    return frame.value_or(AnimationFrameResult {});
+}
+}
+
+TEST_F(AnimatorTest, WindowResizeResizesTheWindowToItsFinalSizeImmediately)
+{
+    // The window is resized up front on every axis, so that the client can
+    // catch up while the renderer scales its content to the animated clip area.
+    auto const frame = frame_at(linear_window_resize_definition(), resize_data(), 0.5f);
+
+    ASSERT_TRUE(frame.rectangle.has_value());
+    EXPECT_EQ(frame.rectangle->size, mir::geometry::Size(300, 200));
+    ASSERT_TRUE(frame.clip_area.has_value());
+    EXPECT_EQ(frame.clip_area->size, mir::geometry::Size(200, 300));
+    EXPECT_TRUE(frame.scales_content);
+}
+
+TEST_F(AnimatorTest, WindowResizeThatOnlyMovesDoesNotScaleContent)
+{
+    auto const frame = frame_at(linear_window_resize_definition(), slide_right_data(), 0.5f);
+
+    EXPECT_FALSE(frame.is_complete);
+    ASSERT_TRUE(frame.rectangle.has_value());
+    EXPECT_EQ(frame.rectangle->top_left, mir::geometry::Point(300, 0));
+    EXPECT_FALSE(frame.scales_content);
+}
+
+TEST_F(AnimatorTest, FinalFrameOfAWindowResizeDoesNotScaleContent)
+{
+    auto const frame = frame_at(linear_window_resize_definition(), resize_data(), 2.f);
+
+    EXPECT_TRUE(frame.is_complete);
+    EXPECT_FALSE(frame.scales_content);
+}
+
+TEST_F(AnimatorTest, SlideClipsRatherThanScalesAResizingWindow)
+{
+    // A growing axis takes its final size up front, while a shrinking one
+    // keeps its starting size until the end so that the clip hides the excess.
+    auto const frame = frame_at(linear_slide_definition(), resize_data(), 0.5f);
+
+    ASSERT_TRUE(frame.rectangle.has_value());
+    EXPECT_EQ(frame.rectangle->size, mir::geometry::Size(300, 400));
+    ASSERT_TRUE(frame.clip_area.has_value());
+    EXPECT_EQ(frame.clip_area->size, mir::geometry::Size(200, 300));
+    EXPECT_FALSE(frame.scales_content);
 }

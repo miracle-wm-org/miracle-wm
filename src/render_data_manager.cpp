@@ -122,6 +122,16 @@ void RenderDataManager::geometry_shader_id_change(RenderDataManagerId id, std::o
     }
 }
 
+void RenderDataManager::scale_content_to_clip_change(RenderDataManagerId id, bool scale_content_to_clip)
+{
+    std::lock_guard lock(mutex);
+    if (auto* const data = find_by_id(render_data, id))
+    {
+        data->scale_content_to_clip = scale_content_to_clip;
+        ++generation;
+    }
+}
+
 bool RenderDataManager::shader_uniform_set(RenderDataManagerId id, ShaderUniform const& uniform)
 {
     std::lock_guard lock(mutex);
