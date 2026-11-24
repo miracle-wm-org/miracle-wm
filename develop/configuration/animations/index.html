@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
     
     
       
@@ -27,10 +27,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -3437,7 +3437,7 @@ by default, please see <a href="../enable_animations/">Enable Animations</a>.</p
 <span class="w">    </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;float seconds&gt;</span>
 <span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;built_in&gt;</span>
 <span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">parts?</span><span class="p p-Indicator">:</span>
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;disabled|slide|grow|shrink|fade&gt;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;disabled|slide|grow|shrink|fade|window_resize&gt;</span>
 <span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;linear|ease_in_*|ease_out_*|ease_in_out_*&gt;</span><span class="w">  </span><span class="c1"># see https://easings.net/</span>
 <span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">c1?</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;float=1.2&gt;</span>
 <span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">c2?</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;float=1.83&gt;</span>
@@ -3488,17 +3488,26 @@ the compositor's frame rate, so below about 6–8 frames (<code>0.10</code> seco
 contributing its own effect — for example a <code>grow</code> contributes a scale
 while a <code>fade</code> contributes an opacity.</p>
 <p>Where two parts set the same property, <strong>the later part wins</strong>. This
-matters most when combining <code>fade</code> with <code>slide</code>: <code>slide</code> always sets
-opacity to fully opaque, so a <code>fade</code> must be listed <em>after</em> a <code>slide</code> to
-have any effect.</p>
+matters most when combining <code>fade</code> with <code>slide</code> or <code>window_resize</code>: both
+always set opacity to fully opaque, so a <code>fade</code> must be listed <em>after</em>
+them to have any effect.</p>
 <p>Properties per part:</p>
 </dd>
 </dl>
 <h4 id="type_1"><code>type</code><a class="headerlink" href="#type_1" title="Permanent link">&para;</a></h4>
 <dl>
 <dd>
-<p><small>required</small> <strong>type:</strong> <code>disabled</code> | <code>slide</code> | <code>grow</code> | <code>shrink</code> | <code>fade</code></p>
+<p><small>required</small> <strong>type:</strong> <code>disabled</code> | <code>slide</code> | <code>grow</code> | <code>shrink</code> | <code>fade</code> | <code>window_resize</code></p>
 <p>The animation effect to apply.</p>
+<ul>
+<li><code>slide</code> moves the window to its new position. If the window also changes
+  size, its content is revealed or cut off by the animated area rather than
+  scaled.</li>
+<li><code>window_resize</code> moves the window like <code>slide</code> does, it is intended
+  specifically for windows and nothing else. This is the default for <code>window_move</code>.</li>
+<li><code>grow</code> and <code>shrink</code> scale the window up from, or down to, <code>scale</code>.</li>
+<li><code>fade</code> animates the opacity of the window.</li>
+</ul>
 </dd>
 </dl>
 <h4 id="function"><code>function</code><a class="headerlink" href="#function" title="Permanent link">&para;</a></h4>
@@ -3590,7 +3599,7 @@ by every other part type.</p>
 <span class="w">    </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.15</span>
 <span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">built_in</span>
 <span class="w">    </span><span class="nt">parts</span><span class="p">:</span>
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">slide</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">window_resize</span>
 <span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ease_out_quart</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">event</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">window_close</span>
 <span class="w">    </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.15</span>
@@ -3665,10 +3674,10 @@ by every other part type.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.code.copy", "navigation.top", "content.tabs.link", "palette.toggle", "content.heading.permalink"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.code.copy", "navigation.top", "content.tabs.link", "palette.toggle", "content.heading.permalink"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
     
   </body>
