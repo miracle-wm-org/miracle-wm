@@ -35,7 +35,8 @@ AnimationFrameResult AnimationFrameResult::merge(AnimationFrameResult const& oth
         .rectangle = rectangle ? *rectangle : other.rectangle,
         .transform = transform ? *transform : other.transform,
         .opacity = opacity ? *opacity : other.opacity,
-        .clip_area = clip_area ? *clip_area : other.clip_area
+        .clip_area = clip_area ? *clip_area : other.clip_area,
+        .scales_content = scales_content || other.scales_content
     };
 }
 

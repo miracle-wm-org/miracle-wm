@@ -61,10 +61,33 @@ mgl::Primitive mgl::tessellate_renderable_into_rectangle(
     auto rect = renderable.screen_position();
     rect.top_left = rect.top_left - offset;
 
-    GLfloat const window_left = x(rect.top_left);
-    GLfloat const window_top = y(rect.top_left);
-    GLfloat const window_width = width(rect.size);
-    GLfloat const window_height = height(rect.size);
+    std::optional<geom::Rectangle> offset_clip;
+    if (clip_area)
+    {
+        offset_clip = clip_area;
+        offset_clip->top_left = offset_clip->top_left - offset;
+    }
+
+    return tessellate_texture_into_rectangle(
+        RectF { x(rect.top_left), y(rect.top_left), width(rect.size), height(rect.size) },
+        renderable.buffer()->size(),
+        renderable.src_bounds(),
+        is_flipped,
+        offset_clip);
+}
+
+mgl::Primitive mgl::tessellate_texture_into_rectangle(
+    RectF const& dest,
+    geom::Size const& buffer_size,
+    geom::RectangleD const& src_bounds,
+    bool const is_flipped,
+    std::optional<geom::Rectangle> const& clip_area)
+{
+    using namespace miracle::geometry_helpers::gl;
+    GLfloat const window_left = dest.x;
+    GLfloat const window_top = dest.y;
+    GLfloat const window_width = dest.width;
+    GLfloat const window_height = dest.height;
 
     /* The clip area is a sub-rectangle of the window. Rather than clipping in framebuffer
      * space, we express it as the fraction of the window that survives, then shrink both the
@@ -75,8 +98,8 @@ mgl::Primitive mgl::tessellate_renderable_into_rectangle(
     GLfloat fx0 = 0.f, fx1 = 1.f, fy0 = 0.f, fy1 = 1.f;
     if (clip_area && window_width > 0.f && window_height > 0.f)
     {
-        GLfloat const clip_left = x(clip_area->top_left) - static_cast<GLfloat>(offset.dx.as_int());
-        GLfloat const clip_top = y(clip_area->top_left) - static_cast<GLfloat>(offset.dy.as_int());
+        GLfloat const clip_left = x(clip_area->top_left);
+        GLfloat const clip_top = y(clip_area->top_left);
         fx0 = std::clamp((clip_left - window_left) / window_width, 0.f, 1.f);
         fx1 = std::clamp((clip_left + width(clip_area->size) - window_left) / window_width, 0.f, 1.f);
         fy0 = std::clamp((clip_top - window_top) / window_height, 0.f, 1.f);
@@ -91,7 +114,7 @@ mgl::Primitive mgl::tessellate_renderable_into_rectangle(
     mgl::Primitive rectangle;
     rectangle.type = GL_TRIANGLE_STRIP;
 
-    auto const [src_top, src_bottom, src_left, src_right] = tex_coords_from_rect(renderable.buffer()->size(), renderable.src_bounds());
+    auto const [src_top, src_bottom, src_left, src_right] = tex_coords_from_rect(buffer_size, src_bounds);
 
     // Narrow the source range to the same fraction the quad was cut down to. This happens
     // before the vertical flip below so that a flipped texture still clips at the edge the

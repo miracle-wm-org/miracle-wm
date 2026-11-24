@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "program_factory.h"
 #include "render_data_manager.h"
 #include "scene_override.h"
+#include "tessellation_helpers.h"
 
 #include <GLES2/gl2.h>
 #include <mir/geometry/rectangle.h>
@@ -87,6 +88,17 @@ private:
         bool const is_flipped,
         std::optional<mir::geometry::Rectangle> const& clip_area);
 
+    /// How a window that is being resized is drawn in the current frame.
+    struct GroupResize
+    {
+        /// The content of the window, in the coordinates of its committed buffers.
+        mir::gl::RectF src;
+        /// Where that content is drawn instead.
+        mir::gl::RectF dst;
+        /// The animated area of the window, border included.
+        mir::geometry::Rectangle window_rect;
+    };
+
     struct DrawData
     {
         bool enabled = false;
@@ -102,6 +114,9 @@ private:
         /// geometry shader sees positions relative to this through `v_local`,
         /// so that the content and the border share one coordinate space.
         mir::geometry::Rectangle window_rect;
+        /// When set, the surface is stretched to fill this rectangle instead of
+        /// being drawn at its screen position.
+        std::optional<mir::gl::RectF> dest;
     };
 
     struct Vertex
@@ -190,6 +205,15 @@ private:
     /// Draws the current renderable and returns a follow-up draw if required.
     void draw(mir::graphics::Renderable const& renderable, DrawData const& data) const;
     void draw_border(mir::scene::Surface const& surface, DrawData const& data) const;
+    /// Works out how the surface group starting at \p renderables[first] is drawn
+    /// while an animation is scaling its content.
+    ///
+    /// \returns std::nullopt when the group is drawn as normal
+    std::optional<GroupResize> resolve_group_resize(
+        mir::graphics::RenderableList const& renderables,
+        size_t first,
+        mir::scene::Surface const& surface,
+        RenderData const& tracked) const;
     /// Returns the variant of \p base with the window's geometry shader, or
     /// \p base when the window has none or it cannot be used.
     Program const& with_geometry_stage(Program const& base, DrawData const& data) const;

@@ -261,6 +261,20 @@ std::optional<geom::Rectangle> miracle::WindowContainer::animation_area() const
     return animation_area_;
 }
 
+bool miracle::WindowContainer::set_scale_content_to_clip(bool scale_content_to_clip)
+{
+    if (scale_content_to_clip_ == scale_content_to_clip)
+        return false;
+
+    scale_content_to_clip_ = scale_content_to_clip;
+    if (render_id_.has_value())
+    {
+        if (auto const rdm_locked = rdm.lock())
+            rdm_locked->scale_content_to_clip_change(render_id_.value(), scale_content_to_clip);
+    }
+    return true;
+}
+
 float miracle::WindowContainer::get_alpha() const
 {
     return workspace_effect.alpha * window_effect.alpha * animation_effect.alpha;

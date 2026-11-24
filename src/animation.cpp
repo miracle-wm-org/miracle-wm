@@ -404,6 +404,33 @@ AnimationFrameResult Animation::tick_built_in(BuiltInAnimationDefinition const& 
             .clip_area = clip_rect
         };
     }
+    case BultInAnimationType::window_resize:
+    {
+        auto const p = ease(builtin_def, t);
+        const auto [position, clip_area_size] = slide(p, data_.area_start, data_.area_end);
+        // The window is given its final size straight away, so that the client
+        // can start rendering at that size as early as possible. The renderer
+        // scales whatever buffer the client has committed to fit the animated
+        // clip area, so the change of size is smooth on screen however long the
+        // client takes to catch up (see AnimationFrameResult::scales_content).
+        auto const window_rect = geom::Rectangle {
+            geom::Point { position.x, position.y },
+            data_.area_end.size
+        };
+        // clip_area is the animated area that the window, its border included, occupies on screen.
+        auto const clip_rect = geom::Rectangle {
+            geom::Point { position.x,       position.y       },
+            geom::Size { clip_area_size.x, clip_area_size.y }
+        };
+        return {
+            .is_complete = false,
+            .rectangle = window_rect,
+            .transform = std::nullopt,
+            .opacity = 1.f,
+            .clip_area = clip_rect,
+            .scales_content = data_.area_start.size != data_.area_end.size
+        };
+    }
     case BultInAnimationType::grow:
     {
         auto const p = interpolate_to_unit_scale(builtin_def, ease(builtin_def, t));

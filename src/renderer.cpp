@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "geometry_helpers.h"
+#include "math_helpers.h"
 #include "program_factory.h"
 #include "tessellation_helpers.h"
 
@@ -654,6 +655,98 @@ int Renderer::run_offscreen_passes(
     return pong;
 }
 
+namespace
+{
+/// The window content within a stream drawn at \p stream_rect. A client that
+/// draws its own shadows offsets its stream by a negative \p displacement, and
+/// the shadows are assumed to extend as far on the far edges as the near ones.
+mgl::RectF content_within_stream(mgl::RectF const& stream_rect, geom::Displacement const& displacement)
+{
+    float const inset_x = static_cast<float>(std::max(-displacement.dx.as_int(), 0));
+    float const inset_y = static_cast<float>(std::max(-displacement.dy.as_int(), 0));
+    mgl::RectF content {
+        stream_rect.x + inset_x,
+        stream_rect.y + inset_y,
+        stream_rect.width - 2.f * inset_x,
+        stream_rect.height - 2.f * inset_y
+    };
+    if (content.width <= 0.f || content.height <= 0.f)
+        return stream_rect;
+    return content;
+}
+}
+
+std::optional<Renderer::GroupResize> Renderer::resolve_group_resize(
+    mg::RenderableList const& renderables,
+    size_t first,
+    ms::Surface const& surface,
+    RenderData const& tracked) const
+{
+    if (!tracked.scale_content_to_clip)
+        return std::nullopt;
+
+    // The animated area of the window is its clip area, which is the same for
+    // every renderable of the surface.
+    auto const window_rect = renderables[first]->clip_area();
+    if (!window_rect || window_rect->size.width.as_int() <= 0 || window_rect->size.height.as_int() <= 0)
+        return std::nullopt;
+
+    // The main stream is taken to be the largest one: subsurfaces are rarely
+    // as large as the window that holds them.
+    mg::Renderable const* main = nullptr;
+    for (size_t i = first; i < renderables.size(); ++i)
+    {
+        auto const& r = renderables[i];
+        auto const s = r->surface_if_any();
+        if (!s || s.value() != &surface)
+            break;
+
+        auto const area = [](mg::Renderable const& renderable)
+        {
+            auto const size = renderable.screen_position().size;
+            return static_cast<long>(size.width.as_int()) * size.height.as_int();
+        };
+        if (!main || area(*r) > area(*main))
+            main = r.get();
+    }
+
+    if (!main)
+        return std::nullopt;
+
+    geom::Displacement displacement;
+    for (auto const& stream : surface.get_streams())
+    {
+        if (static_cast<mg::Renderable::ID>(stream.stream.get()) == main->id())
+        {
+            displacement = stream.displacement;
+            break;
+        }
+    }
+
+    // The window's content sits inside of its margins, which hold the border.
+    auto const window_size = surface.window_size();
+    auto const content_size = surface.content_size();
+    float const margin_x = static_cast<float>(std::max(window_size.width.as_int() - content_size.width.as_int(), 0)) / 2.f;
+    float const margin_y = static_cast<float>(std::max(window_size.height.as_int() - content_size.height.as_int(), 0)) / 2.f;
+    auto const window_f = to_rect_f(window_rect.value());
+    mgl::RectF const dst {
+        window_f.x + margin_x,
+        window_f.y + margin_y,
+        std::max(window_f.width - 2.f * margin_x, 1.f),
+        std::max(window_f.height - 2.f * margin_y, 1.f)
+    };
+
+    auto const src = content_within_stream(to_rect_f(main->screen_position()), displacement);
+    if (src.width <= 0.f || src.height <= 0.f)
+        return std::nullopt;
+
+    return GroupResize {
+        .src = src,
+        .dst = dst,
+        .window_rect = window_rect.value(),
+    };
+}
+
 Renderer::Renderer(
     std::shared_ptr<mir::graphics::GLRenderingProvider> gl_interface,
     std::unique_ptr<mir::graphics::gl::OutputSurface> output,
@@ -863,9 +956,11 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> RendererFr
     RenderData const* group_data = nullptr;
     geom::Rectangle group_real;
     geom::Rectangle group_window_rect;
+    std::optional<GroupResize> group_resize;
     bool first_renderable = true;
-    for (auto const& r : renderables)
+    for (size_t index = 0; index < renderables.size(); ++index)
     {
+        auto const& r = renderables[index];
         mir::scene::Surface const* surface = nullptr;
         if (auto const s = r->surface_if_any())
             surface = s.value();
@@ -892,6 +987,18 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> RendererFr
                 group_real = geom::Rectangle { surface->top_left(), surface->window_size() };
                 scene_override->place(*surface, group_real, group_placements);
             }
+
+            // A scene override owns how the window is presented, so a resize is
+            // only drawn specially without one.
+            group_resize.reset();
+            if (pinned && group_placements.empty()
+                && (!group_data->output_area || group_data->output_area->overlaps(viewport)))
+                group_resize = resolve_group_resize(renderables, index, *pinned, *group_data);
+
+            // A geometry shader works relative to the area that the window is
+            // drawn in, and the content and the border must agree on it.
+            if (group_resize)
+                group_window_rect = group_resize->window_rect;
         }
 
         auto const draw_once = [&](std::optional<SceneOverridePlacement> const& placement)
@@ -901,6 +1008,9 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> RendererFr
                 return;
 
             data.window_rect = group_window_rect;
+
+            if (group_resize && !placement)
+                data.dest = map(to_rect_f(r->screen_position()), group_resize->src, group_resize->dst);
 
             draw(*r, data);
 
@@ -967,18 +1077,26 @@ void Renderer::draw(
     if (clip_area && (clip_area->size.width.as_int() <= 0 || clip_area->size.height.as_int() <= 0))
         return;
 
-    // 'surfaceSize' describes the whole window: the clipped quad carries texcoords that are
-    // a fraction of the window, and the fragment shader turns those back into window-space
-    // pixels for the rounded-corner SDF, so the fraction only means something against the
-    // full size.
-    auto surface_size = renderable.screen_position().size;
+    // 'surfaceSize' describes the whole of what is drawn, before clipping: the clipped quad
+    // carries texcoords that are a fraction of it, and the fragment shader turns those back
+    // into pixels for the rounded-corner SDF, so the fraction only means something against
+    // the full size. That is the size the surface is stretched to when it is being scaled.
+    glm::vec2 surface_size {
+        static_cast<float>(renderable.screen_position().size.width.as_int()),
+        static_cast<float>(renderable.screen_position().size.height.as_int())
+    };
+    if (data.dest)
+        surface_size = { data.dest->width, data.dest->height };
 
     // The transform pivot, in contrast, is the center of what is actually drawn, so it
     // follows the clip area whenever there is one. Only the non-placement path uses it; an
     // override pivots about placement_center instead.
     auto const pivot_rect = clip_area.value_or(renderable.screen_position());
     if (data.placement)
-        surface_size = data.override_real.size;
+        surface_size = {
+            static_cast<float>(data.override_real.size.width.as_int()),
+            static_cast<float>(data.override_real.size.height.as_int())
+        };
 
     // All the programs are held by program_factory through its lifetime. Using pointers avoids
     // -Wdangling-reference.
@@ -1085,7 +1203,7 @@ void Renderer::draw(
     glUniform1f(prog->border_radius_uniform, content_radius);
 
     glUniform1f(prog->alpha_uniform, alpha);
-    glUniform2f(prog->surface_size_uniform, static_cast<GLfloat>(miracle::geometry_helpers::gl::width_value(surface_size)), static_cast<GLfloat>(miracle::geometry_helpers::gl::height_value(surface_size)));
+    glUniform2f(prog->surface_size_uniform, surface_size.x, surface_size.y);
 
     glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.data.workspace_transform));
@@ -1096,7 +1214,15 @@ void Renderer::draw(
     primitives.clear();
     // For multi-pass shaders, the intermediate texture is in GL convention (y=0 at bottom),
     // so tessellate with is_flipped=false regardless of the original Mir texture layout.
-    tessellate(primitives, renderable, is_multipass ? false : (texture->layout() == mg::gl::Texture::Layout::TopRowFirst), clip_area);
+    bool const is_flipped = is_multipass ? false : (texture->layout() == mg::gl::Texture::Layout::TopRowFirst);
+    if (data.dest)
+    {
+        primitives.resize(1);
+        primitives[0] = mgl::tessellate_texture_into_rectangle(
+            *data.dest, renderable.buffer()->size(), renderable.src_bounds(), is_flipped, clip_area);
+    }
+    else
+        tessellate(primitives, renderable, is_flipped, clip_area);
 
     // The pass_targets use a grow-only allocation: a previously large window may have left
     // the textures bigger than the current buf_size. Scale the UV coords so the final pass
